@@ -3,7 +3,6 @@ mb-config.inc
 mb-secure-config.inc
 
 # Ignor composer working files
-composer.phar
 composer.lock
 /vendor/
 
