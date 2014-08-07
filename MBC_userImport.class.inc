@@ -101,7 +101,7 @@ class MBC_UserImport
       $drupalUser = $this->createDrupalUser($user);
 
       // With new user account details from Drupal site:
-      // - Add entry to mbc-userAPI-registration
+      // Add entry to mbc-userAPI-registration
       $this->sendToMBUserAPI($user, $drupalUser);
 
       // - Add entry to newRegistrationQueue to add new user to Mailchimp
@@ -218,6 +218,99 @@ class MBC_UserImport
    *   Results for queue submission.
    */
   private function sendToMBUserAPI($user, $drupalUser) {
+
+    if (isset($user->email)) {
+
+      $config = $this->config;
+      $config['routingKey'] = getenv('MB_USER_API_REGISTRATION_ROUTING_KEY');
+      $mbUserAPI = new MessageBroker($this->credentials, $config);
+
+      // Currently supported
+      $userDetails = array(
+        'email' => $user->email,
+        'subscribed' => 1,
+        'drupal_uid' => $drupalUser->uid,
+        'drupal_register_timestamp' => $drupalUser->created,
+      );
+
+      if (isset($user->birthdate) && $user->birthdate != 0) {
+        $userDetails['birthdate_timestamp'] = strtotime($user->birthdate);
+      }
+      if (isset($user->first_name) && $user->first_name != '') {
+        $userDetails['first_name'] = $user->first_name;
+      }
+      if (isset($user->last_name) && $user->last_name != '') {
+        $userDetails['last_name'] = $user->last_name;
+      }
+      if (isset($user->address1) && $user->address1 != '') {
+        $userDetails['address1'] = $user->address1;
+      }
+      if (isset($user->address2) && $user->address2 != '') {
+        $userDetails['address2'] = $user->address2;
+      }
+      if (isset($user->city) && $user->city != '') {
+        $userDetails['city'] = $user->city;
+      }
+      if (isset($user->state) && $user->state != '') {
+        $userDetails['city'] = $user->state;
+      }
+      if (isset($user->zip) && $user->zip != '') {
+        $userDetails['zip'] = $user->zip;
+      }
+      if (isset($user->phone) && $user->phone != '') {
+        $userDetails['mobile'] = $user->phone;
+      }
+      if (isset($user->hs_gradyear) && $user->hs_gradyear != 0) {
+        $userDetails['hs_gradyear'] = $user->hs_gradyear;
+      }
+      if (isset($user->race) && $user->race != '') {
+        $userDetails['race'] = $user->race;
+      }
+      if (isset($user->religion) && $user->religion != '') {
+        $userDetails['religion'] = $user->religion;
+      }
+      if (isset($user->hs_name) && $user->hs_name != '') {
+        $userDetails['hs_name'] = $user->hs_name;
+      }
+      if (isset($user->college_name) && $user->college_name != '') {
+        $userDetails['college_name'] = $user->college_name;
+      }
+      if (isset($user->major_name) && $user->major_name != '') {
+        $userDetails['major_name'] = $user->major_name;
+      }
+      if (isset($user->degree_type) && $user->degree_type != '') {
+        $userDetails['degree_type'] = $user->degree_type;
+      }
+      if (isset($user->sat_math) && $user->sat_math != 0) {
+        $userDetails['sat_math'] = $user->sat_math;
+      }
+      if (isset($user->sat_verbal) && $user->sat_verbal != 0) {
+        $userDetails['sat_verbal'] = $user->sat_verbal;
+      }
+      if (isset($user->sat_writing) && $user->sat_writing != 0) {
+        $userDetails['sat_writing'] = $user->sat_writing;
+      }
+      if (isset($user->act_math) && $user->act_math != 0) {
+        $userDetails['act_math'] = $user->act_math;
+      }
+      if (isset($user->gpa) && $user->gpa != 0) {
+        $userDetails['gpa'] = $user->gpa;
+      }
+      if (isset($user->role) && $user->role != '') {
+        $userDetails['role'] = $user->role;
+      }
+
+      $payload = serialize($userDetails);
+      $mbUserAPI->publishMessage($payload);
+
+      $this->statHat->clearAddedStatNames();
+      $this->statHat->addStatName('create-mb-user-api queue entry');
+      $this->statHat->reportCount(1);
+
+    }
+    else {
+      $status = FALSE;
+    }
 
     return $status;
   }
