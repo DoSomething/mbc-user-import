@@ -93,6 +93,8 @@ class MBC_UserImport
 
     echo '------- mbc-user-import->produceUserImport() START: ' . date('D M j G:i:s T Y') . ' -------', "\n";
 
+    $targetUsers = array();
+    $deliveryTags = array();
     list($targetUsers, $deliveryTags) = $this->consumeUserImportQueue();
 
     foreach ($targetUsers as $userCount => $user) {
@@ -101,14 +103,11 @@ class MBC_UserImport
       $drupalUser = $this->createDrupalUser($user);
 
       // With new user account details from Drupal site:
-      // - Add entry to mbc-userAPI-registration
-      $this->sendToMBUserAPI($user, $drupalUser);
+      // Send transaction to transactionalExchange for distribution to
+      // transactionalQueue, userAPIRegistrationQueue and userRegistrationQueue
+      $this->userImportProducer($user, $drupalUser);
 
-      // - Add entry to newRegistrationQueue to add new user to Mailchimp
-      // - Add entry to transactionalQueue to trigger sending welcome email via
-      //    Mandrill using a template specific to a new user via import.
       // Ack message
-
       $this->channel->basic_ack($deliveryTags[$userCount]);
 
     }
@@ -182,7 +181,12 @@ class MBC_UserImport
     }
 
     $ch = curl_init();
-    $drupalAPIUrl = getenv('DS_DRUPAL_API_HOST') . '/api/v1/users';
+    $drupalAPIUrl = getenv('DS_DRUPAL_API_HOST');
+    $port = getenv('DS_DRUPAL_API_PORT');
+    if (isset($port)) {
+      $drupalAPIUrl .= ':' . $port;
+    }
+    $drupalAPIUrl .= '/api/v1/users';
 
     curl_setopt($ch, CURLOPT_URL, $drupalAPIUrl);
     curl_setopt($ch, CURLOPT_POST, 1);
@@ -204,8 +208,8 @@ class MBC_UserImport
   }
 
   /**
-   * Send request to Drupal /api/v1/users end point to create a new user
-   * account.
+   * Send transaction to transactionalExchange with user.registration.import
+   * routing key.
    *
    * @param array $user
    *   Details about the user based on the import data.
@@ -217,7 +221,136 @@ class MBC_UserImport
    * @return string $status
    *   Results for queue submission.
    */
-  private function sendToMBUserAPI($user, $drupalUser) {
+  private function userImportProducer($user, $drupalUser) {
+
+    if (isset($user->email)) {
+
+      // Config specific to producing a new user for the Message Broker userAPI
+      $config = array(
+        'exchange' => array(
+          'name' => getenv("MB_TRANSACTIONAL_EXCHANGE"),
+          'type' => getenv("MB_TRANSACTIONAL_EXCHANGE_TYPE"),
+          'passive' => getenv("MB_TRANSACTIONAL_EXCHANGE_PASSIVE"),
+          'durable' => getenv("MB_TRANSACTIONAL_EXCHANGE_DURABLE"),
+          'auto_delete' => getenv("MB_TRANSACTIONAL_EXCHANGE_AUTO_DELETE"),
+        ),
+        'queue' => array(
+          'userAPIRegistration' => array(
+            'name' => getenv("MB_USER_API_REGISTRATION_QUEUE"),
+            'passive' => getenv("MB_USER_API_REGISTRATION_QUEUE_PASSIVE"),
+            'durable' => getenv("MB_USER_API_REGISTRATION_QUEUE_DURABLE"),
+            'exclusive' => getenv("MB_USER_API_REGISTRATION_QUEUE_EXCLUSIVE"),
+            'auto_delete' => getenv("MB_USER_API_REGISTRATION_QUEUE_AUTO_DELETE"),
+            'bindingKey' => getenv("MB_USER_API_REGISTRATION_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
+          ),
+          'registrations' => array(
+            'name' => getenv("MB_USER_REGISTRATION_QUEUE"),
+            'passive' => getenv("MB_USER_REGISTRATION_QUEUE_PASSIVE"),
+            'durable' => getenv("MB_USER_REGISTRATION_QUEUE_DURABLE"),
+            'exclusive' => getenv("MB_USER_REGISTRATION_QUEUE_EXCLUSIVE"),
+            'auto_delete' => getenv("MB_USER_REGISTRATION_QUEUE_AUTO_DELETE"),
+            'bindingKey' => getenv("MB_USER_REGISTRATION_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
+          ),
+          'transactional' => array(
+            'name' => getenv("MB_TRANSACTIONAL_QUEUE"),
+            'passive' => getenv("MB_TRANSACTIONAL_QUEUE_PASSIVE"),
+            'durable' => getenv("MB_TRANSACTIONAL_QUEUE_DURABLE"),
+            'exclusive' => getenv("MB_TRANSACTIONAL_QUEUE_EXCLUSIVE"),
+            'auto_delete' => getenv("MB_TRANSACTIONAL_QUEUE_AUTO_DELETE"),
+            'bindingKey' => getenv("MB_TRANSACTIONAL_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
+          ),
+        ),
+        'routingKey' => 'user.registration.transactional',
+      );
+      $mbUserAPI = new MessageBroker($this->credentials, $config);
+
+      // Currently supported
+      $userDetails = array(
+        'email' => $user->email,
+        'subscribed' => 1,
+        'drupal_uid' => $drupalUser->uid,
+        'drupal_register_timestamp' => $drupalUser->created,
+        'activity' => 'user_import-niche',
+      );
+
+      if (isset($user->birthdate) && $user->birthdate != 0) {
+        $userDetails['birthdate_timestamp'] = strtotime($user->birthdate);
+      }
+      if (isset($user->first_name) && $user->first_name != '') {
+        $userDetails['first_name'] = $user->first_name;
+      }
+      if (isset($user->last_name) && $user->last_name != '') {
+        $userDetails['last_name'] = $user->last_name;
+      }
+      if (isset($user->address1) && $user->address1 != '') {
+        $userDetails['address1'] = $user->address1;
+      }
+      if (isset($user->address2) && $user->address2 != '') {
+        $userDetails['address2'] = $user->address2;
+      }
+      if (isset($user->city) && $user->city != '') {
+        $userDetails['city'] = $user->city;
+      }
+      if (isset($user->state) && $user->state != '') {
+        $userDetails['city'] = $user->state;
+      }
+      if (isset($user->zip) && $user->zip != '') {
+        $userDetails['zip'] = $user->zip;
+      }
+      if (isset($user->phone) && $user->phone != '') {
+        $userDetails['mobile'] = $user->phone;
+      }
+      if (isset($user->hs_gradyear) && $user->hs_gradyear != 0) {
+        $userDetails['hs_gradyear'] = $user->hs_gradyear;
+      }
+      if (isset($user->race) && $user->race != '') {
+        $userDetails['race'] = $user->race;
+      }
+      if (isset($user->religion) && $user->religion != '') {
+        $userDetails['religion'] = $user->religion;
+      }
+      if (isset($user->hs_name) && $user->hs_name != '') {
+        $userDetails['hs_name'] = $user->hs_name;
+      }
+      if (isset($user->college_name) && $user->college_name != '') {
+        $userDetails['college_name'] = $user->college_name;
+      }
+      if (isset($user->major_name) && $user->major_name != '') {
+        $userDetails['major_name'] = $user->major_name;
+      }
+      if (isset($user->degree_type) && $user->degree_type != '') {
+        $userDetails['degree_type'] = $user->degree_type;
+      }
+      if (isset($user->sat_math) && $user->sat_math != 0) {
+        $userDetails['sat_math'] = $user->sat_math;
+      }
+      if (isset($user->sat_verbal) && $user->sat_verbal != 0) {
+        $userDetails['sat_verbal'] = $user->sat_verbal;
+      }
+      if (isset($user->sat_writing) && $user->sat_writing != 0) {
+        $userDetails['sat_writing'] = $user->sat_writing;
+      }
+      if (isset($user->act_math) && $user->act_math != 0) {
+        $userDetails['act_math'] = $user->act_math;
+      }
+      if (isset($user->gpa) && $user->gpa != 0) {
+        $userDetails['gpa'] = $user->gpa;
+      }
+      if (isset($user->role) && $user->role != '') {
+        $userDetails['role'] = $user->role;
+      }
+
+      $payload = serialize($userDetails);
+      $mbUserAPI->publishMessage($payload);
+      $status = TRUE;
+
+      $this->statHat->clearAddedStatNames();
+      $this->statHat->addStatName('create-mb-user-api queue entry');
+      $this->statHat->reportCount(1);
+    }
+    else {
+      $status = FALSE;
+    }
 
     return $status;
   }
