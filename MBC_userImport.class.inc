@@ -105,10 +105,12 @@ class MBC_UserImport
       // With new user account details from Drupal site:
       // Send transaction to transactionalExchange for distribution to
       // transactionalQueue, userAPIRegistrationQueue and userRegistrationQueue
-      $this->userImportProducer($user, $drupalUser);
+      $status = $this->userImportProducer($user, $drupalUser);
 
       // Ack message
-      $this->channel->basic_ack($deliveryTags[$userCount]);
+      if ($status == TRUE) {
+        $this->channel->basic_ack($deliveryTags[$userCount]);
+      }
 
     }
 
@@ -119,8 +121,12 @@ class MBC_UserImport
    * Collect a batch of user submissions to prowler from the related RabbitMQ
    * queue based on produced entries by mbp-user-import.
    *
-   * @return array
-   *   An array of the status of the job
+   * @return array $targetUsers
+   *   Details of the new user accounts to be processed.
+   *
+   * @return array $deliveryTags
+   *   Rabbit delivery tag IDs used for ack backs when processing of each queue
+   *   entry is complete.
    */
   private function consumeUserImportQueue() {
 
@@ -259,6 +265,14 @@ class MBC_UserImport
             'auto_delete' => getenv("MB_TRANSACTIONAL_QUEUE_AUTO_DELETE"),
             'bindingKey' => getenv("MB_TRANSACTIONAL_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
           ),
+          'mobileCommons' => array(
+            'name' => getenv("MB_MOBILE_COMMONS_QUEUE"),
+            'passive' => getenv("MB_MOBILE_COMMONS_QUEUE_PASSIVE"),
+            'durable' => getenv("MB_MOBILE_COMMONS_QUEUE_DURABLE"),
+            'exclusive' => getenv("MB_MOBILE_COMMONS_QUEUE_EXCLUSIVE"),
+            'auto_delete' => getenv("MB_MOBILE_COMMONS_QUEUE_AUTO_DELETE"),
+            'bindingKey' => getenv("MB_MOBILE_COMMONS_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
+          ),
         ),
         'routingKey' => 'user.registration.transactional',
       );
@@ -267,6 +281,7 @@ class MBC_UserImport
       // Currently supported
       $userDetails = array(
         'email' => $user->email,
+        'password' => $user->password,
         'subscribed' => 1,
         'drupal_uid' => $drupalUser->uid,
         'drupal_register_timestamp' => $drupalUser->created,
