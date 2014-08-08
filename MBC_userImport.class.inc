@@ -93,6 +93,8 @@ class MBC_UserImport
 
     echo '------- mbc-user-import->produceUserImport() START: ' . date('D M j G:i:s T Y') . ' -------', "\n";
 
+    $targetUsers = array();
+    $deliveryTags = array();
     list($targetUsers, $deliveryTags) = $this->consumeUserImportQueue();
 
     foreach ($targetUsers as $userCount => $user) {
@@ -101,14 +103,11 @@ class MBC_UserImport
       $drupalUser = $this->createDrupalUser($user);
 
       // With new user account details from Drupal site:
-      // Add entry to mbc-userAPI-registration
-      $this->sendToMBUserAPI($user, $drupalUser);
+      // Send transaction to transactionalExchange for distribution to
+      // transactionalQueue, userAPIRegistrationQueue and userRegistrationQueue
+      $this->userImportProducer($user, $drupalUser);
 
-      // - Add entry to newRegistrationQueue to add new user to Mailchimp
-      // - Add entry to transactionalQueue to trigger sending welcome email via
-      //    Mandrill using a template specific to a new user via import.
       // Ack message
-
       $this->channel->basic_ack($deliveryTags[$userCount]);
 
     }
@@ -182,7 +181,12 @@ class MBC_UserImport
     }
 
     $ch = curl_init();
-    $drupalAPIUrl = getenv('DS_DRUPAL_API_HOST') . '/api/v1/users';
+    $drupalAPIUrl = getenv('DS_DRUPAL_API_HOST');
+    $port = getenv('DS_DRUPAL_API_PORT');
+    if (isset($port)) {
+      $drupalAPIUrl .= ':' . $port;
+    }
+    $drupalAPIUrl .= '/api/v1/users';
 
     curl_setopt($ch, CURLOPT_URL, $drupalAPIUrl);
     curl_setopt($ch, CURLOPT_POST, 1);
@@ -204,8 +208,8 @@ class MBC_UserImport
   }
 
   /**
-   * Send request to Drupal /api/v1/users end point to create a new user
-   * account.
+   * Send transaction to transactionalExchange with user.registration.import
+   * routing key.
    *
    * @param array $user
    *   Details about the user based on the import data.
@@ -217,12 +221,47 @@ class MBC_UserImport
    * @return string $status
    *   Results for queue submission.
    */
-  private function sendToMBUserAPI($user, $drupalUser) {
+  private function userImportProducer($user, $drupalUser) {
 
     if (isset($user->email)) {
 
-      $config = $this->config;
-      $config['routingKey'] = getenv('MB_USER_API_REGISTRATION_ROUTING_KEY');
+      // Config specific to producing a new user for the Message Broker userAPI
+      $config = array(
+        'exchange' => array(
+          'name' => getenv("MB_TRANSACTIONAL_EXCHANGE"),
+          'type' => getenv("MB_TRANSACTIONAL_EXCHANGE_TYPE"),
+          'passive' => getenv("MB_TRANSACTIONAL_EXCHANGE_PASSIVE"),
+          'durable' => getenv("MB_TRANSACTIONAL_EXCHANGE_DURABLE"),
+          'auto_delete' => getenv("MB_TRANSACTIONAL_EXCHANGE_AUTO_DELETE"),
+        ),
+        'queue' => array(
+          'userAPIRegistration' => array(
+            'name' => getenv("MB_USER_API_REGISTRATION_QUEUE"),
+            'passive' => getenv("MB_USER_API_REGISTRATION_QUEUE_PASSIVE"),
+            'durable' => getenv("MB_USER_API_REGISTRATION_QUEUE_DURABLE"),
+            'exclusive' => getenv("MB_USER_API_REGISTRATION_QUEUE_EXCLUSIVE"),
+            'auto_delete' => getenv("MB_USER_API_REGISTRATION_QUEUE_AUTO_DELETE"),
+            'bindingKey' => getenv("MB_USER_API_REGISTRATION_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
+          ),
+          'registrations' => array(
+            'name' => getenv("MB_USER_REGISTRATION_QUEUE"),
+            'passive' => getenv("MB_USER_REGISTRATION_QUEUE_PASSIVE"),
+            'durable' => getenv("MB_USER_REGISTRATION_QUEUE_DURABLE"),
+            'exclusive' => getenv("MB_USER_REGISTRATION_QUEUE_EXCLUSIVE"),
+            'auto_delete' => getenv("MB_USER_REGISTRATION_QUEUE_AUTO_DELETE"),
+            'bindingKey' => getenv("MB_USER_REGISTRATION_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
+          ),
+          'transactional' => array(
+            'name' => getenv("MB_TRANSACTIONAL_QUEUE"),
+            'passive' => getenv("MB_TRANSACTIONAL_QUEUE_PASSIVE"),
+            'durable' => getenv("MB_TRANSACTIONAL_QUEUE_DURABLE"),
+            'exclusive' => getenv("MB_TRANSACTIONAL_QUEUE_EXCLUSIVE"),
+            'auto_delete' => getenv("MB_TRANSACTIONAL_QUEUE_AUTO_DELETE"),
+            'bindingKey' => getenv("MB_TRANSACTIONAL_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
+          ),
+        ),
+        'routingKey' => 'user.registration.transactional',
+      );
       $mbUserAPI = new MessageBroker($this->credentials, $config);
 
       // Currently supported
@@ -231,6 +270,7 @@ class MBC_UserImport
         'subscribed' => 1,
         'drupal_uid' => $drupalUser->uid,
         'drupal_register_timestamp' => $drupalUser->created,
+        'activity' => 'user_import-niche',
       );
 
       if (isset($user->birthdate) && $user->birthdate != 0) {
@@ -302,11 +342,11 @@ class MBC_UserImport
 
       $payload = serialize($userDetails);
       $mbUserAPI->publishMessage($payload);
+      $status = TRUE;
 
       $this->statHat->clearAddedStatNames();
       $this->statHat->addStatName('create-mb-user-api queue entry');
       $this->statHat->reportCount(1);
-
     }
     else {
       $status = FALSE;
