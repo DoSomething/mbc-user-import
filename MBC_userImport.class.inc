@@ -100,15 +100,17 @@ class MBC_UserImport
     foreach ($targetUsers as $userCount => $user) {
 
       // Create Drupal user - https://github.com/DoSomething/dosomething/wiki/API#users
-      $drupalUser = $this->createDrupalUser($user);
+      list($drupalUser, $user->password) = $this->createDrupalUser($user);
 
       // With new user account details from Drupal site:
       // Send transaction to transactionalExchange for distribution to
       // transactionalQueue, userAPIRegistrationQueue and userRegistrationQueue
-      $this->userImportProducer($user, $drupalUser);
+      $status = $this->userImportProducer($user, $drupalUser);
 
       // Ack message
-      $this->channel->basic_ack($deliveryTags[$userCount]);
+      if ($status == TRUE) {
+        $this->channel->basic_ack($deliveryTags[$userCount]);
+      }
 
     }
 
@@ -119,8 +121,12 @@ class MBC_UserImport
    * Collect a batch of user submissions to prowler from the related RabbitMQ
    * queue based on produced entries by mbp-user-import.
    *
-   * @return array
-   *   An array of the status of the job
+   * @return array $targetUsers
+   *   Details of the new user accounts to be processed.
+   *
+   * @return array $deliveryTags
+   *   Rabbit delivery tag IDs used for ack backs when processing of each queue
+   *   entry is complete.
    */
   private function consumeUserImportQueue() {
 
@@ -167,9 +173,10 @@ class MBC_UserImport
    */
   private function createDrupalUser($user) {
 
+    $password = $user->first_name . '-Doer' . rand(1, 1000);
     $post = array(
       'email' => $user->email,
-      'password' => $user->first_name . '-Doer' . rand(1, 1000),
+      'password' => $password,
       'first_name' => $user->first_name,
       "user_registration_source" => 'niche-import-service',
     );
@@ -204,7 +211,7 @@ class MBC_UserImport
     $result = json_decode($jsonResult);
     curl_close($ch);
 
-    return $result;
+    return array($result, $password);
   }
 
   /**
@@ -223,7 +230,7 @@ class MBC_UserImport
    */
   private function userImportProducer($user, $drupalUser) {
 
-    if (isset($user->email)) {
+    if (isset($user->email) && $drupalUser->uid > 0) {
 
       // Config specific to producing a new user for the Message Broker userAPI
       $config = array(
@@ -259,6 +266,14 @@ class MBC_UserImport
             'auto_delete' => getenv("MB_TRANSACTIONAL_QUEUE_AUTO_DELETE"),
             'bindingKey' => getenv("MB_TRANSACTIONAL_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
           ),
+          'mobileCommons' => array(
+            'name' => getenv("MB_MOBILE_COMMONS_QUEUE"),
+            'passive' => getenv("MB_MOBILE_COMMONS_QUEUE_PASSIVE"),
+            'durable' => getenv("MB_MOBILE_COMMONS_QUEUE_DURABLE"),
+            'exclusive' => getenv("MB_MOBILE_COMMONS_QUEUE_EXCLUSIVE"),
+            'auto_delete' => getenv("MB_MOBILE_COMMONS_QUEUE_AUTO_DELETE"),
+            'bindingKey' => getenv("MB_MOBILE_COMMONS_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
+          ),
         ),
         'routingKey' => 'user.registration.transactional',
       );
@@ -267,9 +282,10 @@ class MBC_UserImport
       // Currently supported
       $userDetails = array(
         'email' => $user->email,
+        'password' => $user->password,
         'subscribed' => 1,
-        'drupal_uid' => $drupalUser->uid,
-        'drupal_register_timestamp' => $drupalUser->created,
+        'uid' => $drupalUser->uid,
+        'activity_timestamp' => $drupalUser->created,
         'activity' => 'user_import-niche',
       );
 
@@ -277,10 +293,10 @@ class MBC_UserImport
         $userDetails['birthdate_timestamp'] = strtotime($user->birthdate);
       }
       if (isset($user->first_name) && $user->first_name != '') {
-        $userDetails['first_name'] = $user->first_name;
+        $userDetails['merge_vars']['FNAME'] = $user->first_name;
       }
       if (isset($user->last_name) && $user->last_name != '') {
-        $userDetails['last_name'] = $user->last_name;
+        $userDetails['merge_vars']['LNAME'] = $user->last_name;
       }
       if (isset($user->address1) && $user->address1 != '') {
         $userDetails['address1'] = $user->address1;
@@ -292,7 +308,7 @@ class MBC_UserImport
         $userDetails['city'] = $user->city;
       }
       if (isset($user->state) && $user->state != '') {
-        $userDetails['city'] = $user->state;
+        $userDetails['state'] = $user->state;
       }
       if (isset($user->zip) && $user->zip != '') {
         $userDetails['zip'] = $user->zip;
