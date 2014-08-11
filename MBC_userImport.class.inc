@@ -102,14 +102,21 @@ class MBC_UserImport
       // Create Drupal user - https://github.com/DoSomething/dosomething/wiki/API#users
       list($drupalUser, $user->password) = $this->createDrupalUser($user);
 
-      // With new user account details from Drupal site:
-      // Send transaction to transactionalExchange for distribution to
-      // transactionalQueue, userAPIRegistrationQueue and userRegistrationQueue
-      $status = $this->userImportProducer($user, $drupalUser);
+      if (isset($drupalUser->uid)) {
 
-      // Ack message
-      if ($status == TRUE) {
-        $this->channel->basic_ack($deliveryTags[$userCount]);
+        // With new user account details from Drupal site:
+        // Send transaction to transactionalExchange for distribution to
+        // transactionalQueue, userAPIRegistrationQueue and userRegistrationQueue
+        $status = $this->userImportProducer($user, $drupalUser);
+
+        // Ack message
+        if ($status == TRUE) {
+          $this->channel->basic_ack($deliveryTags[$userCount]);
+        }
+
+      }
+      else {
+        echo 'Failed to create Drupal user account.', "\n";
       }
 
     }
@@ -190,7 +197,7 @@ class MBC_UserImport
     $ch = curl_init();
     $drupalAPIUrl = getenv('DS_DRUPAL_API_HOST');
     $port = getenv('DS_DRUPAL_API_PORT');
-    if (isset($port)) {
+    if ($port != 0) {
       $drupalAPIUrl .= ':' . $port;
     }
     $drupalAPIUrl .= '/api/v1/users';
@@ -282,7 +289,6 @@ class MBC_UserImport
       // Currently supported
       $userDetails = array(
         'email' => $user->email,
-        'password' => $user->password,
         'subscribed' => 1,
         'uid' => $drupalUser->uid,
         'activity_timestamp' => $drupalUser->created,
@@ -297,6 +303,9 @@ class MBC_UserImport
       }
       if (isset($user->last_name) && $user->last_name != '') {
         $userDetails['merge_vars']['LNAME'] = $user->last_name;
+      }
+      if (isset($user->password) && $user->password != '') {
+        $userDetails['merge_vars']['PASSWORD'] = $user->password;
       }
       if (isset($user->address1) && $user->address1 != '') {
         $userDetails['address1'] = $user->address1;
