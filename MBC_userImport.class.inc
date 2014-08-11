@@ -100,7 +100,7 @@ class MBC_UserImport
     foreach ($targetUsers as $userCount => $user) {
 
       // Create Drupal user - https://github.com/DoSomething/dosomething/wiki/API#users
-      $drupalUser = $this->createDrupalUser($user);
+      list($drupalUser, $user->password) = $this->createDrupalUser($user);
 
       // With new user account details from Drupal site:
       // Send transaction to transactionalExchange for distribution to
@@ -173,9 +173,10 @@ class MBC_UserImport
    */
   private function createDrupalUser($user) {
 
+    $password = $user->first_name . '-Doer' . rand(1, 1000);
     $post = array(
       'email' => $user->email,
-      'password' => $user->first_name . '-Doer' . rand(1, 1000),
+      'password' => $password,
       'first_name' => $user->first_name,
       "user_registration_source" => 'niche-import-service',
     );
@@ -210,7 +211,7 @@ class MBC_UserImport
     $result = json_decode($jsonResult);
     curl_close($ch);
 
-    return $result;
+    return array($result, $password);
   }
 
   /**
@@ -229,7 +230,7 @@ class MBC_UserImport
    */
   private function userImportProducer($user, $drupalUser) {
 
-    if (isset($user->email)) {
+    if (isset($user->email) && $drupalUser->uid > 0) {
 
       // Config specific to producing a new user for the Message Broker userAPI
       $config = array(
@@ -283,8 +284,8 @@ class MBC_UserImport
         'email' => $user->email,
         'password' => $user->password,
         'subscribed' => 1,
-        'drupal_uid' => $drupalUser->uid,
-        'drupal_register_timestamp' => $drupalUser->created,
+        'uid' => $drupalUser->uid,
+        'activity_timestamp' => $drupalUser->created,
         'activity' => 'user_import-niche',
       );
 
@@ -292,10 +293,10 @@ class MBC_UserImport
         $userDetails['birthdate_timestamp'] = strtotime($user->birthdate);
       }
       if (isset($user->first_name) && $user->first_name != '') {
-        $userDetails['first_name'] = $user->first_name;
+        $userDetails['merge_vars']['FNAME'] = $user->first_name;
       }
       if (isset($user->last_name) && $user->last_name != '') {
-        $userDetails['last_name'] = $user->last_name;
+        $userDetails['merge_vars']['LNAME'] = $user->last_name;
       }
       if (isset($user->address1) && $user->address1 != '') {
         $userDetails['address1'] = $user->address1;
@@ -307,7 +308,7 @@ class MBC_UserImport
         $userDetails['city'] = $user->city;
       }
       if (isset($user->state) && $user->state != '') {
-        $userDetails['city'] = $user->state;
+        $userDetails['state'] = $user->state;
       }
       if (isset($user->zip) && $user->zip != '') {
         $userDetails['zip'] = $user->zip;
