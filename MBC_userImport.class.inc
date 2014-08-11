@@ -79,7 +79,7 @@ class MBC_UserImport
     $connection = $this->messageBroker->connection;
     $this->channel = $connection->channel();
 
-    $this->statHat = new StatHat($settings['stathat_ez_key'], 'mbp-user-import:');
+    $this->statHat = new StatHat($settings['stathat_ez_key'], 'mbc-user-import:');
     $this->statHat->setIsProduction(FALSE);
   }
 
@@ -286,7 +286,7 @@ class MBC_UserImport
         'subscribed' => 1,
         'uid' => $drupalUser->uid,
         'activity_timestamp' => $drupalUser->created,
-        'activity' => 'user_import-niche',
+        'activity' => 'user_welcome-niche',
       );
 
       if (isset($user->birthdate) && $user->birthdate != 0) {
@@ -363,6 +363,34 @@ class MBC_UserImport
       $this->statHat->clearAddedStatNames();
       $this->statHat->addStatName('create-mb-user-api queue entry');
       $this->statHat->reportCount(1);
+      
+      // Create second transactional email message to inform the user of their temp password
+            // Config specific to producing a new user for the Message Broker userAPI
+      $config = array(
+        'exchange' => array(
+          'name' => getenv("MB_TRANSACTIONAL_EXCHANGE"),
+          'type' => getenv("MB_TRANSACTIONAL_EXCHANGE_TYPE"),
+          'passive' => getenv("MB_TRANSACTIONAL_EXCHANGE_PASSIVE"),
+          'durable' => getenv("MB_TRANSACTIONAL_EXCHANGE_DURABLE"),
+          'auto_delete' => getenv("MB_TRANSACTIONAL_EXCHANGE_AUTO_DELETE"),
+        ),
+        'queue' => array(
+          'transactional' => array(
+            'name' => getenv("MB_TRANSACTIONAL_QUEUE"),
+            'passive' => getenv("MB_TRANSACTIONAL_QUEUE_PASSIVE"),
+            'durable' => getenv("MB_TRANSACTIONAL_QUEUE_DURABLE"),
+            'exclusive' => getenv("MB_TRANSACTIONAL_QUEUE_EXCLUSIVE"),
+            'auto_delete' => getenv("MB_TRANSACTIONAL_QUEUE_AUTO_DELETE"),
+            'bindingKey' => getenv("MB_TRANSACTIONAL_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
+          ),
+        ),
+        'routingKey' => 'user.import.transactional',
+      );
+      $mbUserAPI = new MessageBroker($this->credentials, $config);
+      
+      $userDetails['activity'] = 'user_password-niche';
+      $payload = serialize($userDetails);
+      $mbUserAPI->publishMessage($payload);
     }
     else {
       $status = FALSE;
