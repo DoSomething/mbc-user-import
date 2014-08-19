@@ -106,8 +106,8 @@ class MBC_UserImport
 
         if (isset($drupalUser->uid)) {
 
-          // With new user account details from Drupal site:
-          // Send transaction to transactionalExchange for distribution to
+          // With new user account details from the Drupal site:
+          // - Send transaction to transactionalExchange for distribution to
           // transactionalQueue, userAPIRegistrationQueue and userRegistrationQueue
           $status = $this->userImportProducer($user, $drupalUser);
 
