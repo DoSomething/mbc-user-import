@@ -59,6 +59,10 @@ $config = array(
   'routingKey' => getenv("MB_USER_IMPORT_ROUTING_KEY"),
 );
 $settings = array(
+  'mailchimp_apikey' => getenv("MAILCHIMP_APIKEY"),
+  'mailchimp_list_id' => getenv("MAILCHIMP_LIST_ID"),
+  'mobile_commons_username' => getenv("MOBILE_COMMONS_USER"),
+  'mobile_commons_password' => getenv("MOBILE_COMMONS_PASSWORD"),
   'stathat_ez_key' => getenv("STATHAT_EZKEY"),
 );
 

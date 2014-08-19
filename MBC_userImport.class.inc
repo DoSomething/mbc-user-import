@@ -52,9 +52,16 @@ class MBC_UserImport
   private $statHat;
 
   /**
+   * Keep track of the existing email and mobile accounts.
+   *
+   * @var array
+   */
+  private $existingStatus;
+
+  /**
    * The number of queue entries to process in each session
    */
-  const BATCH_SIZE = 5;
+  const BATCH_SIZE = 500;
 
   /**
    * Constructor for MBC_UserImport
@@ -70,8 +77,9 @@ class MBC_UserImport
    */
   public function __construct($credentials, $config, $settings) {
 
-    $this->config = $config;
     $this->credentials = $credentials;
+    $this->config = $config;
+    $this->settings = $settings;
 
     // Setup RabbitMQ connection
     $this->messageBroker = new MessageBroker($credentials, $config);
@@ -81,6 +89,8 @@ class MBC_UserImport
 
     $this->statHat = new StatHat($settings['stathat_ez_key'], 'mbc-user-import:');
     $this->statHat->setIsProduction(FALSE);
+
+    $this->existingStatus = array();
   }
 
   /*
@@ -127,6 +137,9 @@ class MBC_UserImport
     else {
       echo 'userImportQueue is empty.', "\n";
     }
+
+    // Log existing email and mobile accounts
+    $this->logExistingAccounts();
 
     echo '------- mbc-user-import->produceUserImport() END: ' . date('D M j G:i:s T Y') . ' -------', "\n";
   }
@@ -194,7 +207,10 @@ class MBC_UserImport
       'first_name' => $user->first_name,
       "user_registration_source" => 'niche-import-service',
     );
-    if (isset($user->birthdate)) {
+    if (isset($user->birthdate) && strpos($user->birthdate, '/') > 0) {
+      $post['birthdate'] = date('Y-m-d', strtotime($user->birthdate));
+    }
+    else {
       $post['birthdate'] = date('Y-m-d', $user->birthdate);
     }
     if (isset($user->last_name)) {
@@ -245,6 +261,9 @@ class MBC_UserImport
   private function userImportProducer($user, $drupalUser) {
 
     if (isset($user->email) && $drupalUser->uid > 0) {
+
+      // Check for existing accounts
+      $this->checkExistingAccount($user);
 
       // Config specific to producing a new user for the Message Broker userAPI
       $config = array(
@@ -413,6 +432,93 @@ class MBC_UserImport
     }
 
     return $status;
+  }
+
+ /*
+  * Check for the existance of email (Mailchimp) and mobile (Mobile Commons)
+  * accounts.
+  *
+  * @param array $user
+  *   Information about a user to be imported into the DoSomething systems.
+  */
+  private function checkExistingAccount($user) {
+
+    // http://apidocs.mailchimp.com/api/2.0/lists/member-info.php
+    $MailChimp = new \Drewm\MailChimp($this->settings['mailchimp_apikey']);
+    $mailchimpStatus = $MailChimp->call("/lists/member-info", array(
+      'id' => $this->settings['mailchimp_list_id'],
+      'emails' => array(
+        array(
+          'email' => $user->email
+        ),
+      )
+    ));
+    if ($mailchimpStatus['success_count'] == 1) {
+      $this->existingStatus[] = array(
+        'type' => 'email',
+        'status' => 'Existing account',
+        'value' => $user->email,
+        'acquired' => $mailchimpStatus['data'][0]['timestamp']
+      );
+    }
+    elseif ($mailchimpStatus == FALSE) {
+      $this->existingStatus[] = array(
+        'type' => 'email',
+        'status' => 'Error',
+        'value' => $user->email,
+        'acquired' => $mailchimpStatus['data'][0]['timestamp']
+      );
+    }
+
+    // https://mobilecommons.zendesk.com/hc/en-us/articles/202052534-REST-API#ProfileSummary
+    $config = array(
+      'username' => $this->settings['mobile_commons_username'],
+      'password' => $this->settings['mobile_commons_password'],
+    );
+    $MobileCommons = new MobileCommons($config);
+    $mobilecommonsStatus = (array)$MobileCommons->profiles_get(array('phone_number' => $user->phone));
+    if (!isset($mobilecommonsStatus['error'])) {
+      $this->existingStatus[] = array(
+        'type' => 'mobile',
+        'error' => 'Unknown',
+        'value' => $user->phone,
+      );
+    }
+
+  }
+
+ /*
+  * Log all existing accounts (email and mobile).
+  */
+  private function logExistingAccounts() {
+
+    $config = array(
+      'exchange' => array(
+        'name' => getenv("MB_USER_IMPORT_LOGGING_EXCHANGE"),
+        'type' => getenv("MB_USER_IMPORT_LOGGING_EXCHANGE_TYPE"),
+        'passive' => getenv("MB_USER_IMPORT_LOGGING_EXCHANGE_PASSIVE"),
+        'durable' => getenv("MB_USER_IMPORT_LOGGING_EXCHANGE_DURABLE"),
+        'auto_delete' => getenv("MB_USER_IMPORT_LOGGING_EXCHANGE_AUTO_DELETE"),
+      ),
+      'queue' => array(
+        'user_import' => array(
+          'name' => getenv("MB_USER_IMPORT_LOGGING_QUEUE"),
+          'passive' => getenv("MB_USER_IMPORT_LOGGING_QUEUE_PASSIVE"),
+          'durable' => getenv("MB_USER_IMPORT_LOGGING_QUEUE_DURABLE"),
+          'exclusive' => getenv("MB_USER_IMPORT_LOGGING_QUEUE_EXCLUSIVE"),
+          'auto_delete' => getenv("MB_USER_IMPORT_LOGGING_QUEUE_AUTO_DELETE"),
+          'bindingKey' => getenv("MB_USER_IMPORT_LOGGING_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
+        ),
+      ),
+    );
+    $mbUserImportLogging = new MessageBroker($this->credentials, $config);
+
+    foreach($this->existingStatus as $existingAccount) {
+      $existingAccount['logged'] = time();
+      $payload = serialize($existingAccount);
+      $mbUserImportLogging->publishMessage($payload);
+    }
+
   }
 
 }
