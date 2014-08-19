@@ -49,6 +49,13 @@ $config = array(
       'bindingKey' => getenv("MB_USER_IMPORT_QUEUE_BINDING_KEY"),
     ),
   ),
+  'consume' => array(
+    'consumer_tag' => getenv("MB_USER_IMPORT_CONSUME_TAG"),
+    'no_local' => getenv("MB_USER_IMPORT_CONSUME_NO_LOCAL"),
+    'no_ack' => getenv("MB_USER_IMPORT_CONSUME_NO_ACK"),
+    'exclusive' => getenv("MB_USER_IMPORT_CONSUME_EXCLUSIVE"),
+    'nowait' => getenv("MB_USER_IMPORT_CONSUME_NOWAIT"),
+  ),
   'routingKey' => getenv("MB_USER_IMPORT_ROUTING_KEY"),
 );
 $settings = array(

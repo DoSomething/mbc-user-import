@@ -97,28 +97,35 @@ class MBC_UserImport
     $deliveryTags = array();
     list($targetUsers, $deliveryTags) = $this->consumeUserImportQueue();
 
-    foreach ($targetUsers as $userCount => $user) {
+    if (count ($targetUsers) > 0) {
 
-      // Create Drupal user - https://github.com/DoSomething/dosomething/wiki/API#users
-      list($drupalUser, $user->password) = $this->createDrupalUser($user);
+      foreach ($targetUsers as $userCount => $user) {
 
-      if (isset($drupalUser->uid)) {
+        // Create Drupal user - https://github.com/DoSomething/dosomething/wiki/API#users
+        list($drupalUser, $user->password) = $this->createDrupalUser($user);
 
-        // With new user account details from Drupal site:
-        // Send transaction to transactionalExchange for distribution to
-        // transactionalQueue, userAPIRegistrationQueue and userRegistrationQueue
-        $status = $this->userImportProducer($user, $drupalUser);
+        if (isset($drupalUser->uid)) {
 
-        // Ack message
-        if ($status == TRUE) {
-          $this->channel->basic_ack($deliveryTags[$userCount]);
+          // With new user account details from Drupal site:
+          // Send transaction to transactionalExchange for distribution to
+          // transactionalQueue, userAPIRegistrationQueue and userRegistrationQueue
+          $status = $this->userImportProducer($user, $drupalUser);
+
+          // Ack message
+          if ($status == TRUE) {
+            $this->channel->basic_ack($deliveryTags[$userCount]);
+          }
+
+        }
+        else {
+          echo 'Failed to create Drupal user account.', "\n";
         }
 
       }
-      else {
-        echo 'Failed to create Drupal user account.', "\n";
-      }
 
+    }
+    else {
+      echo 'userImportQueue is empty.', "\n";
     }
 
     echo '------- mbc-user-import->produceUserImport() END: ' . date('D M j G:i:s T Y') . ' -------', "\n";
