@@ -308,7 +308,8 @@ class MBC_UserImport
             'bindingKey' => getenv("MB_MOBILE_COMMONS_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
           ),
         ),
-        'routingKey' => 'user.registration.transactional',
+//        'routingKey' => 'user.registration.transactional',
+        'routingKey' => 'user.registration.import',
       );
       $mbUserAPI = new MessageBroker($this->credentials, $config);
 
@@ -398,9 +399,9 @@ class MBC_UserImport
       $this->statHat->clearAddedStatNames();
       $this->statHat->addStatName('create-mb-user-api queue entry');
       $this->statHat->reportCount(1);
-      
+
       // Create second transactional email message to inform the user of their temp password
-            // Config specific to producing a new user for the Message Broker userAPI
+      // Config specific to producing a new user for the Message Broker userAPI
       $config = array(
         'exchange' => array(
           'name' => getenv("MB_TRANSACTIONAL_EXCHANGE"),
@@ -422,7 +423,7 @@ class MBC_UserImport
         'routingKey' => 'user.import.transactional',
       );
       $mbUserAPI = new MessageBroker($this->credentials, $config);
-      
+
       $userDetails['activity'] = 'user_password-niche';
       $payload = serialize($userDetails);
       $mbUserAPI->publishMessage($payload);
@@ -454,19 +455,17 @@ class MBC_UserImport
       )
     ));
     if ($mailchimpStatus['success_count'] == 1) {
-      $this->existingStatus[] = array(
-        'type' => 'email',
-        'status' => 'Existing account',
-        'value' => $user->email,
+      $existingStatus = array(
+        'email-status' => 'Existing account',
+        'email' => $user->email,
         'acquired' => $mailchimpStatus['data'][0]['timestamp']
       );
     }
     elseif ($mailchimpStatus == FALSE) {
-      $this->existingStatus[] = array(
-        'type' => 'email',
-        'status' => 'Error',
-        'value' => $user->email,
-        'acquired' => $mailchimpStatus['data'][0]['timestamp']
+      $existingStatus = array(
+        'email-status' => 'Error',
+        'email' => $user->email,
+        'email-acquired' => $mailchimpStatus['data'][0]['timestamp']
       );
     }
 
@@ -478,13 +477,13 @@ class MBC_UserImport
     $MobileCommons = new MobileCommons($config);
     $mobilecommonsStatus = (array)$MobileCommons->profiles_get(array('phone_number' => $user->phone));
     if (!isset($mobilecommonsStatus['error'])) {
-      $this->existingStatus[] = array(
-        'type' => 'mobile',
-        'error' => 'Unknown',
-        'value' => $user->phone,
-      );
+      $existingStatus['mobile-error'] = 'Existing account';
+      $existingStatus['mobile'] = $user->phone;
     }
 
+    if (isset($existingStatus['email']) || isset($existingStatus['mobile'])) {
+      $this->existingStatus[] = $existingStatus;
+    }
   }
 
  /*
