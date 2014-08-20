@@ -257,7 +257,7 @@ class MBC_UserImport
    */
   private function userImportProducer($user, $drupalUser) {
 
-    if ((isset($user->email) && $drupalUser->uid > 0) ||
+    if ((isset($user->email) && isset($drupalUser->uid) && $drupalUser->uid > 0) ||
        (isset($drupalUser->errorInfo[2]) && strpos($drupalUser->errorInfo[2], 'Duplicate entry') !== FALSE)) {
 
       // Check for existing accounts
@@ -315,11 +315,13 @@ class MBC_UserImport
       $userDetails = array(
         'email' => $user->email,
         'subscribed' => 1,
-        'uid' => $drupalUser->uid,
         'activity_timestamp' => $drupalUser->created,
         'activity' => 'user_welcome-niche',
       );
 
+      if (isset($drupalUser->uid) && $drupalUser->uid != '') {
+        $userDetails['uid'] = $drupalUser->uid;
+      }
       if (isset($user->birthdate) && $user->birthdate != 0) {
         $userDetails['birthdate_timestamp'] = strtotime($user->birthdate);
       }
