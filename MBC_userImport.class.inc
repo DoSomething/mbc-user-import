@@ -155,9 +155,6 @@ class MBC_UserImport
     list($this->channel, $status) = $this->messageBroker->setupQueue($this->config['queue'][0]['name'], $this->channel);
     $userImportCount = $status[1];
 
-    echo('userImportCount: ' . $userImportCount . "\n");
-    echo('BATCH_SIZE: ' . self::BATCH_SIZE . "\n");
-
     $userImportDetails = '';
     $deliveryTags = array();
     $targetUsers = array();
@@ -207,11 +204,8 @@ class MBC_UserImport
     if (isset($user->birthdate) && strpos($user->birthdate, '/') > 0) {
       $post['birthdate'] = date('Y-m-d', strtotime($user->birthdate));
     }
-    elseif (isset($user->birthdate) &&  is_int($user->birthdate)) {
+    elseif (isset($user->birthdate) && is_int($user->birthdate)) {
       $post['birthdate'] = date('Y-m-d', $user->birthdate);
-    }
-    else {
-      $post['birthdate'] = '';
     }
     if (isset($user->last_name)) {
       $post['last_name'] = $user->last_name;
@@ -394,8 +388,6 @@ class MBC_UserImport
       if (isset($user->role) && $user->role != '') {
         $userDetails['role'] = $user->role;
       }
-
-      echo('payload: ' . $payload . "\n\n");
 
       $payload = serialize($userDetails);
       $mbUserAPI->publishMessage($payload);
