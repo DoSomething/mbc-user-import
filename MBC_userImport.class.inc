@@ -434,6 +434,9 @@ class MBC_UserImport
         $this->statHat->reportCount(1);
 
       }
+      else {
+        echo($user->email . ' already a Drupal user.' . "\n");
+      }
     }
     else {
       $status = FALSE;
