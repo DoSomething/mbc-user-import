@@ -312,12 +312,17 @@ class MBC_UserImport
       $userDetails = array(
         'email' => $user->email,
         'subscribed' => 1,
-        'activity_timestamp' => $drupalUser->created,
         'activity' => 'user_welcome-niche',
       );
 
       if (isset($drupalUser->uid) && $drupalUser->uid != '') {
         $userDetails['uid'] = $drupalUser->uid;
+      }
+      if (isset($drupalUser->created) && $drupalUser->created) {
+        $userDetails['activity_timestamp'] = $drupalUser->created;
+      }
+      else {
+        $userDetails['activity_timestamp'] = time();
       }
       if (isset($user->birthdate) && $user->birthdate != 0) {
         $userDetails['birthdate_timestamp'] = strtotime($user->birthdate);
