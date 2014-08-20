@@ -129,6 +129,7 @@ class MBC_UserImport
         }
         else {
           echo 'Failed to create Drupal user account.', "\n";
+          echo('User: ' . print_r($user, TRUE) . "\n");
         }
 
       }
