@@ -114,27 +114,15 @@ class MBC_UserImport
         // Create Drupal user - https://github.com/DoSomething/dosomething/wiki/API#users
         list($drupalUser, $user->password) = $this->createDrupalUser($user);
 
-        if (isset($drupalUser->uid)) {
+        // With new user account details from the Drupal site:
+        // - Send transaction to transactionalExchange for distribution to
+        // transactionalQueue, userAPIRegistrationQueue and userRegistrationQueue
+        // - could return error when user already exists based on supplied email
+        $status = $this->userImportProducer($user, $drupalUser);
 
-          // With new user account details from the Drupal site:
-          // - Send transaction to transactionalExchange for distribution to
-          // transactionalQueue, userAPIRegistrationQueue and userRegistrationQueue
-          $status = $this->userImportProducer($user, $drupalUser);
-
-          // Ack message
-          if ($status == TRUE) {
-            $this->channel->basic_ack($deliveryTags[$userCount]);
-          }
-
-        }
-        elseif (isset($drupalUser->errorInfo[2]) && strpos($drupalUser->errorInfo[2], 'Duplicate entry') !== FALSE) {
-          // Existing Drupal user, skip password transactional email message - adjust routingKey to exclude *.*.transactional
-          echo('===============' . "\n" . 'user: ' . print_r($user, TRUE) . "\n" . '----------------' . "\n");
-          echo('result: ' . print_r($drupalUser, TRUE) . '=================' . "\n\n");
-        }
-        else {
-          echo 'Failed to create Drupal user account.', "\n";
-          echo('User: ' . print_r($user, TRUE) . "\n");
+        // Ack message
+        if ($status == TRUE) {
+          $this->channel->basic_ack($deliveryTags[$userCount]);
         }
 
       }
@@ -269,7 +257,8 @@ class MBC_UserImport
    */
   private function userImportProducer($user, $drupalUser) {
 
-    if (isset($user->email) && $drupalUser->uid > 0) {
+    if ((isset($user->email) && $drupalUser->uid > 0) ||
+       (isset($drupalUser->errorInfo[2]) && strpos($drupalUser->errorInfo[2], 'Duplicate entry') !== FALSE)) {
 
       // Check for existing accounts
       $this->checkExistingAccount($user);
@@ -411,35 +400,41 @@ class MBC_UserImport
 
       // Create second transactional email message to inform the user of their temp password
       // Config specific to producing a new user for the Message Broker userAPI
-      $config = array(
-        'exchange' => array(
-          'name' => getenv("MB_TRANSACTIONAL_EXCHANGE"),
-          'type' => getenv("MB_TRANSACTIONAL_EXCHANGE_TYPE"),
-          'passive' => getenv("MB_TRANSACTIONAL_EXCHANGE_PASSIVE"),
-          'durable' => getenv("MB_TRANSACTIONAL_EXCHANGE_DURABLE"),
-          'auto_delete' => getenv("MB_TRANSACTIONAL_EXCHANGE_AUTO_DELETE"),
-        ),
-        'queue' => array(
-          'transactional' => array(
-            'name' => getenv("MB_TRANSACTIONAL_QUEUE"),
-            'passive' => getenv("MB_TRANSACTIONAL_QUEUE_PASSIVE"),
-            'durable' => getenv("MB_TRANSACTIONAL_QUEUE_DURABLE"),
-            'exclusive' => getenv("MB_TRANSACTIONAL_QUEUE_EXCLUSIVE"),
-            'auto_delete' => getenv("MB_TRANSACTIONAL_QUEUE_AUTO_DELETE"),
-            'bindingKey' => getenv("MB_TRANSACTIONAL_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
+
+      // Skip if the Drupal user account already existed
+      if (!(isset($drupalUser->errorInfo[2]) && strpos($drupalUser->errorInfo[2], 'Duplicate entry') !== FALSE)) {
+
+        $config = array(
+          'exchange' => array(
+            'name' => getenv("MB_TRANSACTIONAL_EXCHANGE"),
+            'type' => getenv("MB_TRANSACTIONAL_EXCHANGE_TYPE"),
+            'passive' => getenv("MB_TRANSACTIONAL_EXCHANGE_PASSIVE"),
+            'durable' => getenv("MB_TRANSACTIONAL_EXCHANGE_DURABLE"),
+            'auto_delete' => getenv("MB_TRANSACTIONAL_EXCHANGE_AUTO_DELETE"),
           ),
-        ),
-        'routingKey' => 'user.import.transactional',
-      );
-      $mbUserAPI = new MessageBroker($this->credentials, $config);
+          'queue' => array(
+            'transactional' => array(
+              'name' => getenv("MB_TRANSACTIONAL_QUEUE"),
+              'passive' => getenv("MB_TRANSACTIONAL_QUEUE_PASSIVE"),
+              'durable' => getenv("MB_TRANSACTIONAL_QUEUE_DURABLE"),
+              'exclusive' => getenv("MB_TRANSACTIONAL_QUEUE_EXCLUSIVE"),
+              'auto_delete' => getenv("MB_TRANSACTIONAL_QUEUE_AUTO_DELETE"),
+              'bindingKey' => getenv("MB_TRANSACTIONAL_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
+            ),
+          ),
+          'routingKey' => 'user.import.transactional',
+        );
+        $mbUserAPI = new MessageBroker($this->credentials, $config);
 
-      $userDetails['activity'] = 'user_password-niche';
-      $payload = serialize($userDetails);
-      $mbUserAPI->publishMessage($payload);
+        $userDetails['activity'] = 'user_password-niche';
+        $payload = serialize($userDetails);
+        $mbUserAPI->publishMessage($payload);
 
-      $this->statHat->clearAddedStatNames();
-      $this->statHat->addStatName('Sent user_password-niche');
-      $this->statHat->reportCount(1);
+        $this->statHat->clearAddedStatNames();
+        $this->statHat->addStatName('Sent user_password-niche');
+        $this->statHat->reportCount(1);
+
+      }
     }
     else {
       $status = FALSE;
