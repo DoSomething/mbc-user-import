@@ -127,6 +127,11 @@ class MBC_UserImport
           }
 
         }
+        elseif (isset($drupalUser->errorInfo[2]) && strpos($drupalUser->errorInfo[2], 'Duplicate entry') !== FALSE) {
+          // Existing Drupal user, skip password transactional email message - adjust routingKey to exclude *.*.transactional
+          echo('===============' . "\n" . 'user: ' . print_r($user, TRUE) . "\n" . '----------------' . "\n");
+          echo('result: ' . print_r($drupalUser, TRUE) . '=================' . "\n\n");
+        }
         else {
           echo 'Failed to create Drupal user account.', "\n";
           echo('User: ' . print_r($user, TRUE) . "\n");
@@ -211,8 +216,11 @@ class MBC_UserImport
     if (isset($user->birthdate) && strpos($user->birthdate, '/') > 0) {
       $post['birthdate'] = date('Y-m-d', strtotime($user->birthdate));
     }
-    else {
+    elseif (isset($user->birthdate) &&  is_int($user->birthdate)) {
       $post['birthdate'] = date('Y-m-d', $user->birthdate);
+    }
+    else {
+      $post['birthdate'] = '';
     }
     if (isset($user->last_name)) {
       $post['last_name'] = $user->last_name;
@@ -398,7 +406,7 @@ class MBC_UserImport
       $status = TRUE;
 
       $this->statHat->clearAddedStatNames();
-      $this->statHat->addStatName('create-mb-user-api queue entry');
+      $this->statHat->addStatName('Distribute user import - user.registration.transactional');
       $this->statHat->reportCount(1);
 
       // Create second transactional email message to inform the user of their temp password
@@ -428,6 +436,10 @@ class MBC_UserImport
       $userDetails['activity'] = 'user_password-niche';
       $payload = serialize($userDetails);
       $mbUserAPI->publishMessage($payload);
+
+      $this->statHat->clearAddedStatNames();
+      $this->statHat->addStatName('Sent user_password-niche');
+      $this->statHat->reportCount(1);
     }
     else {
       $status = FALSE;
