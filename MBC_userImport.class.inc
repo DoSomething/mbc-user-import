@@ -303,8 +303,8 @@ class MBC_UserImport
             'bindingKey' => getenv("MB_MOBILE_COMMONS_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
           ),
         ),
-//        'routingKey' => 'user.registration.transactional',
-        'routingKey' => 'user.registration.import',
+        'routingKey' => 'user.registration.transactional',
+//        'routingKey' => 'user.registration.import',
       );
       $mbUserAPI = new MessageBroker($this->credentials, $config);
 
