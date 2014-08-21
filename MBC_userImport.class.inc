@@ -240,7 +240,7 @@ class MBC_UserImport
     curl_close($ch);
 
     $this->statHat->clearAddedStatNames();
-    $this->statHat->addStatName('createDrupalUser');
+    $this->statHat->addStatName('Requested createDrupalUser');
     $this->statHat->reportCount(1);
 
     return array($result, $password);
@@ -448,6 +448,9 @@ class MBC_UserImport
       }
       else {
         echo($user->email . ' already a Drupal user.' . "\n");
+        $this->statHat->clearAddedStatNames();
+        $this->statHat->addStatName('Existing DrupalUser');
+        $this->statHat->reportCount(1);
       }
     }
     else {
