@@ -105,6 +105,7 @@ class MBC_UserImport
 
     $targetUsers = array();
     $deliveryTags = array();
+
     list($targetUsers, $deliveryTags) = $this->consumeUserImportQueue();
 
     if (count ($targetUsers) > 0) {
@@ -123,6 +124,9 @@ class MBC_UserImport
         // Ack message
         if ($status == TRUE) {
           $this->channel->basic_ack($deliveryTags[$userCount]);
+          $this->statHat->clearAddedStatNames();
+          $this->statHat->addStatName('consumeCSVImport');
+          $this->statHat->reportCount(1);
         }
 
       }
@@ -235,6 +239,10 @@ class MBC_UserImport
     $result = json_decode($jsonResult);
     curl_close($ch);
 
+    $this->statHat->clearAddedStatNames();
+    $this->statHat->addStatName('Requested createDrupalUser');
+    $this->statHat->reportCount(1);
+
     return array($result, $password);
   }
 
@@ -304,7 +312,6 @@ class MBC_UserImport
           ),
         ),
         'routingKey' => 'user.registration.transactional',
-//        'routingKey' => 'user.registration.import',
       );
       $mbUserAPI = new MessageBroker($this->credentials, $config);
 
@@ -441,6 +448,9 @@ class MBC_UserImport
       }
       else {
         echo($user->email . ' already a Drupal user.' . "\n");
+        $this->statHat->clearAddedStatNames();
+        $this->statHat->addStatName('Existing DrupalUser');
+        $this->statHat->reportCount(1);
       }
     }
     else {
@@ -459,6 +469,7 @@ class MBC_UserImport
   */
   private function checkExistingAccount($user) {
 
+    $this->statHat->clearAddedStatNames();
     // http://apidocs.mailchimp.com/api/2.0/lists/member-info.php
     $MailChimp = new \Drewm\MailChimp($this->settings['mailchimp_apikey']);
     $mailchimpStatus = $MailChimp->call("/lists/member-info", array(
@@ -475,6 +486,8 @@ class MBC_UserImport
         'email' => $user->email,
         'acquired' => $mailchimpStatus['data'][0]['timestamp']
       );
+      $this->statHat->addStatName('Mailchimp - existing account');
+      $this->statHat->reportCount(1);
     }
     elseif ($mailchimpStatus == FALSE) {
       $existingStatus = array(
@@ -482,8 +495,11 @@ class MBC_UserImport
         'email' => $user->email,
         'email-acquired' => $mailchimpStatus['data'][0]['timestamp']
       );
+      $this->statHat->addStatName('Mailchimp - error');
+      $this->statHat->reportCount(1);
     }
 
+    $this->statHat->clearAddedStatNames();
     // https://mobilecommons.zendesk.com/hc/en-us/articles/202052534-REST-API#ProfileSummary
     $config = array(
       'username' => $this->settings['mobile_commons_username'],
@@ -494,6 +510,8 @@ class MBC_UserImport
     if (!isset($mobilecommonsStatus['error'])) {
       $existingStatus['mobile-error'] = 'Existing account';
       $existingStatus['mobile'] = $user->phone;
+      $this->statHat->addStatName('Mobile Commons - existing account');
+      $this->statHat->reportCount(1);
     }
 
     if (isset($existingStatus['email']) || isset($existingStatus['mobile'])) {
