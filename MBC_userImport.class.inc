@@ -448,6 +448,7 @@ class MBC_UserImport
       }
       else {
         echo($user->email . ' already a Drupal user.' . "\n");
+        $this->existingStatus[] = $drupalUser;
         $this->statHat->clearAddedStatNames();
         $this->statHat->addStatName('Existing DrupalUser');
         $this->statHat->reportCount(1);
