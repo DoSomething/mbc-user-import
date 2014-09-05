@@ -263,7 +263,7 @@ class MBC_UserImport
   private function userImportProducer($user, $drupalUser) {
 
     if ((isset($user->email) && isset($drupalUser->uid) && $drupalUser->uid > 0) ||
-       (isset($drupalUser->errorInfo[2]) && strpos($drupalUser->errorInfo[2], 'Duplicate entry') !== FALSE)) {
+       (isset($drupalUser[0]) && strpos($drupalUser[0], 'is registered') !== FALSE)) {
 
       // Check for existing accounts
       $this->checkExistingAccount($user);
@@ -413,7 +413,7 @@ class MBC_UserImport
       // Config specific to producing a new user for the Message Broker userAPI
 
       // Skip if the Drupal user account already existed
-      if (!(isset($drupalUser->errorInfo[2]) && strpos($drupalUser->errorInfo[2], 'Duplicate entry') !== FALSE)) {
+      if (!(isset($drupalUser[0]) && strpos($drupalUser[0], 'is registered') !== FALSE)) {
 
         $config = array(
           'exchange' => array(
@@ -448,7 +448,7 @@ class MBC_UserImport
       }
       else {
         echo($user->email . ' already a Drupal user.' . "\n");
-        $this->existingStatus[] = $drupalUser;
+        $this->existingStatus[] = $drupalUser[0];
         $this->statHat->clearAddedStatNames();
         $this->statHat->addStatName('Existing DrupalUser');
         $this->statHat->reportCount(1);
