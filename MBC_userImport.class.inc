@@ -413,7 +413,7 @@ class MBC_UserImport
       // Config specific to producing a new user for the Message Broker userAPI
 
       // Skip if the Drupal user account already existed
-      if (!(isset($drupalUser[0]) && strpos($drupalUser[0], 'is registered') !== FALSE)) {
+      if (!(is_array($drupalUser) && strpos($drupalUser[0], 'is registered') !== FALSE)) {
 
         $config = array(
           'exchange' => array(
