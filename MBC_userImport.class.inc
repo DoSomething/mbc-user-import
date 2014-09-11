@@ -527,7 +527,7 @@ class MBC_UserImport
     }
 
     // Existing account details found, include log entry basics
-    if (count($this->existingStatus[$this->existingStatusCount]) > 0) {
+    if (isset($this->existingStatus[$this->existingStatusCount]) && count($this->existingStatus[$this->existingStatusCount]) > 0) {
       $this->existingStatus[$this->existingStatusCount]['log-type'] = '';
       $this->existingStatus[$this->existingStatusCount]['log-timestamp'] = time();
       $this->existingStatusCount++;
