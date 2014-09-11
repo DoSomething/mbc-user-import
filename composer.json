@@ -1,7 +1,7 @@
 {
     "name": "https://github.com/DoSomething/mbc-user-import",
     "type": "project",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "description": "A consummer app for the Message Broker system that creates entries in other user creation related queues. Each entry is an import of users from niche.com that have expressed an interest in DoSomething scholorships.",
     "keywords": ["message broker"],
     "homepage": "https://github.com/DoSomething/mbc-user-import",
