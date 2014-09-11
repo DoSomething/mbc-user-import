@@ -252,6 +252,7 @@ class MBC_UserImport
     $this->statHat->reportCount(1);
 
     if (is_array($result)) {
+      echo($user->email . ' already a Drupal user.' . "\n");
       $this->existingStatus[$this->existingStatusCount]['drupal-uid'] = substr($result[0], strpos($result[0], 'User uid') + 9);
       $this->existingStatus[$this->existingStatusCount]['drupal-email'] = substr($result[0], strpos($result[0], 'mail') + 5, (strpos($result[0], 'is') - 1) - (strpos($result[0], 'mail') + 5));
     }
@@ -460,7 +461,6 @@ class MBC_UserImport
 
       }
       else {
-        echo($user->email . ' already a Drupal user.' . "\n");
         $this->statHat->clearAddedStatNames();
         $this->statHat->addStatName('Existing DrupalUser');
         $this->statHat->reportCount(1);
@@ -495,6 +495,7 @@ class MBC_UserImport
     ));
 
     if (isset($mailchimpStatus['data']) && count($mailchimpStatus['data']) > 0) {
+      echo($user->email . ' already a Mailchimp user.' . "\n");
       $this->existingStatus[$this->existingStatusCount]['email-status'] = 'Existing account';
       $this->existingStatus[$this->existingStatusCount]['email'] = $user->email;
       $this->existingStatus[$this->existingStatusCount]['email-acquired'] = $mailchimpStatus['data'][0]['timestamp'];
@@ -519,6 +520,7 @@ class MBC_UserImport
       $MobileCommons = new MobileCommons($config);
       $mobilecommonsStatus = (array)$MobileCommons->profiles_get(array('phone_number' => $user->phone));
       if (!isset($mobilecommonsStatus['error'])) {
+        echo($user->phone . ' already a Mobile Commons user.' . "\n");
         $this->existingStatus[$this->existingStatusCount]['mobile-error'] = 'Existing account';
         $this->existingStatus[$this->existingStatusCount]['mobile'] = $user->phone;
         $this->statHat->addStatName('Mobile Commons - existing account');
@@ -530,6 +532,7 @@ class MBC_UserImport
     if (isset($this->existingStatus[$this->existingStatusCount]) && count($this->existingStatus[$this->existingStatusCount]) > 0) {
       $this->existingStatus[$this->existingStatusCount]['log-type'] = '';
       $this->existingStatus[$this->existingStatusCount]['log-timestamp'] = time();
+      echo('------' . "\n\n");
       $this->existingStatusCount++;
     }
 
