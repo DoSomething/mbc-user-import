@@ -95,7 +95,7 @@ class MBC_UserImport
     $this->channel = $connection->channel();
 
     $this->statHat = new StatHat($settings['stathat_ez_key'], 'mbc-user-import:');
-    $this->statHat->setIsProduction(TRUE);
+    $this->statHat->setIsProduction(FALSE);
 
     $this->existingStatus = array();
     $this->existingStatusCount = 0;
@@ -530,7 +530,9 @@ class MBC_UserImport
 
     // Existing account details found, include log entry basics
     if (isset($this->existingStatus[$this->existingStatusCount]) && count($this->existingStatus[$this->existingStatusCount]) > 0) {
-      $this->existingStatus[$this->existingStatusCount]['log-type'] = '';
+      // @todo: Add logic to support different log-type values when other
+      // sources for users are used
+      $this->existingStatus[$this->existingStatusCount]['log-type'] = 'user-import-niche';
       $this->existingStatus[$this->existingStatusCount]['log-timestamp'] = time();
       echo('------' . "\n\n");
       $this->existingStatusCount++;
