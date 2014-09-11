@@ -59,6 +59,13 @@ class MBC_UserImport
   private $existingStatus;
 
   /**
+   * Keep track of the number of entries in the CSV that had existing entries.
+   *
+   * @var integer
+   */
+  private $existingStatusCount;
+
+  /**
    * The number of queue entries to process in each session
    */
   const BATCH_SIZE = 3000;
@@ -91,6 +98,7 @@ class MBC_UserImport
     $this->statHat->setIsProduction(TRUE);
 
     $this->existingStatus = array();
+    $this->existingStatusCount = 0;
   }
 
   /*
@@ -242,6 +250,11 @@ class MBC_UserImport
     $this->statHat->clearAddedStatNames();
     $this->statHat->addStatName('Requested createDrupalUser');
     $this->statHat->reportCount(1);
+
+    if (is_array($result)) {
+      $this->existingStatus[$this->existingStatusCount]['drupal-uid'] = substr($result[0], strpos($result[0], 'User uid') + 9);
+      $this->existingStatus[$this->existingStatusCount]['drupal-email'] = substr($result[0], strpos($result[0], 'mail') + 5, (strpos($result[0], 'is') - 1) - (strpos($result[0], 'mail') + 5));
+    }
 
     return array($result, $password);
   }
@@ -448,7 +461,6 @@ class MBC_UserImport
       }
       else {
         echo($user->email . ' already a Drupal user.' . "\n");
-        $this->existingStatus[] = $drupalUser[0];
         $this->statHat->clearAddedStatNames();
         $this->statHat->addStatName('Existing DrupalUser');
         $this->statHat->reportCount(1);
@@ -462,7 +474,7 @@ class MBC_UserImport
   }
 
  /*
-  * Check for the existance of email (Mailchimp) and mobile (Mobile Commons)
+  * Check for the existence of email (Mailchimp) and mobile (Mobile Commons)
   * accounts.
   *
   * @param array $user
@@ -476,48 +488,51 @@ class MBC_UserImport
     $mailchimpStatus = $MailChimp->call("/lists/member-info", array(
       'id' => $this->settings['mailchimp_list_id'],
       'emails' => array(
-        array(
+        0 => array(
           'email' => $user->email
-        ),
+        )
       )
     ));
-    if ($mailchimpStatus['success_count'] == 1) {
-      $existingStatus = array(
-        'email-status' => 'Existing account',
-        'email' => $user->email,
-        'acquired' => $mailchimpStatus['data'][0]['timestamp']
-      );
+
+    if (isset($mailchimpStatus['data']) && count($mailchimpStatus['data']) > 0) {
+      $this->existingStatus[$this->existingStatusCount]['email-status'] = 'Existing account';
+      $this->existingStatus[$this->existingStatusCount]['email'] = $user->email;
+      $this->existingStatus[$this->existingStatusCount]['email-acquired'] = $mailchimpStatus['data'][0]['timestamp'];
       $this->statHat->addStatName('Mailchimp - existing account');
       $this->statHat->reportCount(1);
     }
     elseif ($mailchimpStatus == FALSE) {
-      $existingStatus = array(
-        'email-status' => 'Error',
-        'email' => $user->email,
-        'email-acquired' => $mailchimpStatus['data'][0]['timestamp']
-      );
+      $this->existingStatus[$this->existingStatusCount]['email-status'] = 'Mailchimp Error';
+      $this->existingStatus[$this->existingStatusCount]['email'] = $user->email;
+      $this->existingStatus[$this->existingStatusCount]['email-acquired'] = $mailchimpStatus['data'][0]['timestamp'];
       $this->statHat->addStatName('Mailchimp - error');
       $this->statHat->reportCount(1);
     }
 
-    $this->statHat->clearAddedStatNames();
-    // https://mobilecommons.zendesk.com/hc/en-us/articles/202052534-REST-API#ProfileSummary
-    $config = array(
-      'username' => $this->settings['mobile_commons_username'],
-      'password' => $this->settings['mobile_commons_password'],
-    );
-    $MobileCommons = new MobileCommons($config);
-    $mobilecommonsStatus = (array)$MobileCommons->profiles_get(array('phone_number' => $user->phone));
-    if (!isset($mobilecommonsStatus['error'])) {
-      $existingStatus['mobile-error'] = 'Existing account';
-      $existingStatus['mobile'] = $user->phone;
-      $this->statHat->addStatName('Mobile Commons - existing account');
-      $this->statHat->reportCount(1);
+    if (isset($user->phone)) {
+      $this->statHat->clearAddedStatNames();
+      // https://mobilecommons.zendesk.com/hc/en-us/articles/202052534-REST-API#ProfileSummary
+      $config = array(
+        'username' => $this->settings['mobile_commons_username'],
+        'password' => $this->settings['mobile_commons_password'],
+      );
+      $MobileCommons = new MobileCommons($config);
+      $mobilecommonsStatus = (array)$MobileCommons->profiles_get(array('phone_number' => $user->phone));
+      if (!isset($mobilecommonsStatus['error'])) {
+        $this->existingStatus[$this->existingStatusCount]['mobile-error'] = 'Existing account';
+        $this->existingStatus[$this->existingStatusCount]['mobile'] = $user->phone;
+        $this->statHat->addStatName('Mobile Commons - existing account');
+        $this->statHat->reportCount(1);
+      }
     }
 
-    if (isset($existingStatus['email']) || isset($existingStatus['mobile'])) {
-      $this->existingStatus[] = $existingStatus;
+    // Existing account details found, include log entry basics
+    if (count($this->existingStatus[$this->existingStatusCount]) > 0) {
+      $this->existingStatus[$this->existingStatusCount]['log-type'] = '';
+      $this->existingStatus[$this->existingStatusCount]['log-timestamp'] = time();
+      $this->existingStatusCount++;
     }
+
   }
 
  /*
@@ -547,7 +562,6 @@ class MBC_UserImport
     $mbUserImportLogging = new MessageBroker($this->credentials, $config);
 
     foreach($this->existingStatus as $existingAccount) {
-      $existingAccount['logged'] = time();
       $payload = serialize($existingAccount);
       $mbUserImportLogging->publishMessage($payload);
     }
