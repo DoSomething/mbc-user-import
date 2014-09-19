@@ -266,7 +266,7 @@ class MBC_UserImport
   private function userImportProducer($user, $drupalUser) {
 
     if ((isset($user->email) && isset($drupalUser->uid) && $drupalUser->uid > 0) ||
-       (isset($drupalUser[0]) && strpos($drupalUser[0], 'is registered') !== FALSE)) {
+       (is_array($drupalUser) && isset($drupalUser[0]) && strpos($drupalUser[0], 'is registered') !== FALSE)) {
 
       // Check for existing accounts
       $this->checkExistingAccount($user);
