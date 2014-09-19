@@ -510,7 +510,12 @@ class MBC_UserImport
       $mobilecommonsStatus = (array)$MobileCommons->profiles_get(array('phone_number' => $user->phone));
       if (!isset($mobilecommonsStatus['error'])) {
         echo($user->phone . ' already a Mobile Commons user.' . "\n");
-        $this->existingStatus['mobile-error'] = 'Existing account';
+        if (isset($mobilecommonsStatus['profile']->status)) {
+          $this->existingStatus['mobile-error'] = (string)$mobilecommonsStatus['profile']->status;
+        }
+        else {
+          $this->existingStatus['mobile-error'] = 'Existing account';
+        }
         $this->existingStatus['mobile'] = $user->phone;
         $this->statHat->addStatName('Mobile Commons - existing account');
         $this->statHat->reportCount(1);
