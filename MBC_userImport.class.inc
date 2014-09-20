@@ -108,7 +108,7 @@ class MBC_UserImport
 
     list($targetUsers, $deliveryTags) = $this->consumeUserImportQueue();
 
-    if (count ($targetUsers) > 0) {
+    if (count($targetUsers) > 0) {
 
       foreach ($targetUsers as $userCount => $user) {
 
@@ -494,7 +494,6 @@ class MBC_UserImport
     elseif ($mailchimpStatus == FALSE) {
       $this->existingStatus['email-status'] = 'Mailchimp Error';
       $this->existingStatus['email'] = $user->email;
-      $this->existingStatus['email-acquired'] = $mailchimpStatus['data'][0]['timestamp'];
       $this->statHat->addStatName('Mailchimp - error');
       $this->statHat->reportCount(1);
     }
@@ -512,6 +511,7 @@ class MBC_UserImport
         echo($user->phone . ' already a Mobile Commons user.' . "\n");
         if (isset($mobilecommonsStatus['profile']->status)) {
           $this->existingStatus['mobile-error'] = (string)$mobilecommonsStatus['profile']->status;
+          $this->existingStatus['mobile-acquired'] = (string)$mobilecommonsStatus['profile']->created_at;
         }
         else {
           $this->existingStatus['mobile-error'] = 'Existing account';
