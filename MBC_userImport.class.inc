@@ -164,11 +164,17 @@ class MBC_UserImport
     while ($userImportCount > 0 && $processedCount < self::BATCH_SIZE) {
 
       $userImportDetails = $this->channel->basic_get($this->config['queue'][0]['name']);
-      $deliveryTags[] = $userImportDetails->delivery_info['delivery_tag'];
-      $targetUsers[$processedCount] = json_decode($userImportDetails->body);
+      if (is_object($userImportDetails)) {
+        $deliveryTags[] = $userImportDetails->delivery_info['delivery_tag'];
+        $targetUsers[$processedCount] = json_decode($userImportDetails->body);
 
-      $userImportCount--;
-      $processedCount++;
+        $userImportCount--;
+        $processedCount++;
+      }
+      else {
+        echo 'consumeUserImportQueue: ERROR - basic_get failed to get message from: ' . $this->config['queue'][0]['name'], "\n";
+      }
+
     }
 
     if (count($targetUsers) > 0) {
