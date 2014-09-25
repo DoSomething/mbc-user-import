@@ -478,53 +478,71 @@ class MBC_UserImport
   private function checkExistingAccount($user) {
 
     $this->statHat->clearAddedStatNames();
-    // http://apidocs.mailchimp.com/api/2.0/lists/member-info.php
-    $MailChimp = new \Drewm\MailChimp($this->settings['mailchimp_apikey']);
-    $mailchimpStatus = $MailChimp->call("/lists/member-info", array(
-      'id' => $this->settings['mailchimp_list_id'],
-      'emails' => array(
-        0 => array(
-          'email' => $user->email
-        )
-      )
-    ));
 
-    if (isset($mailchimpStatus['data']) && count($mailchimpStatus['data']) > 0) {
-      echo($user->email . ' already a Mailchimp user.' . "\n");
-      $this->existingStatus['email-status'] = 'Existing account';
-      $this->existingStatus['email'] = $user->email;
-      $this->existingStatus['email-acquired'] = $mailchimpStatus['data'][0]['timestamp'];
-      $this->statHat->addStatName('Mailchimp - existing account');
-      $this->statHat->reportCount(1);
+    try {
+
+      // http://apidocs.mailchimp.com/api/2.0/lists/member-info.php
+      $MailChimp = new \Drewm\MailChimp($this->settings['mailchimp_apikey']);
+      $mailchimpStatus = $MailChimp->call("/lists/member-info", array(
+        'id' => $this->settings['mailchimp_list_id'],
+        'emails' => array(
+          0 => array(
+            'email' => $user->email
+          )
+        )
+      ));
+
+      if (isset($mailchimpStatus['data']) && count($mailchimpStatus['data']) > 0) {
+        echo($user->email . ' already a Mailchimp user.' . "\n");
+        $this->existingStatus['email-status'] = 'Existing account';
+        $this->existingStatus['email'] = $user->email;
+        $this->existingStatus['email-acquired'] = $mailchimpStatus['data'][0]['timestamp'];
+        $this->statHat->addStatName('Mailchimp - existing account');
+        $this->statHat->reportCount(1);
+      }
+      elseif ($mailchimpStatus == FALSE) {
+        $this->existingStatus['email-status'] = 'Mailchimp Error';
+        $this->existingStatus['email'] = $user->email;
+        $this->statHat->addStatName('Mailchimp - error');
+        $this->statHat->reportCount(1);
+      }
+
     }
-    elseif ($mailchimpStatus == FALSE) {
-      $this->existingStatus['email-status'] = 'Mailchimp Error';
-      $this->existingStatus['email'] = $user->email;
-      $this->statHat->addStatName('Mailchimp - error');
-      $this->statHat->reportCount(1);
+    catch (Exception $e) {
+      trigger_error('mbc-user-import ERROR - Failed to submit "/lists/member-info" to Mailchimp API for ' . $user->email . '.', E_USER_WARNING);
+      $this->statHat->addStatName('checkExistingAccount Mailchimp /lists/member-info  error');
     }
 
     if (isset($user->phone)) {
-      $this->statHat->clearAddedStatNames();
-      // https://mobilecommons.zendesk.com/hc/en-us/articles/202052534-REST-API#ProfileSummary
-      $config = array(
-        'username' => $this->settings['mobile_commons_username'],
-        'password' => $this->settings['mobile_commons_password'],
-      );
-      $MobileCommons = new MobileCommons($config);
-      $mobilecommonsStatus = (array)$MobileCommons->profiles_get(array('phone_number' => $user->phone));
-      if (!isset($mobilecommonsStatus['error'])) {
-        echo($user->phone . ' already a Mobile Commons user.' . "\n");
-        if (isset($mobilecommonsStatus['profile']->status)) {
-          $this->existingStatus['mobile-error'] = (string)$mobilecommonsStatus['profile']->status;
-          $this->existingStatus['mobile-acquired'] = (string)$mobilecommonsStatus['profile']->created_at;
+
+      try {
+
+        $this->statHat->clearAddedStatNames();
+        // https://mobilecommons.zendesk.com/hc/en-us/articles/202052534-REST-API#ProfileSummary
+        $config = array(
+          'username' => $this->settings['mobile_commons_username'],
+          'password' => $this->settings['mobile_commons_password'],
+        );
+        $MobileCommons = new MobileCommons($config);
+        $mobilecommonsStatus = (array)$MobileCommons->profiles_get(array('phone_number' => $user->phone));
+        if (!isset($mobilecommonsStatus['error'])) {
+          echo($user->phone . ' already a Mobile Commons user.' . "\n");
+          if (isset($mobilecommonsStatus['profile']->status)) {
+            $this->existingStatus['mobile-error'] = (string)$mobilecommonsStatus['profile']->status;
+            $this->existingStatus['mobile-acquired'] = (string)$mobilecommonsStatus['profile']->created_at;
+          }
+          else {
+            $this->existingStatus['mobile-error'] = 'Existing account';
+          }
+          $this->existingStatus['mobile'] = $user->phone;
+          $this->statHat->addStatName('Mobile Commons - existing account');
+          $this->statHat->reportCount(1);
         }
-        else {
-          $this->existingStatus['mobile-error'] = 'Existing account';
-        }
-        $this->existingStatus['mobile'] = $user->phone;
-        $this->statHat->addStatName('Mobile Commons - existing account');
-        $this->statHat->reportCount(1);
+
+      }
+      catch (Exception $e) {
+        trigger_error('mbc-user-import ERROR - Failed to submit "profiles_get" to Mobile Commons API for ' . $user->phone . '.', E_USER_WARNING);
+        $this->statHat->addStatName('checkExistingAccount Mobile Commons profiles_get()  error');
       }
     }
 
