@@ -61,7 +61,7 @@ class MBC_UserImport
   /**
    * The number of queue entries to process in each session
    */
-  const BATCH_SIZE = 3000;
+  const BATCH_SIZE = 5000;
 
   /**
    * Constructor for MBC_UserImport
@@ -529,6 +529,9 @@ class MBC_UserImport
           echo($user->phone . ' already a Mobile Commons user.' . "\n");
           if (isset($mobilecommonsStatus['profile']->status)) {
             $this->existingStatus['mobile-error'] = (string)$mobilecommonsStatus['profile']->status;
+
+            // opted_out_source
+
             $this->existingStatus['mobile-acquired'] = (string)$mobilecommonsStatus['profile']->created_at;
           }
           else {
