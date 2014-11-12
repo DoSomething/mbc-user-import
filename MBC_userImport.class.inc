@@ -324,11 +324,15 @@ class MBC_UserImport
       );
       $mbUserAPI = new MessageBroker($this->credentials, $config);
 
-      // Currently supported
+      // Required
       $userDetails = array(
         'email' => $user->email,
         'subscribed' => 1,
         'activity' => 'user_welcome-niche',
+        'email_template' => 'mb-user-welcome-niche-com-v1-0-0-1',
+        'tags' => array(
+          0 => 'user_welcome-niche',
+        ),
       );
 
       if (isset($drupalUser->uid) && $drupalUser->uid != '') {
@@ -447,6 +451,8 @@ class MBC_UserImport
         $mbUserAPI = new MessageBroker($this->credentials, $config);
 
         $userDetails['activity'] = 'user_password-niche';
+        $userDetails['email_template'] = 'mb-user-signup-niche-com-v1-0-0-1';
+        $userDetails['tags'][] = 'user_password-niche';
         $payload = serialize($userDetails);
         $mbUserAPI->publishMessage($payload);
 
