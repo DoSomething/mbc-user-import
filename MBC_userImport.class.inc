@@ -598,7 +598,7 @@ class MBC_UserImport
     $mbEistingUserImportLogging = new MessageBroker($this->credentials, $config);
 
     $payload = serialize($this->existingStatus);
-    // $mbEistingUserImportLogging->publishMessage($payload);
+    $mbEistingUserImportLogging->publishMessage($payload);
 
     // Reset for next round
     $this->existingStatus = array();
@@ -608,7 +608,7 @@ class MBC_UserImport
    * Gather current member count via Drupal end point.
    * https://github.com/DoSomething/dosomething/wiki/API#get-member-count
    *
-   *  POST https://beta.dosomething.org/api/v1/get_member_count
+   *  POST https://beta.dosomething.org/api/v1/users/get_member_count
    *
    * @return string $memberCount
    *   The string supplied byt the Drupal endpoint /get_member_count.
@@ -622,7 +622,7 @@ class MBC_UserImport
     if ($port != 0) {
       $drupalAPIUrl .= ':' . $port;
     }
-    $drupalAPIUrl .= '/api/v1/get_member_count';
+    $drupalAPIUrl .= '/api/v1/users/get_member_count';
     $post = array();
 
     curl_setopt($ch, CURLOPT_URL, $drupalAPIUrl);
