@@ -617,7 +617,6 @@ class MBC_UserImport
 
     $ch = curl_init();
     $drupalAPIUrl = getenv('DS_DRUPAL_API_HOST');
-    // $drupalAPIUrl = 'https://beta.dosomething.org';
     $port = getenv('DS_DRUPAL_API_PORT');
     if ($port != 0) {
       $drupalAPIUrl .= ':' . $port;
