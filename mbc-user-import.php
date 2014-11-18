@@ -67,11 +67,11 @@ $settings = array(
 );
 
 
-echo '------- mbc-user-import START: ' . date('D M j G:i:s T Y') . ' -------', "\n";
+echo '------- mbc-user-import START: ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;
 
 // Kick off
 // Create entries in userImportQueue based on csv.
 $mbcUserImport = new MBC_UserImport($credentials, $config, $settings);
 $mbcUserImport->produceUserImport();
 
-echo '------- mbc-user-import END: ' . date('D M j G:i:s T Y') . ' -------', "\n";
+echo '------- mbc-user-import END: ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;

@@ -88,7 +88,7 @@ class MBC_UserImport
     $this->channel = $connection->channel();
 
     $this->statHat = new StatHat($settings['stathat_ez_key'], 'mbc-user-import:');
-    $this->statHat->setIsProduction(TRUE);
+    $this->statHat->setIsProduction(FALSE);
 
     $this->existingStatus = array();
   }
@@ -101,7 +101,7 @@ class MBC_UserImport
    */
   public function produceUserImport() {
 
-    echo '------- mbc-user-import->produceUserImport() START: ' . date('D M j G:i:s T Y') . ' -------', "\n";
+    echo '------- mbc-user-import->produceUserImport() START: ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;
 
     $targetUsers = array();
     $deliveryTags = array();
@@ -133,10 +133,10 @@ class MBC_UserImport
 
     }
     else {
-      echo 'userImportQueue is empty.', "\n";
+      echo 'userImportQueue is empty.', PHP_EOL;
     }
 
-    echo '------- mbc-user-import->produceUserImport() END: ' . date('D M j G:i:s T Y') . ' -------', "\n";
+    echo '------- mbc-user-import->produceUserImport() END: ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;
   }
 
   /**
@@ -172,7 +172,7 @@ class MBC_UserImport
         $processedCount++;
       }
       else {
-        echo 'consumeUserImportQueue: ERROR - basic_get failed to get message from: ' . $this->config['queue'][0]['name'], "\n";
+        echo 'consumeUserImportQueue: ERROR - basic_get failed to get message from: ' . $this->config['queue'][0]['name'], PHP_EOL;
       }
 
     }
@@ -184,7 +184,7 @@ class MBC_UserImport
       return array($targetUsers, $deliveryTags);
     }
     else {
-      echo '------- mbc-digest-email MBC_UserDigest->consumeUserDigestQueue() - Queue is empty. -  ' . date('D M j G:i:s T Y') . ' -------', "\n";
+      echo '------- mbc-digest-email MBC_UserDigest->consumeUserDigestQueue() - Queue is empty. -  ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;
     }
 
   }
@@ -247,7 +247,7 @@ class MBC_UserImport
     $this->statHat->reportCount(1);
 
     if (is_array($result)) {
-      echo($user->email . ' already a Drupal user.' . "\n");
+      echo($user->email . ' already a Drupal user.' . PHP_EOL);
       $this->existingStatus['drupal-uid'] = substr($result[0], strpos($result[0], 'User uid') + 9);
       $this->existingStatus['drupal-email'] = substr($result[0], strpos($result[0], 'mail') + 5, (strpos($result[0], 'is') - 1) - (strpos($result[0], 'mail') + 5));
     }
@@ -333,6 +333,9 @@ class MBC_UserImport
         'tags' => array(
           0 => 'user_welcome-niche',
         ),
+        'merge_vars' => array(
+          'MEMBER_COUNT' => $this->getMemberCount(),
+        )
       );
 
       if (isset($drupalUser->uid) && $drupalUser->uid != '') {
@@ -499,7 +502,7 @@ class MBC_UserImport
       ));
 
       if (isset($mailchimpStatus['data']) && count($mailchimpStatus['data']) > 0) {
-        echo($user->email . ' already a Mailchimp user.' . "\n");
+        echo($user->email . ' already a Mailchimp user.' . PHP_EOL);
         $this->existingStatus['email-status'] = 'Existing account';
         $this->existingStatus['email'] = $user->email;
         $this->existingStatus['email-acquired'] = $mailchimpStatus['data'][0]['timestamp'];
@@ -532,7 +535,7 @@ class MBC_UserImport
         $MobileCommons = new MobileCommons($config);
         $mobilecommonsStatus = (array)$MobileCommons->profiles_get(array('phone_number' => $user->phone));
         if (!isset($mobilecommonsStatus['error'])) {
-          echo($user->phone . ' already a Mobile Commons user.' . "\n");
+          echo($user->phone . ' already a Mobile Commons user.' . PHP_EOL);
           if (isset($mobilecommonsStatus['profile']->status)) {
             $this->existingStatus['mobile-error'] = (string)$mobilecommonsStatus['profile']->status;
 
@@ -561,7 +564,7 @@ class MBC_UserImport
       // sources for users are used
       $this->existingStatus['log-type'] = 'user-import-niche';
       $this->existingStatus['log-timestamp'] = time();
-      echo('------' . "\n\n");
+      echo('------' . PHP_EOL . PHP_EOL);
       $this->logExistingAccounts();
     }
 
@@ -595,10 +598,57 @@ class MBC_UserImport
     $mbEistingUserImportLogging = new MessageBroker($this->credentials, $config);
 
     $payload = serialize($this->existingStatus);
-    $mbEistingUserImportLogging->publishMessage($payload);
+    // $mbEistingUserImportLogging->publishMessage($payload);
 
     // Reset for next round
     $this->existingStatus = array();
+  }
+
+  /**
+   * Gather current member count via Drupal end point.
+   * https://github.com/DoSomething/dosomething/wiki/API#get-member-count
+   *
+   *  POST https://beta.dosomething.org/api/v1/get_member_count
+   *
+   * @return string $memberCount
+   *   The string supplied byt the Drupal endpoint /get_member_count.
+   */
+  private function getMemberCount() {
+
+    $ch = curl_init();
+    $drupalAPIUrl = getenv('DS_DRUPAL_API_HOST');
+    // $drupalAPIUrl = 'https://beta.dosomething.org';
+    $port = getenv('DS_DRUPAL_API_PORT');
+    if ($port != 0) {
+      $drupalAPIUrl .= ':' . $port;
+    }
+    $drupalAPIUrl .= '/api/v1/get_member_count';
+    $post = array();
+
+    curl_setopt($ch, CURLOPT_URL, $drupalAPIUrl);
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($post));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($ch, CURLOPT_HTTPHEADER,
+      array(
+        'Content-type: application/json',
+        'Accept: application/json'
+      )
+    );
+    curl_setopt($ch,CURLOPT_CONNECTTIMEOUT, 3);
+    curl_setopt($ch,CURLOPT_TIMEOUT, 20);
+    $jsonResult = curl_exec($ch);
+    $result = json_decode($jsonResult);
+    curl_close($ch);
+
+    if (isset($result->readable)) {
+      $memberCount = $result->readable;
+    }
+    else {
+      $memberCount = NULL;
+    }
+    return $memberCount;
+
   }
 
 }
