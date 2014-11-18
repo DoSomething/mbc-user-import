@@ -88,7 +88,7 @@ class MBC_UserImport
     $this->channel = $connection->channel();
 
     $this->statHat = new StatHat($settings['stathat_ez_key'], 'mbc-user-import:');
-    $this->statHat->setIsProduction(FALSE);
+    $this->statHat->setIsProduction(TRUE);
 
     $this->existingStatus = array();
   }
