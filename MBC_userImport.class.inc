@@ -610,21 +610,43 @@ class MBC_UserImport
    *
    *  POST https://beta.dosomething.org/api/v1/users/get_member_count
    *
-   * @return string $memberCount
+   * @return string $memberCountFormatted
    *   The string supplied byt the Drupal endpoint /get_member_count.
    */
   private function getMemberCount() {
 
-    $ch = curl_init();
-    $drupalAPIUrl = getenv('DS_DRUPAL_API_HOST');
+    $curlUrl = getenv('DS_DRUPAL_API_HOST');
     $port = getenv('DS_DRUPAL_API_PORT');
     if ($port != 0) {
-      $drupalAPIUrl .= ':' . $port;
+      $curlUrl .= ':' . $port;
     }
-    $drupalAPIUrl .= '/api/v1/users/get_member_count';
+    $curlUrl .= '/api/v1/users/get_member_count';
+
+    // $post value sent in cURL call intentionally empty due to the endpoint
+    // expecting POST rather than GET where there's no POST values expected.
     $post = array();
 
-    curl_setopt($ch, CURLOPT_URL, $drupalAPIUrl);
+    $result = curlPOST($curlUrl, $post);
+    if (isset($result->readable)) {
+      $memberCountFormatted = $result->readable;
+    }
+    else {
+      $memberCountFormatted = NULL;
+    }
+    return $memberCountFormatted;
+
+  }
+
+  /**
+   * cURL POSTs
+   *
+   * @return object $result
+   *   The results retruned from the cURL call.
+   */
+  private function curlPOST($curlUrl, $post) {
+
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $curlUrl);
     curl_setopt($ch, CURLOPT_POST, 1);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($post));
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
@@ -640,14 +662,5 @@ class MBC_UserImport
     $result = json_decode($jsonResult);
     curl_close($ch);
 
-    if (isset($result->readable)) {
-      $memberCount = $result->readable;
-    }
-    else {
-      $memberCount = NULL;
-    }
-    return $memberCount;
-
-  }
-
+    return $result;
 }
