@@ -626,7 +626,7 @@ class MBC_UserImport
     // expecting POST rather than GET where there's no POST values expected.
     $post = array();
 
-    $result = curlPOST($curlUrl, $post);
+    $result = $this->curlPOST($curlUrl, $post);
     if (isset($result->readable)) {
       $memberCountFormatted = $result->readable;
     }
