@@ -663,4 +663,6 @@ class MBC_UserImport
     curl_close($ch);
 
     return $result;
+  }
+
 }
