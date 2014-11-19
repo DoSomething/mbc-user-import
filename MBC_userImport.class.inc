@@ -455,7 +455,7 @@ class MBC_UserImport
 
         $userDetails['activity'] = 'user_password-niche';
         $userDetails['email_template'] = 'mb-user-signup-niche-com-v1-0-0-1';
-        $userDetails['tags'][] = 'user_password-niche';
+        $userDetails['tags'][0] = 'user_password-niche';
         $payload = serialize($userDetails);
         $mbUserAPI->publishMessage($payload);
 
