@@ -1,5 +1,6 @@
 <?php
 
+use DoSomething\MB_Toolbox\MB_Toolbox;
 use DoSomething\MBStatTracker\StatHat;
 
 /**
@@ -87,6 +88,8 @@ class MBC_UserImport
     $connection = $this->messageBroker->connection;
     $this->channel = $connection->channel();
 
+    $this->toolbox = new MB_Toolbox($settings);
+    $this->memberCount = $this->toolbox->getDSMemberCount();
     $this->statHat = new StatHat($settings['stathat_ez_key'], 'mbc-user-import:');
     $this->statHat->setIsProduction(TRUE);
 
@@ -113,7 +116,7 @@ class MBC_UserImport
       foreach ($targetUsers as $userCount => $user) {
 
         // Create Drupal user - https://github.com/DoSomething/dosomething/wiki/API#users
-        list($drupalUser, $user->password) = $this->createDrupalUser($user);
+        list($drupalUser, $user->password) = $this->toolbox->createDrupalUser($user);
 
         // With new user account details from the Drupal site:
         // - Send transaction to transactionalExchange for distribution to
@@ -334,7 +337,7 @@ class MBC_UserImport
           0 => 'user_welcome-niche',
         ),
         'merge_vars' => array(
-          'MEMBER_COUNT' => $this->getMemberCount(),
+          'MEMBER_COUNT' => $this->memberCount,
         )
       );
 
@@ -602,67 +605,6 @@ class MBC_UserImport
 
     // Reset for next round
     $this->existingStatus = array();
-  }
-
-  /**
-   * Gather current member count via Drupal end point.
-   * https://github.com/DoSomething/dosomething/wiki/API#get-member-count
-   *
-   *  POST https://beta.dosomething.org/api/v1/users/get_member_count
-   *
-   * @return string $memberCountFormatted
-   *   The string supplied byt the Drupal endpoint /get_member_count.
-   */
-  private function getMemberCount() {
-
-    $curlUrl = getenv('DS_DRUPAL_API_HOST');
-    $port = getenv('DS_DRUPAL_API_PORT');
-    if ($port != 0) {
-      $curlUrl .= ':' . $port;
-    }
-    $curlUrl .= '/api/v1/users/get_member_count';
-
-    // $post value sent in cURL call intentionally empty due to the endpoint
-    // expecting POST rather than GET where there's no POST values expected.
-    $post = array();
-
-    $result = $this->curlPOST($curlUrl, $post);
-    if (isset($result->readable)) {
-      $memberCountFormatted = $result->readable;
-    }
-    else {
-      $memberCountFormatted = NULL;
-    }
-    return $memberCountFormatted;
-
-  }
-
-  /**
-   * cURL POSTs
-   *
-   * @return object $result
-   *   The results retruned from the cURL call.
-   */
-  private function curlPOST($curlUrl, $post) {
-
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $curlUrl);
-    curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($post));
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-    curl_setopt($ch, CURLOPT_HTTPHEADER,
-      array(
-        'Content-type: application/json',
-        'Accept: application/json'
-      )
-    );
-    curl_setopt($ch,CURLOPT_CONNECTTIMEOUT, 3);
-    curl_setopt($ch,CURLOPT_TIMEOUT, 20);
-    $jsonResult = curl_exec($ch);
-    $result = json_decode($jsonResult);
-    curl_close($ch);
-
-    return $result;
   }
 
 }
