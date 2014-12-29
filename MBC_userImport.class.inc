@@ -125,8 +125,9 @@ class MBC_UserImport
 
         // With new user account details from the Drupal site:
         // - Send transaction to transactionalExchange for distribution to
-        // transactionalQueue, userAPIRegistrationQueue and userRegistrationQueue
-        // - could return error when user already exists based on supplied email
+        //   transactionalQueue, userAPIRegistrationQueue and userRegistrationQueue
+        // - could return array rather than user object when user already exists
+        //   based on supplied email. Existing Drupal accounts will be logged.
         $status = $this->userImportProducer($user, $drupalUser);
 
         // Ack message
@@ -203,7 +204,6 @@ class MBC_UserImport
    *
    * @param array $user
    *   Details about the user based on the import data.
-   *
    * @param array $drupalUser
    *   Details about the Drupal user based on the account created from the API
    *   call to /api/v1/users.
@@ -216,8 +216,8 @@ class MBC_UserImport
     if ((isset($user->email) && isset($drupalUser->uid) && $drupalUser->uid > 0) ||
        (is_array($drupalUser) && isset($drupalUser[0]) && strpos($drupalUser[0], 'is registered') !== FALSE)) {
 
-      // Check for existing accounts
-      $this->checkExistingAccount($user);
+      // Check for existing MailChimp and/or Mobile Commons accounts
+      $this->checkExistingAccount($user, $drupalUser);
 
       // Config specific to producing a new user for the Message Broker userAPI
       $config = array(
@@ -425,8 +425,20 @@ class MBC_UserImport
   *
   * @param array $user
   *   Information about a user to be imported into the DoSomething systems.
+  * @param array $drupalUser
+  *   An object or an array if a new Drupal user account was not created
   */
-  private function checkExistingAccount($user) {
+  private function checkExistingAccount($user, $drupalUser) {
+
+    // Log existing Drupal user
+    if (is_array($drupalUser)) {
+      $this->existingStatus['drupal-uid'] = substr($drupalUser[0], strpos($drupalUser[0], 'User uid') + 9);
+      $this->existingStatus['drupal-email'] = substr($drupalUser[0], strpos($drupalUser[0], 'mail') + 5, (strpos($drupalUser[0], 'is') - 1) - (strpos($drupalUser[0], 'mail') + 5));
+
+      $this->statHat->clearAddedStatNames();
+      $this->statHat->addStatName('Drupal - existing account');
+      $this->statHat->reportCount(1);
+    }
 
     $this->statHat->clearAddedStatNames();
 
