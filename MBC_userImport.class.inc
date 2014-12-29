@@ -111,8 +111,6 @@ class MBC_UserImport
    */
   public function produceUserImport() {
 
-    echo '------- mbc-user-import->produceUserImport() START: ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;
-
     $targetUsers = array();
     $deliveryTags = array();
 
@@ -123,9 +121,7 @@ class MBC_UserImport
       foreach ($targetUsers as $userCount => $user) {
 
         // Create Drupal user - https://github.com/DoSomething/dosomething/wiki/API#users
-        echo '------- mbc-user-import->produceUserImport() toolbox->createDrupalUser: ' . print_r($user, TRUE) . ' -------', PHP_EOL;
         list($drupalUser, $user->password) = $this->toolbox->createDrupalUser($user);
-        echo '------- mbc-user-import->produceUserImport() drupalUser: ' . print_r($drupalUser, TRUE) . ' -------', PHP_EOL;
 
         // With new user account details from the Drupal site:
         // - Send transaction to transactionalExchange for distribution to
@@ -175,7 +171,6 @@ class MBC_UserImport
 
     while ($userImportCount > 0 && $processedCount < self::BATCH_SIZE) {
 
-      echo '------- mbc-user-import->consumeUserImportQueue() userImportCount: ' . $userImportCount . ' -------', PHP_EOL;
       $userImportDetails = $this->channel->basic_get($this->config['queue'][0]['name']);
       if (is_object($userImportDetails)) {
         $deliveryTags[] = $userImportDetails->delivery_info['delivery_tag'];
@@ -217,8 +212,6 @@ class MBC_UserImport
    *   Results for queue submission.
    */
   private function userImportProducer($user, $drupalUser) {
-
-    echo '------- mbc-user-import->userImportProducer() drupalUser: ' . print_r($drupalUser, TRUE) . ' -------', PHP_EOL;
 
     if ((isset($user->email) && isset($drupalUser->uid) && $drupalUser->uid > 0) ||
        (is_array($drupalUser) && isset($drupalUser[0]) && strpos($drupalUser[0], 'is registered') !== FALSE)) {
