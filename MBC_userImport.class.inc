@@ -60,6 +60,13 @@ class MBC_UserImport
   private $existingStatus;
 
   /**
+   * Current DoSomething member count value.
+   *
+   * @var array
+   */
+  private $memberCount;
+
+  /**
    * The number of queue entries to process in each session
    */
   const BATCH_SIZE = 5000;
