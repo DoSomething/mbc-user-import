@@ -123,6 +123,7 @@ class MBC_UserImport
       foreach ($targetUsers as $userCount => $user) {
 
         // Create Drupal user - https://github.com/DoSomething/dosomething/wiki/API#users
+        echo '------- mbc-user-import->produceUserImport() toolbox->createDrupalUser: ' . print_r($user, TRUE) . ' -------', PHP_EOL;
         list($drupalUser, $user->password) = $this->toolbox->createDrupalUser($user);
 
         // With new user account details from the Drupal site:
@@ -173,6 +174,7 @@ class MBC_UserImport
 
     while ($userImportCount > 0 && $processedCount < self::BATCH_SIZE) {
 
+      echo '------- mbc-user-import->consumeUserImportQueue() userImportCount: ' . $userImportCount . ' -------', PHP_EOL;
       $userImportDetails = $this->channel->basic_get($this->config['queue'][0]['name']);
       if (is_object($userImportDetails)) {
         $deliveryTags[] = $userImportDetails->delivery_info['delivery_tag'];
@@ -197,72 +199,6 @@ class MBC_UserImport
       echo '------- mbc-digest-email MBC_UserDigest->consumeUserDigestQueue() - Queue is empty. -  ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;
     }
 
-  }
-
-  /**
-   * Send request to Drupal /api/v1/users end point to create a new user
-   * account.
-   *
-   * @param array $user
-   *   Details about the user to create Drupal account for.
-   *
-   * @return array
-   *   Details of the new user account.
-   */
-  private function createDrupalUser($user) {
-
-    $password = $user->first_name . '-Doer' . rand(1, 1000);
-    $post = array(
-      'email' => $user->email,
-      'password' => $password,
-      'first_name' => $user->first_name,
-      "user_registration_source" => 'niche-import-service',
-    );
-    if (isset($user->birthdate) && strpos($user->birthdate, '/') > 0) {
-      $post['birthdate'] = date('Y-m-d', strtotime($user->birthdate));
-    }
-    elseif (isset($user->birthdate) && is_int($user->birthdate)) {
-      $post['birthdate'] = date('Y-m-d', $user->birthdate);
-    }
-    if (isset($user->last_name)) {
-      $post['last_name'] = $user->last_name;
-    }
-
-    $ch = curl_init();
-    $drupalAPIUrl = getenv('DS_DRUPAL_API_HOST');
-    $port = getenv('DS_DRUPAL_API_PORT');
-    if ($port != 0) {
-      $drupalAPIUrl .= ':' . $port;
-    }
-    $drupalAPIUrl .= '/api/v1/users';
-
-    curl_setopt($ch, CURLOPT_URL, $drupalAPIUrl);
-    curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($post));
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-    curl_setopt($ch, CURLOPT_HTTPHEADER,
-      array(
-        'Content-type: application/json',
-        'Accept: application/json'
-      )
-    );
-    curl_setopt($ch,CURLOPT_CONNECTTIMEOUT, 3);
-    curl_setopt($ch,CURLOPT_TIMEOUT, 20);
-    $jsonResult = curl_exec($ch);
-    $result = json_decode($jsonResult);
-    curl_close($ch);
-
-    $this->statHat->clearAddedStatNames();
-    $this->statHat->addStatName('Requested createDrupalUser');
-    $this->statHat->reportCount(1);
-
-    if (is_array($result)) {
-      echo($user->email . ' already a Drupal user.' . PHP_EOL);
-      $this->existingStatus['drupal-uid'] = substr($result[0], strpos($result[0], 'User uid') + 9);
-      $this->existingStatus['drupal-email'] = substr($result[0], strpos($result[0], 'mail') + 5, (strpos($result[0], 'is') - 1) - (strpos($result[0], 'mail') + 5));
-    }
-
-    return array($result, $password);
   }
 
   /**
