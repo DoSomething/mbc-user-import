@@ -120,15 +120,32 @@ class MBC_UserImport
 
       foreach ($targetUsers as $userCount => $user) {
 
-        // Create Drupal user - https://github.com/DoSomething/dosomething/wiki/API#users
-        list($drupalUser, $user->password) = $this->toolbox->createDrupalUser($user);
+        switch ($user['source']) {
 
-        // With new user account details from the Drupal site:
-        // - Send transaction to transactionalExchange for distribution to
-        //   transactionalQueue, userAPIRegistrationQueue and userRegistrationQueue
-        // - could return array rather than user object when user already exists
-        //   based on supplied email. Existing Drupal accounts will be logged.
-        $status = $this->userImportProducer($user, $drupalUser);
+          case 'niche':
+
+            // Create Drupal user - https://github.com/DoSomething/dosomething/wiki/API#users
+            list($drupalUser, $user->password) = $this->toolbox->createDrupalUser($user);
+
+            // With new user account details from the Drupal site:
+            // - Send transaction to transactionalExchange for distribution to
+            //   transactionalQueue, userAPIRegistrationQueue and userRegistrationQueue
+            // - could return array rather than user object when user already exists
+            //   based on supplied email. Existing Drupal accounts will be logged.
+            $status = $this->userImportProducer_niche($user, $drupalUser);
+
+            break;
+
+          case 'herCampus':
+
+            list($drupalUser, $user->password) = $this->toolbox->createDrupalUser($user);
+
+            // Add to Teen for Jeans campaign
+            $status = $this->userImportProducer_herCampus($user, $drupalUser);
+
+            break;
+
+        }
 
         // Ack message
         if ($status == TRUE) {
@@ -200,7 +217,7 @@ class MBC_UserImport
 
   /**
    * Send transaction to transactionalExchange with user.registration.import
-   * routing key.
+   * routing key for new users from "niche.com".
    *
    * @param array $user
    *   Details about the user based on the import data.
@@ -211,7 +228,7 @@ class MBC_UserImport
    * @return string $status
    *   Results for queue submission.
    */
-  private function userImportProducer($user, $drupalUser) {
+  private function userImportProducer_niche($user, $drupalUser) {
 
     if ((isset($user->email) && isset($drupalUser->uid) && $drupalUser->uid > 0) ||
        (is_array($drupalUser) && isset($drupalUser[0]) && strpos($drupalUser[0], 'is registered') !== FALSE)) {
@@ -417,6 +434,23 @@ class MBC_UserImport
     }
 
     return $status;
+  }
+
+  /**
+   * Send transaction to transactionalExchange with user.registration.import
+   * routing key for new users from "Her Campus".
+   *
+   * @param array $user
+   *   Details about the user based on the import data.
+   * @param array $drupalUser
+   *   Details about the Drupal user based on the account created from the API
+   *   call to /api/v1/users.
+   *
+   * @return string $status
+   *   Results for queue submission.
+   */
+  private function userImportProducer_herCampus($user, $drupalUser) {
+
   }
 
  /*
