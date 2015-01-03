@@ -451,6 +451,16 @@ class MBC_UserImport
    */
   private function userImportProducer_herCampus($user, $drupalUser) {
 
+    if ((isset($user->email) && isset($drupalUser->uid) && $drupalUser->uid > 0) ||
+       (is_array($drupalUser) && isset($drupalUser[0]) && strpos($drupalUser[0], 'is registered') !== FALSE)) {
+
+      // Check for existing MailChimp and/or Mobile Commons accounts
+      $this->checkExistingAccount($user, $drupalUser);
+
+    }
+    else {
+      $status = FALSE;
+    }
   }
 
  /*
@@ -550,7 +560,7 @@ class MBC_UserImport
     if (isset($this->existingStatus) && count($this->existingStatus) > 0) {
       // @todo: Add logic to support different log-type values when other
       // sources for users are used
-      $this->existingStatus['log-type'] = 'user-import-niche';
+      $this->existingStatus['log-type'] = 'user-import-' . $user->source;
       $this->existingStatus['log-timestamp'] = time();
       echo('------' . PHP_EOL . PHP_EOL);
       $this->logExistingAccounts();
