@@ -138,10 +138,17 @@ class MBC_UserImport
 
           case 'herCampus':
 
+            // Create Drupal user - https://github.com/DoSomething/dosomething/wiki/API#users
             list($drupalUser, $user->password) = $this->toolbox->createDrupalUser($user);
 
             // Add to Teen for Jeans campaign
-            $status = $this->userImportProducer_herCampus($user, $drupalUser);
+            $campaignNID = 1141;
+            $signedUp = $this->campaignSignup($campaignNID, $drupalUser->uid);
+
+            if ($signedUp) {
+              $status = $this->userImportProducer_herCampus($user, $drupalUser);
+            }
+
 
             break;
 
@@ -461,6 +468,26 @@ class MBC_UserImport
     else {
       $status = FALSE;
     }
+  }
+
+  /**
+   * Sign up user ID (UID) to campaign.
+   *
+   * https://github.com/DoSomething/dosomething/wiki/API#campaign-signup
+   * https://www.dosomething.org/api/v1/campaigns/[nid]/signup
+   *
+   * @param integer $campaignNID
+   *   The unique node ID from the Drupal site that identifies the target
+   *   campaign to sign the user up to.
+   * @param array $drupalUID
+   *   The user ID (UID) of the Drupal user account to create a campaign
+   *   signup for.
+   *
+   * @return string $status
+   *   Results for queue submission.
+   */
+  private function campaignSignup($campaignNID, $drupalUID) {
+
   }
 
  /*
