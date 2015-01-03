@@ -138,17 +138,27 @@ class MBC_UserImport
 
           case 'herCampus':
 
+            // - [ ] Creation of Drupal user that they can access at a later date by resetting their password.
             // Create Drupal user - https://github.com/DoSomething/dosomething/wiki/API#users
             list($drupalUser, $user->password) = $this->toolbox->createDrupalUser($user);
 
-            // Add to Teen for Jeans campaign
-            $campaignNID = 1141;
-            $signedUp = $this->campaignSignup($campaignNID, $drupalUser->uid);
-
-            if ($signedUp) {
-              $status = $this->userImportProducer_herCampus($user, $drupalUser);
+            if ($drupalUser !== FALSE) {
+              $this->temporaryPasswordTransactional($userDetails);
             }
 
+            // Add to Teen for Jeans campaign
+            $campaignNID = 1141;
+            $campaignDetails = $this->campaignSignup($campaignNID, $drupalUser->uid);
+
+            // - [ ] An email from DoSomething.org thanking the user for signing
+            // up to the campaign
+            if ($campaignDetails !== FALSE) {
+              $this->campaignSignupTransactional($userDetails, $campaignDetails);
+            }
+
+            // Generate additional messages to trigger related functionality to
+            // a user signing up for a campaign
+            $status = $this->userImportProducer_herCampus($user, $drupalUser);
 
             break;
 
@@ -296,8 +306,9 @@ class MBC_UserImport
         'subscribed' => 1,
         'activity' => 'user_welcome-niche',
         'email_template' => 'mb-user-welcome-niche-com-v1-0-0-1',
+        'source' => $user->source,
         'tags' => array(
-          0 => 'user_welcome-niche',
+          0 => 'user_welcome-' . $user->source,
         ),
         'merge_vars' => array(
           'MEMBER_COUNT' => $this->memberCount,
@@ -396,39 +407,10 @@ class MBC_UserImport
 
       // Skip if the Drupal user account already existed
       if (!(is_array($drupalUser) && strpos($drupalUser[0], 'is registered') !== FALSE)) {
-
-        $config = array(
-          'exchange' => array(
-            'name' => getenv("MB_TRANSACTIONAL_EXCHANGE"),
-            'type' => getenv("MB_TRANSACTIONAL_EXCHANGE_TYPE"),
-            'passive' => getenv("MB_TRANSACTIONAL_EXCHANGE_PASSIVE"),
-            'durable' => getenv("MB_TRANSACTIONAL_EXCHANGE_DURABLE"),
-            'auto_delete' => getenv("MB_TRANSACTIONAL_EXCHANGE_AUTO_DELETE"),
-          ),
-          'queue' => array(
-            'transactional' => array(
-              'name' => getenv("MB_TRANSACTIONAL_QUEUE"),
-              'passive' => getenv("MB_TRANSACTIONAL_QUEUE_PASSIVE"),
-              'durable' => getenv("MB_TRANSACTIONAL_QUEUE_DURABLE"),
-              'exclusive' => getenv("MB_TRANSACTIONAL_QUEUE_EXCLUSIVE"),
-              'auto_delete' => getenv("MB_TRANSACTIONAL_QUEUE_AUTO_DELETE"),
-              'bindingKey' => getenv("MB_TRANSACTIONAL_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
-            ),
-          ),
-          'routingKey' => 'user.import.transactional',
-        );
-        $mbUserAPI = new MessageBroker($this->credentials, $config);
-
-        $userDetails['activity'] = 'user_password-niche';
-        $userDetails['email_template'] = 'mb-user-signup-niche-com-v1-0-0-1';
-        $userDetails['tags'][0] = 'user_password-niche';
-        $payload = serialize($userDetails);
-        $mbUserAPI->publishMessage($payload);
-
+        $this->temporaryPasswordTransactional($userDetails);
         $this->statHat->clearAddedStatNames();
         $this->statHat->addStatName('Sent user_password-niche');
         $this->statHat->reportCount(1);
-
       }
       else {
         $this->statHat->clearAddedStatNames();
@@ -464,10 +446,139 @@ class MBC_UserImport
       // Check for existing MailChimp and/or Mobile Commons accounts
       $this->checkExistingAccount($user, $drupalUser);
 
+      $config = array(
+        'exchange' => array(
+          'name' => getenv("MB_TRANSACTIONAL_EXCHANGE"),
+          'type' => getenv("MB_TRANSACTIONAL_EXCHANGE_TYPE"),
+          'passive' => getenv("MB_TRANSACTIONAL_EXCHANGE_PASSIVE"),
+          'durable' => getenv("MB_TRANSACTIONAL_EXCHANGE_DURABLE"),
+          'auto_delete' => getenv("MB_TRANSACTIONAL_EXCHANGE_AUTO_DELETE"),
+        ),
+        'queue' => array(
+          'userAPIRegistration' => array(
+            'name' => getenv("MB_USER_API_REGISTRATION_QUEUE"),
+            'passive' => getenv("MB_USER_API_REGISTRATION_QUEUE_PASSIVE"),
+            'durable' => getenv("MB_USER_API_REGISTRATION_QUEUE_DURABLE"),
+            'exclusive' => getenv("MB_USER_API_REGISTRATION_QUEUE_EXCLUSIVE"),
+            'auto_delete' => getenv("MB_USER_API_REGISTRATION_QUEUE_AUTO_DELETE"),
+            'bindingKey' => getenv("MB_USER_API_REGISTRATION_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
+          ),
+          'userAPICampaignActivity' => array(
+            'name' => getenv("MB_USER_API_CAMPAIGN_ACTIVITY_QUEUE"),
+            'passive' => getenv("MB_USER_API_CAMPAIGN_ACTIVITY_QUEUE_PASSIVE"),
+            'durable' => getenv("MB_USER_API_CAMPAIGN_ACTIVITY_QUEUE_DURABLE"),
+            'exclusive' => getenv("MB_USER_API_CAMPAIGN_ACTIVITY_QUEUE_EXCLUSIVE"),
+            'auto_delete' => getenv("MB_USER_API_CAMPAIGN_ACTIVITY_QUEUE_AUTO_DELETE"),
+            'bindingKey' => getenv("MB_USER_API_CAMPAIGN_ACTIVITY_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
+          ),
+          'registrations' => array(
+            'name' => getenv("MB_USER_REGISTRATION_QUEUE"),
+            'passive' => getenv("MB_USER_REGISTRATION_QUEUE_PASSIVE"),
+            'durable' => getenv("MB_USER_REGISTRATION_QUEUE_DURABLE"),
+            'exclusive' => getenv("MB_USER_REGISTRATION_QUEUE_EXCLUSIVE"),
+            'auto_delete' => getenv("MB_USER_REGISTRATION_QUEUE_AUTO_DELETE"),
+            'bindingKey' => getenv("MB_USER_REGISTRATION_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
+          ),
+          'mobileCommons' => array(
+            'name' => getenv("MB_MOBILE_COMMONS_QUEUE"),
+            'passive' => getenv("MB_MOBILE_COMMONS_QUEUE_PASSIVE"),
+            'durable' => getenv("MB_MOBILE_COMMONS_QUEUE_DURABLE"),
+            'exclusive' => getenv("MB_MOBILE_COMMONS_QUEUE_EXCLUSIVE"),
+            'auto_delete' => getenv("MB_MOBILE_COMMONS_QUEUE_AUTO_DELETE"),
+            'bindingKey' => getenv("MB_MOBILE_COMMONS_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
+          ),
+        ),
+        'routingKey' => 'user.registration.transactional',
+      );
+      $mb = new MessageBroker($this->credentials, $config);
+
+      // Required
+      $userDetails = array(
+        'email' => $user->email,
+        'subscribed' => 1,
+        'activity' => 'user_welcome-niche',
+        'email_template' => 'mb-user-welcome-niche-com-v1-0-0-1',
+        'source' => $user->source,
+        'tags' => array(
+          0 => 'user_welcome-' . $user->source,
+        ),
+        'merge_vars' => array(
+          'MEMBER_COUNT' => $this->memberCount,
+        )
+      );
+
+
+    // - [ ] Addition of the email address to MailChimp for future email broadcasts related to the campaign as well as a weekly DS newsletter
+
+    // for future email broadcasts related to the campaign
+    // campaign.signup.*  -> mailchimpCampaignSignupQueue
+    // campaign.signup.import
+    // MB_MAILCHIMP_CAMPAIGN_SIGNUP_QUEUE
+    // mbc-registration-email
+    // MBC_UserRegistration -> consumeMailchimpCampaignSignupQueue()
+    // 'email' => $messagePayload['email'],
+    //'mailchimp_group_name' => $messagePayload['mailchimp_group_name'],
+    // 'mailchimp_grouping_id' => $messagePayload['mailchimp_grouping_id'],
+
+    // as well as a weekly DS newsletter
+    // MB_MAILCHIMP_CAMPAIGN_SIGNUP_QUEUE - userRegistrationQueue
+    // user.registration.* -> user.registration.import
+    // mbc-registration-email
+    // 'email' => $messagePayload['email'],
+    // $newSubscribers[$processedCount]['fname'] = $messagePayload['merge_vars']['FNAME'];
+    // $newSubscribers[$processedCount]['uid'] = $messagePayload['uid'];
+    // $newSubscribers[$processedCount]['birthdate_timestamp'] = $messagePayload['birthdate_timestamp'];
+    // $newSubscribers[$processedCount]['birthdate_timestamp'] = $messagePayload['birthdate'];
+    // $newSubscribers[$processedCount]['mobile'] = $messagePayload['mobile'];
+
+
+    // - [ ] Storage of the optional phone number but not sending them a signup SMS message
+    // mobileCommonsQueue
+    // user.registration.* -> user.registration.import
+
     }
     else {
       $status = FALSE;
     }
+  }
+
+  /**
+   * Send transactional email to provide details on temporaty password assigned
+   * to newly created Drupal user account.
+   *
+   * @param array $userDetails
+   *   Payload details to be sent with trnsactional message.
+   */
+  private function temporaryPasswordTransactional($userDetails) {
+
+    $config = array(
+      'exchange' => array(
+        'name' => getenv("MB_TRANSACTIONAL_EXCHANGE"),
+        'type' => getenv("MB_TRANSACTIONAL_EXCHANGE_TYPE"),
+        'passive' => getenv("MB_TRANSACTIONAL_EXCHANGE_PASSIVE"),
+        'durable' => getenv("MB_TRANSACTIONAL_EXCHANGE_DURABLE"),
+        'auto_delete' => getenv("MB_TRANSACTIONAL_EXCHANGE_AUTO_DELETE"),
+      ),
+      'queue' => array(
+        'transactional' => array(
+          'name' => getenv("MB_TRANSACTIONAL_QUEUE"),
+          'passive' => getenv("MB_TRANSACTIONAL_QUEUE_PASSIVE"),
+          'durable' => getenv("MB_TRANSACTIONAL_QUEUE_DURABLE"),
+          'exclusive' => getenv("MB_TRANSACTIONAL_QUEUE_EXCLUSIVE"),
+          'auto_delete' => getenv("MB_TRANSACTIONAL_QUEUE_AUTO_DELETE"),
+          'bindingKey' => getenv("MB_TRANSACTIONAL_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
+        ),
+      ),
+      'routingKey' => 'user.import.transactional',
+    );
+    $mbUserAPI = new MessageBroker($this->credentials, $config);
+
+    $userDetails['activity'] = 'user_password-niche';
+    $userDetails['email_template'] = 'mb-user-signup-niche-com-v1-0-0-1';
+    $userDetails['tags'][0] = 'user_password-' . $userDetails['source'];
+    $payload = serialize($userDetails);
+    $mbUserAPI->publishMessage($payload);
+
   }
 
   /**
@@ -484,9 +595,90 @@ class MBC_UserImport
    *   signup for.
    *
    * @return string $status
-   *   Results for queue submission.
+   *   Results for transactional submission.
    */
   private function campaignSignup($campaignNID, $drupalUID) {
+
+    // Campaign Signup
+    // https://github.com/DoSomething/dosomething/wiki/API#campaign-signup
+    // https://www.dosomething.org/api/v1/campaigns/[nid]/signup
+
+    if ($signUp) {
+
+      // Lookup campaign details after successful signup
+      // https://www.dosomething.org/api/v1/content/:nid
+
+      return $campaignDetails;
+    }
+    else {
+      return FALSE;
+    }
+  }
+
+  /**
+   * Send transactional email confirming the user has signed up for a campaign.
+   *
+   * @param array $userDetails
+   *   Details about the user account that has signed up for a campaign.
+   * @param array $campaignDetails
+   *   .
+   *
+   * @return string $status
+   *   Results for transactional submission.
+   */
+  private function campaignSignupTransactional($userDetails, $campaignDetails) {
+
+    $signupDetails = array(
+      'activity' => 'campaign_signup',
+      'email' => $userDetails->email,
+      'uid' => $userDetails->uid,
+      'merge_vars' => array(
+        'MEMBER_COUNT' => $this->memberCount,
+        'FNAME' => $userDetails->first_name,
+        'CAMPAIGN_TITLE' => '',
+        'CAMPAIGN_LINK' => '',
+        'CALL_TO_ACTION' => '',
+        'STEP_ONE' => '',
+        'STEP_TWO' => '',
+        'STEP_THREE' => '',
+      ),
+      'subscribed' => 1,
+      'event_id' => $campaignDetails->nid,
+      'email_tags' => array(
+        0 => $campaignDetails->nid,
+        1 => 'drupal_campaign_signup-import-' . $userDetails->source,
+      ),
+      'mailchimp_grouping_id' => '',
+      'mailchimp_group_name' => '',
+      'email_template' => 'mb-campaign-signup',
+      'activity_timestamp' => time(),
+      'application_id' => 200
+    );
+
+    $config = array(
+      'exchange' => array(
+        'name' => getenv("MB_TRANSACTIONAL_EXCHANGE"),
+        'type' => getenv("MB_TRANSACTIONAL_EXCHANGE_TYPE"),
+        'passive' => getenv("MB_TRANSACTIONAL_EXCHANGE_PASSIVE"),
+        'durable' => getenv("MB_TRANSACTIONAL_EXCHANGE_DURABLE"),
+        'auto_delete' => getenv("MB_TRANSACTIONAL_EXCHANGE_AUTO_DELETE"),
+      ),
+      'queue' => array(
+        'transactional' => array(
+          'name' => getenv("MB_TRANSACTIONAL_QUEUE"),
+          'passive' => getenv("MB_TRANSACTIONAL_QUEUE_PASSIVE"),
+          'durable' => getenv("MB_TRANSACTIONAL_QUEUE_DURABLE"),
+          'exclusive' => getenv("MB_TRANSACTIONAL_QUEUE_EXCLUSIVE"),
+          'auto_delete' => getenv("MB_TRANSACTIONAL_QUEUE_AUTO_DELETE"),
+          'bindingKey' => getenv("MB_TRANSACTIONAL_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
+        ),
+      ),
+      'routingKey' => 'user.import.transactional',
+    );
+    $mbUserAPI = new MessageBroker($this->credentials, $config);
+
+    $payload = serialize($signupDetails);
+    $mbUserAPI->publishMessage($payload);
 
   }
 
