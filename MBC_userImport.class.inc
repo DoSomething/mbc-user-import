@@ -429,6 +429,12 @@ class MBC_UserImport
    * Send transaction to transactionalExchange with user.registration.import
    * routing key for new users from "Her Campus".
    *
+   * [ ] Addition of the email address to MailChimp for future email broadcasts
+   * related to the campaign as well as a weekly DS newsletter
+   *   mbc-registration-email
+   * [ ] Storage of the optional phone number but not sending them a signup
+   * SMS message,
+   *
    * @param array $user
    *   Details about the user based on the import data.
    * @param array $drupalUser
@@ -488,53 +494,39 @@ class MBC_UserImport
             'bindingKey' => getenv("MB_MOBILE_COMMONS_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
           ),
         ),
-        'routingKey' => 'user.registration.transactional',
+        'routingKey' => 'campaign.signup.import',
       );
-      $mb = new MessageBroker($this->credentials, $config);
+      $mbUserImport = new MessageBroker($this->credentials, $config);
 
       // Required
       $userDetails = array(
         'email' => $user->email,
         'subscribed' => 1,
-        'activity' => 'user_welcome-niche',
-        'email_template' => 'mb-user-welcome-niche-com-v1-0-0-1',
+        'activity' => 'user_import',
         'source' => $user->source,
-        'tags' => array(
-          0 => 'user_welcome-' . $user->source,
-        ),
-        'merge_vars' => array(
-          'MEMBER_COUNT' => $this->memberCount,
-        )
+        'mailchimp_group_name' => '',
+        'mailchimp_grouping_id' => '',
       );
 
+      if (isset($drupalUser['first_name'])) {
+        $userDetails['fname'] = $drupalUser['first_name'];
+      }
+      if (isset($drupalUser['uid'])) {
+        $nuserDetails['uid'] = $drupalUser['uid'];
+      }
+      if (isset($drupalUser['birthdate_timestamp'])) {
+        $userDetails['birthdate_timestamp'] = $drupalUser['birthdate_timestamp'];
+      }
+      elseif (isset($drupalUser['birthdate_timestamp'])) {
+        $userDetails['birthdate_timestamp'] = $drupalUser['birthdate_timestamp'];
+      }
+      if (isset($drupalUser['phone'])) {
+        $userDetails['mobile'] = $drupalUser['phone'];
+      }
 
-    // - [ ] Addition of the email address to MailChimp for future email broadcasts related to the campaign as well as a weekly DS newsletter
-
-    // for future email broadcasts related to the campaign
-    // campaign.signup.*  -> mailchimpCampaignSignupQueue
-    // campaign.signup.import
-    // MB_MAILCHIMP_CAMPAIGN_SIGNUP_QUEUE
-    // mbc-registration-email
-    // MBC_UserRegistration -> consumeMailchimpCampaignSignupQueue()
-    // 'email' => $messagePayload['email'],
-    //'mailchimp_group_name' => $messagePayload['mailchimp_group_name'],
-    // 'mailchimp_grouping_id' => $messagePayload['mailchimp_grouping_id'],
-
-    // as well as a weekly DS newsletter
-    // MB_MAILCHIMP_CAMPAIGN_SIGNUP_QUEUE - userRegistrationQueue
-    // user.registration.* -> user.registration.import
-    // mbc-registration-email
-    // 'email' => $messagePayload['email'],
-    // $newSubscribers[$processedCount]['fname'] = $messagePayload['merge_vars']['FNAME'];
-    // $newSubscribers[$processedCount]['uid'] = $messagePayload['uid'];
-    // $newSubscribers[$processedCount]['birthdate_timestamp'] = $messagePayload['birthdate_timestamp'];
-    // $newSubscribers[$processedCount]['birthdate_timestamp'] = $messagePayload['birthdate'];
-    // $newSubscribers[$processedCount]['mobile'] = $messagePayload['mobile'];
-
-
-    // - [ ] Storage of the optional phone number but not sending them a signup SMS message
-    // mobileCommonsQueue
-    // user.registration.* -> user.registration.import
+      $payload = serialize($userDetails);
+      $mbUserImport->publishMessage($payload);
+      $status = TRUE;
 
     }
     else {
@@ -646,7 +638,7 @@ class MBC_UserImport
       'event_id' => $campaignDetails->nid,
       'email_tags' => array(
         0 => $campaignDetails->nid,
-        1 => 'drupal_campaign_signup-import-' . $userDetails->source,
+        1 => 'campaign_signup-import-' . $userDetails->source,
       ),
       'mailchimp_grouping_id' => '',
       'mailchimp_group_name' => '',
