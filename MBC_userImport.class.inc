@@ -69,7 +69,7 @@ class MBC_UserImport
   /**
    * The number of queue entries to process in each session
    */
-  const BATCH_SIZE = 5000;
+  const BATCH_SIZE = 5;
 
   /**
    * Constructor for MBC_UserImport
@@ -120,7 +120,7 @@ class MBC_UserImport
 
       foreach ($targetUsers as $userCount => $user) {
 
-        switch ($user['source']) {
+        switch ($user->source) {
 
           case 'niche':
 
@@ -142,13 +142,19 @@ class MBC_UserImport
             // Create Drupal user - https://github.com/DoSomething/dosomething/wiki/API#users
             list($drupalUser, $user->password) = $this->toolbox->createDrupalUser($user);
 
-            if ($drupalUser !== FALSE) {
-              $this->temporaryPasswordTransactional($userDetails);
+            // New user produces object, array returned if existing user
+            if (is_object($drupalUser) === TRUE) {
+              $drupalUID = $drupalUser->uid;
+              $this->temporaryPasswordTransactional($drupalUser);
+            }
+            else {
+              // Email xxx@gmail.com is registered to User uid 2305144.
+              $drupalUID = substr($drupalUser[0], strpos($drupalUser[0], 'uid') + 4);
             }
 
             // Add to Teen for Jeans campaign
             $campaignNID = 1141;
-            $campaignDetails = $this->campaignSignup($campaignNID, $drupalUser->uid);
+            $campaignDetails = $this->campaignSignup($campaignNID, $drupalUID, $user->source);
 
             // - [ ] An email from DoSomething.org thanking the user for signing
             // up to the campaign
@@ -585,20 +591,37 @@ class MBC_UserImport
    * @param array $drupalUID
    *   The user ID (UID) of the Drupal user account to create a campaign
    *   signup for.
+   * @param string $source
+   *   The name of the import source
    *
    * @return string $status
    *   Results for transactional submission.
    */
-  private function campaignSignup($campaignNID, $drupalUID) {
+  private function campaignSignup($campaignNID, $drupalUID, $source) {
 
-    // Campaign Signup
-    // https://github.com/DoSomething/dosomething/wiki/API#campaign-signup
-    // https://www.dosomething.org/api/v1/campaigns/[nid]/signup
+    $post = array(
+      'source' => $source . '_mb_import',
+      'uid' => $drupalUID
+    );
+    $curlUrl = $this->settings['ds_drupal_api_host'];
+    $port = $this->settings['ds_drupal_api_port'];
+    if ($port != 0) {
+      $curlUrl .= ":{$port}";
+    }
+    $curlUrl .= '/api/v1/campaigns/' . $campaignNID . '/signup';
+    $signUp = $this->toolbox->curlPOSTauth($curlUrl, $post);
 
     if ($signUp) {
 
       // Lookup campaign details after successful signup
       // https://www.dosomething.org/api/v1/content/:nid
+      $curlUrl = $this->settings['ds_drupal_api_host'];
+      $port = $this->settings['ds_drupal_api_port'];
+      if ($port != 0) {
+        $curlUrl .= ":{$port}";
+      }
+      $curlUrl .= '/api/v1/content/' . $campaignNID;
+      $campaignDetails = $this->toolbox->curlGET($curlUrl);
 
       return $campaignDetails;
     }
