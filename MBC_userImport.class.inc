@@ -153,7 +153,7 @@ class MBC_UserImport
             }
 
             // Add to Teen for Jeans campaign
-            $campaignNID = 1141;
+            $campaignNID = 1144;
             $campaignDetails = $this->campaignSignup($campaignNID, $drupalUID, $user->source);
 
             // - [ ] An email from DoSomething.org thanking the user for signing
@@ -622,6 +622,10 @@ class MBC_UserImport
       }
       $curlUrl .= '/api/v1/content/' . $campaignNID;
       $campaignDetails = $this->toolbox->curlGET($curlUrl);
+      if (!is_object($campaignDetails)) {
+        echo 'ERROR - MB_Toolbox->campaignSignup: Target campaign "' . $campaignNID . '" not found with /api/v1/content/' . $campaignNID . ' call.', PHP_EOL;
+        $campaignDetails = FALSE;
+      }
 
       return $campaignDetails;
     }
