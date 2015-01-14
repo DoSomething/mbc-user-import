@@ -544,8 +544,7 @@ class MBC_UserImport
 
       $payload = serialize($userDetails);
       $mbUserImport->publishMessage($payload);
-       $status = TRUE;
-
+      $status = TRUE;
     }
     else {
       $status = FALSE;
@@ -841,7 +840,7 @@ class MBC_UserImport
       $this->existingStatus['log-type'] = 'user-import-' . $user->source;
       $this->existingStatus['log-timestamp'] = time();
       echo('------' . PHP_EOL . PHP_EOL);
-      $this->logExistingAccounts();
+      $this->logExistingAccounts($user->source);
     }
 
   }
@@ -849,8 +848,11 @@ class MBC_UserImport
  /*
   * Log existing account (email and mobile). Create log entry as they're
   * encountered to ensure logging even if the application crashes.
+  *
+  * @param string $source
+  *   The siurce of the user data.
   */
-  private function logExistingAccounts() {
+  private function logExistingAccounts($source) {
 
     $config = array(
       'exchange' => array(
@@ -873,6 +875,7 @@ class MBC_UserImport
     );
     $mbEistingUserImportLogging = new MessageBroker($this->credentials, $config);
 
+    $this->existingStatus['source'] = $source;
     $payload = serialize($this->existingStatus);
     $mbEistingUserImportLogging->publishMessage($payload);
 
