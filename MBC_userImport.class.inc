@@ -69,7 +69,7 @@ class MBC_UserImport
   /**
    * The number of queue entries to process in each session
    */
-  const BATCH_SIZE = 1;
+  const BATCH_SIZE = 5000;
 
   /**
    * Constructor for MBC_UserImport
