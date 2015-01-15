@@ -166,6 +166,7 @@ class MBC_UserImport
             else {
               // Email xxx@gmail.com is registered to User uid 2305144.
               $drupalUID = substr($drupalUser[0], strpos($drupalUser[0], 'uid') + 4);
+              $drupalUID = substr($drupalUID, 0, strlen($drupalUID) - 1);
               $user->uid = $drupalUID;
             }
 
