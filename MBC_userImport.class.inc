@@ -252,7 +252,7 @@ class MBC_UserImport
       return array($targetUsers, $deliveryTags);
     }
     else {
-      echo '------- mbc-digest-email MBC_UserDigest->consumeUserDigestQueue() - Queue is empty. -  ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;
+      echo '------- mbc-user-import MBC_UserImport->consumeUserImportQueue() - Queue is empty. -  ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;
     }
 
   }
@@ -633,7 +633,8 @@ class MBC_UserImport
     $curlUrl .= '/api/v1/campaigns/' . $campaignNID . '/signup';
     $signUp = $this->toolbox->curlPOSTauth($curlUrl, $post);
 
-    if ($signUp[0] != 0) {
+    // No results found for campaign - invalid ID or closed campaign
+    if ($signUp[0] != 0 || strpos($signUp[0], 'not active') === FALSE)  {
 
       // Lookup campaign details after successful signup
       // https://www.dosomething.org/api/v1/content/:nid
@@ -652,7 +653,7 @@ class MBC_UserImport
       return $campaignDetails;
     }
     else {
-      echo 'Drupal UID: ' . $drupalUID . ' already signed up for campaign ' . $campaignNID, PHP_EOL; 
+      echo 'Drupal UID: ' . $drupalUID . ' may already be signed up for campaign ' . $campaignNID . ' or campaign is not accepting signups: ' . $signUp[0], PHP_EOL; 
       return FALSE;
     }
   }
