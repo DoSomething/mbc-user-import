@@ -634,7 +634,7 @@ class MBC_UserImport
     $signUp = $this->toolbox->curlPOSTauth($curlUrl, $post);
 
     // No results found for campaign - invalid ID or closed campaign
-    if ($signUp[0] != 0 || strpos($signUp[0], 'not active') === FALSE)  {
+    if ($signUp[0] != 0 && !is_array($signUp))  {
 
       // Lookup campaign details after successful signup
       // https://www.dosomething.org/api/v1/content/:nid
@@ -842,7 +842,7 @@ class MBC_UserImport
       $this->existingStatus['log-type'] = 'user-import-' . $user->source;
       $this->existingStatus['log-timestamp'] = time();
       echo('------' . PHP_EOL . PHP_EOL);
-      $this->logExistingAccounts($user->source);
+      $this->logExistingAccounts($user->source, $user->source_file);
     }
 
   }
@@ -853,8 +853,10 @@ class MBC_UserImport
   *
   * @param string $source
   *   The siurce of the user data.
+  * @param string $origin
+  *   THe file that the user import is generated from.
   */
-  private function logExistingAccounts($source) {
+  private function logExistingAccounts($source, $origin) {
 
     $config = array(
       'exchange' => array(
@@ -878,6 +880,11 @@ class MBC_UserImport
     $mbEistingUserImportLogging = new MessageBroker($this->credentials, $config);
 
     $this->existingStatus['source'] = $source;
+    $this->existingStatus['origin'] = array(
+      'name' => $origin,
+      'processed' => time(),
+    );
+
     $payload = serialize($this->existingStatus);
     $mbEistingUserImportLogging->publishMessage($payload);
 
