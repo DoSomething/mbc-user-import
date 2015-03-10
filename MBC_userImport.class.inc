@@ -361,6 +361,7 @@ class MBC_UserImport
       }
       if (isset($user->password) && $user->password != '') {
         $userDetails['merge_vars']['PASSWORD'] = $user->password;
+        $userDetails['merge_vars']['PASSWORD_RESET_LINK'] = $this->toolbox->getPasswordResetURL($drupalUser->uid);
       }
       if (isset($user->address1) && $user->address1 != '') {
         $userDetails['address1'] = $user->address1;
