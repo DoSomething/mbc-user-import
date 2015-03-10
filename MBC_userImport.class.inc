@@ -275,6 +275,8 @@ class MBC_UserImport
     if ((isset($user->email) && isset($drupalUser->uid) && $drupalUser->uid > 0) ||
        (is_array($drupalUser) && isset($drupalUser[0]) && strpos($drupalUser[0], 'is registered') !== FALSE)) {
 
+      $drupalUID = $drupalUser->uid;
+
       // Check for existing MailChimp and/or Mobile Commons accounts
       $this->checkExistingAccount($user, $drupalUser);
 
@@ -341,8 +343,8 @@ class MBC_UserImport
         )
       );
 
-      if (isset($drupalUser->uid) && $drupalUser->uid != '') {
-        $userDetails['uid'] = $drupalUser->uid;
+      if (isset($drupalUID) && $drupalUID != '') {
+        $userDetails['uid'] = $drupalUID;
       }
       if (isset($drupalUser->created) && $drupalUser->created) {
         $userDetails['activity_timestamp'] = $drupalUser->created;
@@ -361,6 +363,7 @@ class MBC_UserImport
       }
       if (isset($user->password) && $user->password != '') {
         $userDetails['merge_vars']['PASSWORD'] = $user->password;
+        $userDetails['merge_vars']['PASSWORD_RESET_LINK'] = $this->toolbox->getPasswordResetURL($drupalUID);
       }
       if (isset($user->address1) && $user->address1 != '') {
         $userDetails['address1'] = $user->address1;
