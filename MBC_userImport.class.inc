@@ -272,10 +272,8 @@ class MBC_UserImport
    */
   private function userImportProducer_niche($user, $drupalUser) {
 
-    if ((isset($user->email) && isset($drupalUser->uid) && $drupalUser->uid > 0) ||
-       (is_array($drupalUser) && isset($drupalUser[0]) && strpos($drupalUser[0], 'is registered') !== FALSE)) {
-
-      $drupalUID = $drupalUser->uid;
+    if (( isset($user->email) && isset($drupalUser->uid) && $drupalUser->uid > 0 ) ||
+        ( ( is_array($drupalUser) && !isset($drupalUser['errorInfo']) ) && isset($drupalUser[0]) && strpos($drupalUser[0], 'is registered') !== FALSE) ) {
 
       // Check for existing MailChimp and/or Mobile Commons accounts
       $this->checkExistingAccount($user, $drupalUser);
@@ -343,7 +341,13 @@ class MBC_UserImport
         )
       );
 
-      if (isset($drupalUID) && $drupalUID != '') {
+      if (isset($drupalUser->uid) && $drupalUser->uid != '') {
+        $drupalUID = $drupalUser->uid;
+        $userDetails['uid'] = $drupalUID;
+      }
+      elseif (isset($drupalUser[0])) {
+        $drupalUID = substr($drupalUser[0], strpos($drupalUser[0], 'uid') + 4);
+        $drupalUID = substr($drupalUID, 0, strlen($drupalUID) - 1);
         $userDetails['uid'] = $drupalUID;
       }
       if (isset($drupalUser->created) && $drupalUser->created) {
