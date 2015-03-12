@@ -367,7 +367,6 @@ class MBC_UserImport
       }
       if (isset($user->password) && $user->password != '') {
         $userDetails['merge_vars']['PASSWORD'] = $user->password;
-        $userDetails['merge_vars']['PASSWORD_RESET_LINK'] = $this->toolbox->getPasswordResetURL($drupalUID);
       }
       if (isset($user->address1) && $user->address1 != '') {
         $userDetails['address1'] = $user->address1;
@@ -600,6 +599,7 @@ class MBC_UserImport
     );
     $mbUserAPI = new MessageBroker($this->credentials, $config);
 
+    $userDetails['merge_vars']['PASSWORD_RESET_LINK'] = $this->toolbox->getPasswordResetURL($userDetails['uid']);
     $userDetails['activity'] = 'user_password-' . $userDetails['source'];
     $userDetails['email_template'] = 'mb-user-signup-niche-com-v1-0-0-1';
     $userDetails['tags'][0] = 'user_password-' . $userDetails['source'];
