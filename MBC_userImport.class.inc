@@ -451,6 +451,9 @@ class MBC_UserImport
       }
     }
     else {
+      if (isset($drupalUser->errorInfo)) {
+        echo 'Error processing user: ' . $drupalUser->errorInfo[2], PHP_EOL;
+      }
       $status = FALSE;
     }
 
@@ -832,7 +835,10 @@ class MBC_UserImport
           $this->statHat->reportCount(1);
         }
         else {
-          echo 'Mobile commons error: ' .  print_r($mobilecommonsStatus['error'], TRUE), PHP_EOL;
+          $mobileCommonsError = $mobilecommonsStatus['error']->attributes()->{'message'};
+          echo 'Mobile commons error (' . $user->phone . ') : ' . $mobileCommonsError, PHP_EOL;
+          $this->statHat->addStatName('Mobile Commons Error - ' . $mobileCommonsError);
+          $this->statHat->reportCount(1);
         }
 
       }
