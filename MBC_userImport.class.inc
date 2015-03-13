@@ -854,10 +854,10 @@ class MBC_UserImport
       // sources for users are used
       $this->existingStatus['log-type'] = 'user-import-' . $user->source;
       $this->existingStatus['log-timestamp'] = time();
-      echo('------' . PHP_EOL . PHP_EOL);
       $this->logExistingAccounts($user->source, $user->source_file);
     }
 
+    echo('------' . PHP_EOL . PHP_EOL);
   }
 
  /*
