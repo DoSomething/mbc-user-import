@@ -836,7 +836,7 @@ class MBC_UserImport
         }
         else {
           $mobileCommonsError = $mobilecommonsStatus['error']->attributes()->{'message'};
-          echo 'Mobile commons error (' . $user->phone . ') : ' . $mobileCommonsError, PHP_EOL;
+          echo 'Mobile commons error (' . $user->phone . ') : ' . $mobileCommonsError . ' aka Number not found.', PHP_EOL;
           $this->statHat->addStatName('Mobile Commons Error - ' . $mobileCommonsError);
           $this->statHat->reportCount(1);
         }
