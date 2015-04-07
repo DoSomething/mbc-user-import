@@ -187,6 +187,20 @@ class MBC_UserImport
 
             break;
 
+          case 'att-ichannel':
+
+            // Create Drupal user - https://github.com/DoSomething/dosomething/wiki/API#users
+            list($drupalUser, $user->password) = $this->toolbox->createDrupalUser($user);
+
+            // With new user account details from the Drupal site:
+            // - Send transaction to transactionalExchange for distribution to
+            //   transactionalQueue, userAPIRegistrationQueue and userRegistrationQueue
+            // - could return array rather than user object when user already exists
+            //   based on supplied email. Existing Drupal accounts will be logged.
+            $this->userImportProducer_att_ichannel($user, $drupalUser);
+
+            break;
+
         }
 
         // Ack message
@@ -557,6 +571,207 @@ class MBC_UserImport
       $status = TRUE;
     }
     else {
+      $status = FALSE;
+    }
+
+    return $status;
+  }
+
+    /**
+   * Send transaction to transactionalExchange with user.registration.import
+   * routing key for new users from "AT&T - iChannel".
+   *
+   * @param array $user
+   *   Details about the user based on the import data.
+   * @param array $drupalUser
+   *   Details about the Drupal user based on the account created from the API
+   *   call to /api/v1/users.
+   *
+   * @return string $status
+   *   Results for queue submission.
+   */
+  private function userImportProducer_att_ichannel($user, $drupalUser) {
+
+    if (( isset($user->email) && isset($drupalUser->uid) && $drupalUser->uid > 0 ) ||
+        ( ( is_array($drupalUser) && !isset($drupalUser['errorInfo']) ) && isset($drupalUser[0]) && strpos($drupalUser[0], 'is registered') !== FALSE) ) {
+
+      // Check for existing MailChimp and/or Mobile Commons accounts
+      $this->checkExistingAccount($user, $drupalUser);
+
+      // Config specific to producing a new user for the Message Broker userAPI
+      $config = array(
+        'exchange' => array(
+          'name' => getenv("MB_TRANSACTIONAL_EXCHANGE"),
+          'type' => getenv("MB_TRANSACTIONAL_EXCHANGE_TYPE"),
+          'passive' => getenv("MB_TRANSACTIONAL_EXCHANGE_PASSIVE"),
+          'durable' => getenv("MB_TRANSACTIONAL_EXCHANGE_DURABLE"),
+          'auto_delete' => getenv("MB_TRANSACTIONAL_EXCHANGE_AUTO_DELETE"),
+        ),
+        'queue' => array(
+          'userAPIRegistration' => array(
+            'name' => getenv("MB_USER_API_REGISTRATION_QUEUE"),
+            'passive' => getenv("MB_USER_API_REGISTRATION_QUEUE_PASSIVE"),
+            'durable' => getenv("MB_USER_API_REGISTRATION_QUEUE_DURABLE"),
+            'exclusive' => getenv("MB_USER_API_REGISTRATION_QUEUE_EXCLUSIVE"),
+            'auto_delete' => getenv("MB_USER_API_REGISTRATION_QUEUE_AUTO_DELETE"),
+            'bindingKey' => getenv("MB_USER_API_REGISTRATION_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
+          ),
+          'registrations' => array(
+            'name' => getenv("MB_USER_REGISTRATION_QUEUE"),
+            'passive' => getenv("MB_USER_REGISTRATION_QUEUE_PASSIVE"),
+            'durable' => getenv("MB_USER_REGISTRATION_QUEUE_DURABLE"),
+            'exclusive' => getenv("MB_USER_REGISTRATION_QUEUE_EXCLUSIVE"),
+            'auto_delete' => getenv("MB_USER_REGISTRATION_QUEUE_AUTO_DELETE"),
+            'bindingKey' => getenv("MB_USER_REGISTRATION_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
+          ),
+          'transactional' => array(
+            'name' => getenv("MB_TRANSACTIONAL_QUEUE"),
+            'passive' => getenv("MB_TRANSACTIONAL_QUEUE_PASSIVE"),
+            'durable' => getenv("MB_TRANSACTIONAL_QUEUE_DURABLE"),
+            'exclusive' => getenv("MB_TRANSACTIONAL_QUEUE_EXCLUSIVE"),
+            'auto_delete' => getenv("MB_TRANSACTIONAL_QUEUE_AUTO_DELETE"),
+            'bindingKey' => getenv("MB_TRANSACTIONAL_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
+          ),
+          'mobileCommons' => array(
+            'name' => getenv("MB_MOBILE_COMMONS_QUEUE"),
+            'passive' => getenv("MB_MOBILE_COMMONS_QUEUE_PASSIVE"),
+            'durable' => getenv("MB_MOBILE_COMMONS_QUEUE_DURABLE"),
+            'exclusive' => getenv("MB_MOBILE_COMMONS_QUEUE_EXCLUSIVE"),
+            'auto_delete' => getenv("MB_MOBILE_COMMONS_QUEUE_AUTO_DELETE"),
+            'bindingKey' => getenv("MB_MOBILE_COMMONS_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
+          ),
+        ),
+        'routingKey' => 'user.registration.transactional',
+      );
+      $mbUserAPI = new MessageBroker($this->credentials, $config);
+
+      // Required
+      $userDetails = array(
+        'email' => $user->email,
+        'subscribed' => 1,
+        'subscriptions' => array(
+          'mailchimp' => 1
+        ),
+        'activity' => 'user_welcome-att-ichannel',
+        'email_template' => 'mb-user-welcome-attichannel-v1-0-0',
+        'mc_opt_in_path_id' => 170071,
+        'source' => $user->source,
+        'tags' => array(
+          0 => 'user_welcome-' . $user->source,
+        ),
+        'merge_vars' => array(
+          'MEMBER_COUNT' => $this->memberCount,
+        )
+      );
+
+      if (isset($drupalUser->uid) && $drupalUser->uid != '') {
+        $drupalUID = $drupalUser->uid;
+        $userDetails['uid'] = $drupalUID;
+      }
+      elseif (isset($drupalUser[0])) {
+        $drupalUID = substr($drupalUser[0], strpos($drupalUser[0], 'uid') + 4);
+        $drupalUID = substr($drupalUID, 0, strlen($drupalUID) - 1);
+        $userDetails['uid'] = $drupalUID;
+      }
+      if (isset($drupalUser->created) && $drupalUser->created) {
+        $userDetails['activity_timestamp'] = $drupalUser->created;
+      }
+      else {
+        $userDetails['activity_timestamp'] = time();
+      }
+      if (isset($user->birthdate) && $user->birthdate != 0) {
+        $userDetails['birthdate_timestamp'] = strtotime($user->birthdate);
+      }
+      if (isset($user->first_name) && $user->first_name != '') {
+        $userDetails['merge_vars']['FNAME'] = $user->first_name;
+      }
+      if (isset($user->last_name) && $user->last_name != '') {
+        $userDetails['merge_vars']['LNAME'] = $user->last_name;
+      }
+      if (isset($user->password) && $user->password != '') {
+        $userDetails['merge_vars']['PASSWORD'] = $user->password;
+      }
+      if (isset($user->address1) && $user->address1 != '') {
+        $userDetails['address1'] = $user->address1;
+      }
+      if (isset($user->address2) && $user->address2 != '') {
+        $userDetails['address2'] = $user->address2;
+      }
+      if (isset($user->city) && $user->city != '') {
+        $userDetails['city'] = $user->city;
+      }
+      if (isset($user->state) && $user->state != '') {
+        $userDetails['state'] = $user->state;
+      }
+      if (isset($user->zip) && $user->zip != '') {
+        $userDetails['zip'] = $user->zip;
+      }
+      if (isset($user->phone) && $user->phone != '') {
+        $userDetails['mobile'] = $user->phone;
+      }
+      if (isset($user->hs_gradyear) && $user->hs_gradyear != 0) {
+        $userDetails['hs_gradyear'] = $user->hs_gradyear;
+      }
+      if (isset($user->race) && $user->race != '') {
+        $userDetails['race'] = $user->race;
+      }
+      if (isset($user->religion) && $user->religion != '') {
+        $userDetails['religion'] = $user->religion;
+      }
+      if (isset($user->hs_name) && $user->hs_name != '') {
+        $userDetails['hs_name'] = $user->hs_name;
+      }
+      if (isset($user->college_name) && $user->college_name != '') {
+        $userDetails['college_name'] = $user->college_name;
+      }
+      if (isset($user->major_name) && $user->major_name != '') {
+        $userDetails['major_name'] = $user->major_name;
+      }
+      if (isset($user->degree_type) && $user->degree_type != '') {
+        $userDetails['degree_type'] = $user->degree_type;
+      }
+      if (isset($user->sat_math) && $user->sat_math != 0) {
+        $userDetails['sat_math'] = $user->sat_math;
+      }
+      if (isset($user->sat_verbal) && $user->sat_verbal != 0) {
+        $userDetails['sat_verbal'] = $user->sat_verbal;
+      }
+      if (isset($user->sat_writing) && $user->sat_writing != 0) {
+        $userDetails['sat_writing'] = $user->sat_writing;
+      }
+      if (isset($user->act_math) && $user->act_math != 0) {
+        $userDetails['act_math'] = $user->act_math;
+      }
+      if (isset($user->gpa) && $user->gpa != 0) {
+        $userDetails['gpa'] = $user->gpa;
+      }
+      if (isset($user->role) && $user->role != '') {
+        $userDetails['role'] = $user->role;
+      }
+
+      $payload = serialize($userDetails);
+      $mbUserAPI->publishMessage($payload);
+      $status = TRUE;
+
+      $this->statHat->clearAddedStatNames();
+      $this->statHat->addStatName('Distribute user import - user.registration.transactional');
+      $this->statHat->reportCount(1);
+
+      // Create second transactional email message to inform the user of their temp password
+      // Config specific to producing a new user for the Message Broker userAPI
+
+
+
+
+
+
+
+
+    }
+    else {
+      if (isset($drupalUser->errorInfo)) {
+        echo 'Error processing user: ' . $drupalUser->errorInfo[2], PHP_EOL;
+      }
       $status = FALSE;
     }
 
