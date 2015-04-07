@@ -682,73 +682,20 @@ class MBC_UserImport
       if (isset($user->birthdate) && $user->birthdate != 0) {
         $userDetails['birthdate_timestamp'] = strtotime($user->birthdate);
       }
-      if (isset($user->first_name) && $user->first_name != '') {
-        $userDetails['merge_vars']['FNAME'] = $user->first_name;
+
+      if (isset($user->name) && $user->name != '') {
+        $names = explode(' ', $user->name);
+        $userDetails['merge_vars']['LNAME'] = $names[count($names) - 1];
+        unset($names[count($names) - 1]);
+        $userDetails['merge_vars']['FNAME'] = implode(' ', $names);
       }
-      if (isset($user->last_name) && $user->last_name != '') {
-        $userDetails['merge_vars']['LNAME'] = $user->last_name;
-      }
+
       if (isset($user->password) && $user->password != '') {
         $userDetails['merge_vars']['PASSWORD'] = $user->password;
-      }
-      if (isset($user->address1) && $user->address1 != '') {
-        $userDetails['address1'] = $user->address1;
-      }
-      if (isset($user->address2) && $user->address2 != '') {
-        $userDetails['address2'] = $user->address2;
-      }
-      if (isset($user->city) && $user->city != '') {
-        $userDetails['city'] = $user->city;
-      }
-      if (isset($user->state) && $user->state != '') {
-        $userDetails['state'] = $user->state;
-      }
-      if (isset($user->zip) && $user->zip != '') {
-        $userDetails['zip'] = $user->zip;
       }
       if (isset($user->phone) && $user->phone != '') {
         $userDetails['mobile'] = $user->phone;
       }
-      if (isset($user->hs_gradyear) && $user->hs_gradyear != 0) {
-        $userDetails['hs_gradyear'] = $user->hs_gradyear;
-      }
-      if (isset($user->race) && $user->race != '') {
-        $userDetails['race'] = $user->race;
-      }
-      if (isset($user->religion) && $user->religion != '') {
-        $userDetails['religion'] = $user->religion;
-      }
-      if (isset($user->hs_name) && $user->hs_name != '') {
-        $userDetails['hs_name'] = $user->hs_name;
-      }
-      if (isset($user->college_name) && $user->college_name != '') {
-        $userDetails['college_name'] = $user->college_name;
-      }
-      if (isset($user->major_name) && $user->major_name != '') {
-        $userDetails['major_name'] = $user->major_name;
-      }
-      if (isset($user->degree_type) && $user->degree_type != '') {
-        $userDetails['degree_type'] = $user->degree_type;
-      }
-      if (isset($user->sat_math) && $user->sat_math != 0) {
-        $userDetails['sat_math'] = $user->sat_math;
-      }
-      if (isset($user->sat_verbal) && $user->sat_verbal != 0) {
-        $userDetails['sat_verbal'] = $user->sat_verbal;
-      }
-      if (isset($user->sat_writing) && $user->sat_writing != 0) {
-        $userDetails['sat_writing'] = $user->sat_writing;
-      }
-      if (isset($user->act_math) && $user->act_math != 0) {
-        $userDetails['act_math'] = $user->act_math;
-      }
-      if (isset($user->gpa) && $user->gpa != 0) {
-        $userDetails['gpa'] = $user->gpa;
-      }
-      if (isset($user->role) && $user->role != '') {
-        $userDetails['role'] = $user->role;
-      }
-
       $payload = serialize($userDetails);
       $mbUserAPI->publishMessage($payload);
       $status = TRUE;
