@@ -120,6 +120,16 @@ class MBC_UserImport
 
       foreach ($targetUsers as $userCount => $user) {
 
+        // Needed for toolbox->createDrupalUser()
+        $user->user_registration_source = $user->source;
+
+        // Ensure first_name is defined for Drupal user creation
+        if (isset($user->name) && !isset($user->first_name)) {
+          $nameBits = $this->nameBits($user->name);
+          $user->first_name = $nameBits['first_name'];
+          $user->last_name = $nameBits['last_name'];
+        }
+
         switch ($user->source) {
 
           case 'niche':
@@ -1065,6 +1075,24 @@ class MBC_UserImport
 
     // Reset for next round
     $this->existingStatus = array();
+  }
+
+ /*
+  * Utility method - Converts full name to first and last name.
+  *
+  * @param string $fullName
+  *   The full name to break a part based on spaces in the name.
+  * @return array $nameBits
+  *   The first and last names created from the supplied full name.
+  */
+  private function nameBits($fullName) {
+
+    $names = explode(' ', $fullName);
+    $nameBits['last_name'] = $names[count($names) - 1];
+    unset($names[count($names) - 1]);
+    $nameBits['first_name'] = implode(' ', $names);
+
+    return $nameBits;
   }
 
 }
