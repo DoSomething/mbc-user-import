@@ -693,13 +693,12 @@ class MBC_UserImport
         $userDetails['birthdate_timestamp'] = strtotime($user->birthdate);
       }
 
-      if (isset($user->name) && $user->name != '') {
-        $names = explode(' ', $user->name);
-        $userDetails['merge_vars']['LNAME'] = $names[count($names) - 1];
-        unset($names[count($names) - 1]);
-        $userDetails['merge_vars']['FNAME'] = implode(' ', $names);
+      if (isset($user->first_name) && $user->first_name != '') {
+        $userDetails['merge_vars']['FNAME'] = $user->first_name;
       }
-
+      if (isset($user->last_name) && $user->last_name != '') {
+        $userDetails['merge_vars']['LNAME'] = $user->last_name;
+      };
       if (isset($user->password) && $user->password != '') {
         $userDetails['merge_vars']['PASSWORD'] = $user->password;
       }
