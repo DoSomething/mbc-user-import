@@ -713,8 +713,8 @@ class MBC_UserImport
       $this->statHat->addStatName('Distribute user import - user.registration.transactional');
       $this->statHat->reportCount(1);
 
-      // Create second transactional email message to inform the user of their temp password
-      // Config specific to producing a new user for the Message Broker userAPI
+      // Create second transactional email message to inform the user of their new DoSomething account
+      // with password reset link. Config specific to producing a new user for the Message Broker userAPI
 
 
 
