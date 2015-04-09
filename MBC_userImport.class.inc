@@ -120,6 +120,16 @@ class MBC_UserImport
 
       foreach ($targetUsers as $userCount => $user) {
 
+        // Needed for toolbox->createDrupalUser()
+        $user->user_registration_source = $user->source;
+
+        // Ensure first_name is defined for Drupal user creation
+        if (isset($user->name) && !isset($user->first_name)) {
+          $nameBits = $this->nameBits($user->name);
+          $user->first_name = $nameBits['first_name'];
+          $user->last_name = $nameBits['last_name'];
+        }
+
         switch ($user->source) {
 
           case 'niche':
@@ -184,6 +194,20 @@ class MBC_UserImport
             // Generate additional messages to trigger related functionality to
             // a user signing up for a campaign
             $status = $this->userImportProducer_herCampus($user, $drupalUser);
+
+            break;
+
+          case 'att-ichannel':
+
+            // Create Drupal user - https://github.com/DoSomething/dosomething/wiki/API#users
+            list($drupalUser, $user->password) = $this->toolbox->createDrupalUser($user);
+
+            // With new user account details from the Drupal site:
+            // - Send transaction to transactionalExchange for distribution to
+            //   transactionalQueue, userAPIRegistrationQueue and userRegistrationQueue
+            // - could return array rather than user object when user already exists
+            //   based on supplied email. Existing Drupal accounts will be logged.
+            $status = $this->userImportProducer_att_ichannel($user, $drupalUser);
 
             break;
 
@@ -563,6 +587,157 @@ class MBC_UserImport
     return $status;
   }
 
+    /**
+   * Send transaction to transactionalExchange with user.registration.import
+   * routing key for new users from "AT&T - iChannel".
+   *
+   * @param array $user
+   *   Details about the user based on the import data.
+   * @param array $drupalUser
+   *   Details about the Drupal user based on the account created from the API
+   *   call to /api/v1/users.
+   *
+   * @return string $status
+   *   Results for queue submission.
+   */
+  private function userImportProducer_att_ichannel($user, $drupalUser) {
+
+    if (( isset($user->email) && isset($drupalUser->uid) && $drupalUser->uid > 0 ) ||
+        ( ( is_array($drupalUser) && !isset($drupalUser['errorInfo']) ) && isset($drupalUser[0]) && strpos($drupalUser[0], 'is registered') !== FALSE) ) {
+
+      // Check for existing MailChimp and/or Mobile Commons accounts
+      $this->checkExistingAccount($user, $drupalUser);
+
+      // Config specific to producing a new user for the Message Broker userAPI
+      $config = array(
+        'exchange' => array(
+          'name' => getenv("MB_TRANSACTIONAL_EXCHANGE"),
+          'type' => getenv("MB_TRANSACTIONAL_EXCHANGE_TYPE"),
+          'passive' => getenv("MB_TRANSACTIONAL_EXCHANGE_PASSIVE"),
+          'durable' => getenv("MB_TRANSACTIONAL_EXCHANGE_DURABLE"),
+          'auto_delete' => getenv("MB_TRANSACTIONAL_EXCHANGE_AUTO_DELETE"),
+        ),
+        'queue' => array(
+          'userAPIRegistration' => array(
+            'name' => getenv("MB_USER_API_REGISTRATION_QUEUE"),
+            'passive' => getenv("MB_USER_API_REGISTRATION_QUEUE_PASSIVE"),
+            'durable' => getenv("MB_USER_API_REGISTRATION_QUEUE_DURABLE"),
+            'exclusive' => getenv("MB_USER_API_REGISTRATION_QUEUE_EXCLUSIVE"),
+            'auto_delete' => getenv("MB_USER_API_REGISTRATION_QUEUE_AUTO_DELETE"),
+          ),
+          'registrations' => array(
+            'name' => getenv("MB_USER_REGISTRATION_QUEUE"),
+            'passive' => getenv("MB_USER_REGISTRATION_QUEUE_PASSIVE"),
+            'durable' => getenv("MB_USER_REGISTRATION_QUEUE_DURABLE"),
+            'exclusive' => getenv("MB_USER_REGISTRATION_QUEUE_EXCLUSIVE"),
+            'auto_delete' => getenv("MB_USER_REGISTRATION_QUEUE_AUTO_DELETE"),
+            'bindingKey' => getenv("MB_USER_REGISTRATION_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
+          ),
+          'transactional' => array(
+            'name' => getenv("MB_TRANSACTIONAL_QUEUE"),
+            'passive' => getenv("MB_TRANSACTIONAL_QUEUE_PASSIVE"),
+            'durable' => getenv("MB_TRANSACTIONAL_QUEUE_DURABLE"),
+            'exclusive' => getenv("MB_TRANSACTIONAL_QUEUE_EXCLUSIVE"),
+            'auto_delete' => getenv("MB_TRANSACTIONAL_QUEUE_AUTO_DELETE"),
+            'bindingKey' => getenv("MB_TRANSACTIONAL_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
+          ),
+          'mobileCommons' => array(
+            'name' => getenv("MB_MOBILE_COMMONS_QUEUE"),
+            'passive' => getenv("MB_MOBILE_COMMONS_QUEUE_PASSIVE"),
+            'durable' => getenv("MB_MOBILE_COMMONS_QUEUE_DURABLE"),
+            'exclusive' => getenv("MB_MOBILE_COMMONS_QUEUE_EXCLUSIVE"),
+            'auto_delete' => getenv("MB_MOBILE_COMMONS_QUEUE_AUTO_DELETE"),
+            'bindingKey' => getenv("MB_MOBILE_COMMONS_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
+          ),
+        ),
+        'routingKey' => 'user.registration.transactional',
+      );
+      $mbUserAPI = new MessageBroker($this->credentials, $config);
+
+      // Required
+      $userDetails = array(
+        'email' => $user->email,
+        'subscribed' => 1,
+        'subscriptions' => array(
+          'mailchimp' => 1
+        ),
+        'activity' => 'user_welcome-att-ichannel',
+        'email_template' => 'mb-user-welcome-attichannel-v1-0-0',
+        'mc_opt_in_path_id' => 177266,
+        'source' => $user->source,
+        'tags' => array(
+          0 => 'user_welcome-' . $user->source,
+        ),
+        'merge_vars' => array(
+          'MEMBER_COUNT' => $this->memberCount,
+        )
+      );
+
+      if (isset($drupalUser->uid) && $drupalUser->uid != '') {
+        $drupalUID = $drupalUser->uid;
+        $userDetails['uid'] = $drupalUID;
+      }
+      elseif (isset($drupalUser[0])) {
+        $drupalUID = substr($drupalUser[0], strpos($drupalUser[0], 'uid') + 4);
+        $drupalUID = substr($drupalUID, 0, strlen($drupalUID) - 1);
+        $userDetails['uid'] = $drupalUID;
+      }
+      if (isset($drupalUser->created) && $drupalUser->created) {
+        $userDetails['activity_timestamp'] = $drupalUser->created;
+      }
+      else {
+        $userDetails['activity_timestamp'] = time();
+      }
+      if (isset($user->birthdate) && $user->birthdate != 0) {
+        $userDetails['birthdate_timestamp'] = strtotime($user->birthdate);
+      }
+
+      if (isset($user->first_name) && $user->first_name != '') {
+        $userDetails['merge_vars']['FNAME'] = $user->first_name;
+      }
+      if (isset($user->last_name) && $user->last_name != '') {
+        $userDetails['merge_vars']['LNAME'] = $user->last_name;
+      };
+      if (isset($user->password) && $user->password != '') {
+        $userDetails['merge_vars']['PASSWORD'] = $user->password;
+      }
+      if (isset($user->phone) && $user->phone != '') {
+        $userDetails['mobile'] = $user->phone;
+      }
+      $payload = serialize($userDetails);
+      $mbUserAPI->publishMessage($payload);
+      $status = TRUE;
+
+      $this->statHat->clearAddedStatNames();
+      $this->statHat->addStatName('Distribute user import - user.registration.transactional');
+      $this->statHat->reportCount(1);
+
+      // Create second transactional email message to inform the user of their new DoSomething account
+      // with password reset link. Config specific to producing a new user for the Message Broker userAPI
+      // Skip if the Drupal user account already existed
+      if (!(is_array($drupalUser) && strpos($drupalUser[0], 'is registered') !== FALSE)) {
+        $this->temporaryPasswordTransactional($userDetails);
+        $this->statHat->clearAddedStatNames();
+        $this->statHat->addStatName('Sent user_password-niche');
+        $this->statHat->reportCount(1);
+      }
+      else {
+        $this->statHat->clearAddedStatNames();
+        $this->statHat->addStatName('Existing DrupalUser');
+        $this->statHat->reportCount(1);
+      }
+
+    }
+    else {
+      if (isset($drupalUser->errorInfo)) {
+        echo 'Error processing user: ' . $drupalUser->errorInfo[2], PHP_EOL;
+      }
+      $status = FALSE;
+    }
+
+    return $status;
+  }
+
   /**
    * Send transactional email to provide details on temporaty password assigned
    * to newly created Drupal user account.
@@ -903,6 +1078,24 @@ class MBC_UserImport
 
     // Reset for next round
     $this->existingStatus = array();
+  }
+
+ /*
+  * Utility method - Converts full name to first and last name.
+  *
+  * @param string $fullName
+  *   The full name to break a part based on spaces in the name.
+  * @return array $nameBits
+  *   The first and last names created from the supplied full name.
+  */
+  private function nameBits($fullName) {
+
+    $names = explode(' ', $fullName);
+    $nameBits['last_name'] = ucwords($names[count($names) - 1]);
+    unset($names[count($names) - 1]);
+    $nameBits['first_name'] = ucwords(implode(' ', $names));
+
+    return $nameBits;
   }
 
 }
