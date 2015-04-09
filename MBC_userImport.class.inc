@@ -207,7 +207,7 @@ class MBC_UserImport
             //   transactionalQueue, userAPIRegistrationQueue and userRegistrationQueue
             // - could return array rather than user object when user already exists
             //   based on supplied email. Existing Drupal accounts will be logged.
-            $this->userImportProducer_att_ichannel($user, $drupalUser);
+            $status = $this->userImportProducer_att_ichannel($user, $drupalUser);
 
             break;
 
@@ -624,7 +624,6 @@ class MBC_UserImport
             'durable' => getenv("MB_USER_API_REGISTRATION_QUEUE_DURABLE"),
             'exclusive' => getenv("MB_USER_API_REGISTRATION_QUEUE_EXCLUSIVE"),
             'auto_delete' => getenv("MB_USER_API_REGISTRATION_QUEUE_AUTO_DELETE"),
-            'bindingKey' => getenv("MB_USER_API_REGISTRATION_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
           ),
           'registrations' => array(
             'name' => getenv("MB_USER_REGISTRATION_QUEUE"),
@@ -664,7 +663,7 @@ class MBC_UserImport
         ),
         'activity' => 'user_welcome-att-ichannel',
         'email_template' => 'mb-user-welcome-attichannel-v1-0-0',
-        'mc_opt_in_path_id' => 170071,
+        'mc_opt_in_path_id' => 177266,
         'source' => $user->source,
         'tags' => array(
           0 => 'user_welcome-' . $user->source,
@@ -715,13 +714,18 @@ class MBC_UserImport
 
       // Create second transactional email message to inform the user of their new DoSomething account
       // with password reset link. Config specific to producing a new user for the Message Broker userAPI
-
-
-
-
-
-
-
+      // Skip if the Drupal user account already existed
+      if (!(is_array($drupalUser) && strpos($drupalUser[0], 'is registered') !== FALSE)) {
+        $this->temporaryPasswordTransactional($userDetails);
+        $this->statHat->clearAddedStatNames();
+        $this->statHat->addStatName('Sent user_password-niche');
+        $this->statHat->reportCount(1);
+      }
+      else {
+        $this->statHat->clearAddedStatNames();
+        $this->statHat->addStatName('Existing DrupalUser');
+        $this->statHat->reportCount(1);
+      }
 
     }
     else {
@@ -1087,9 +1091,9 @@ class MBC_UserImport
   private function nameBits($fullName) {
 
     $names = explode(' ', $fullName);
-    $nameBits['last_name'] = $names[count($names) - 1];
+    $nameBits['last_name'] = ucwords($names[count($names) - 1]);
     unset($names[count($names) - 1]);
-    $nameBits['first_name'] = implode(' ', $names);
+    $nameBits['first_name'] = ucwords(implode(' ', $names));
 
     return $nameBits;
   }
