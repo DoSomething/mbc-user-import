@@ -355,6 +355,7 @@ class MBC_UserImport
         'subscribed' => 1,
         'activity' => 'user_welcome-niche',
         'email_template' => 'mb-user-welcome-niche-com-v1-0-0-1',
+        'mailchimp_list_id' => 'f2fab1dfd4',
         'mc_opt_in_path_id' => 170071,
         'source' => $user->source,
         'tags' => array(
@@ -555,6 +556,7 @@ class MBC_UserImport
         'subscribed' => 1,
         'activity' => 'user_import',
         'source' => $user->source,
+        'mailchimp_list_id' => 'f2fab1dfd4',
         'mailchimp_group_name' => 'TeensforJeans2014',
         'mailchimp_grouping_id' => 10637,
         'mc_opt_in_path_id' => 175235
@@ -663,6 +665,7 @@ class MBC_UserImport
         ),
         'activity' => 'user_welcome-att-ichannel',
         'email_template' => 'mb-user-welcome-attichannel-v1-0-0',
+        'mailchimp_list_id' => 'f2fab1dfd4',
         'mc_opt_in_path_id' => 177266,
         'source' => $user->source,
         'tags' => array(
@@ -764,16 +767,8 @@ class MBC_UserImport
           'auto_delete' => getenv("MB_TRANSACTIONAL_QUEUE_AUTO_DELETE"),
           'bindingKey' => getenv("MB_TRANSACTIONAL_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
         ),
-        'registrations' => array(
-          'name' => getenv("MB_USER_REGISTRATION_QUEUE"),
-          'passive' => getenv("MB_USER_REGISTRATION_QUEUE_PASSIVE"),
-          'durable' => getenv("MB_USER_REGISTRATION_QUEUE_DURABLE"),
-          'exclusive' => getenv("MB_USER_REGISTRATION_QUEUE_EXCLUSIVE"),
-          'auto_delete' => getenv("MB_USER_REGISTRATION_QUEUE_AUTO_DELETE"),
-          'bindingKey' => getenv("MB_USER_REGISTRATION_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
-        ),
       ),
-      'routingKey' => 'user.registration.transactional',
+      'routingKey' => 'user.password.transactional',
     );
     $mbUserAPI = new MessageBroker($this->credentials, $config);
 
