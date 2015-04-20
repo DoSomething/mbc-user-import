@@ -181,25 +181,31 @@ class MBC_UserImport
               $user->uid = $drupalUID;
             }
             else {
-              echo 'ERROR - Call to Drupal API to create user has failed.', PHP_EOL;
-              exit;
+              echo 'ERROR - Call to Drupal API to create user has failed - submitted: ' . print_r($user, TRUE), PHP_EOL;
+
+              // Skip ack_back, process again on next run
+              $drupalUID = FALSE;
+              $status = FALSE;
             }
 
-            // Add to Teen for Jeans campaign: 1144
-            // Comeback Clothes: 362
-            $campaignNID = 362;
-            $campaignDetails = $this->campaignSignup($campaignNID, $drupalUID, $user->source);
+            if ($drupalUID != FALSE) {
 
-            // - [ ] An email from DoSomething.org thanking the user for signing
-            // up to the campaign
-            if ($campaignDetails !== FALSE) {
-              $user->uid = $drupalUID;
-              $this->campaignSignupTransactional($user, $campaignDetails);
+              // Add to Teen for Jeans campaign: 1144
+              // Comeback Clothes: 362
+              $campaignNID = 362;
+              $campaignDetails = $this->campaignSignup($campaignNID, $drupalUID, $user->source);
+
+              // - [ ] An email from DoSomething.org thanking the user for signing
+              // up to the campaign
+              if ($campaignDetails !== FALSE) {
+                $user->uid = $drupalUID;
+                $this->campaignSignupTransactional($user, $campaignDetails);
+              }
+
+              // Generate additional messages to trigger related functionality to
+              // a user signing up for a campaign
+              $status = $this->userImportProducer_herCampus($user, $drupalUser);
             }
-
-            // Generate additional messages to trigger related functionality to
-            // a user signing up for a campaign
-            $status = $this->userImportProducer_herCampus($user, $drupalUser);
 
             break;
 
@@ -216,7 +222,6 @@ class MBC_UserImport
             $status = $this->userImportProducer_att_ichannel($user, $drupalUser);
 
             break;
-
         }
 
         // Ack message
