@@ -137,12 +137,23 @@ class MBC_UserImport
             // Create Drupal user - https://github.com/DoSomething/dosomething/wiki/API#users
             list($drupalUser, $user->password) = $this->toolbox->createDrupalUser($user);
 
-            // With new user account details from the Drupal site:
-            // - Send transaction to transactionalExchange for distribution to
-            //   transactionalQueue, userAPIRegistrationQueue and userRegistrationQueue
-            // - could return array rather than user object when user already exists
-            //   based on supplied email. Existing Drupal accounts will be logged.
-            $status = $this->userImportProducer_niche($user, $drupalUser);
+            if ((is_object($drupalUser) && (!isset($drupalUser->errorInfo))) || is_array($drupalUser)) {
+
+              // With new user account details from the Drupal site:
+              // - Send transaction to transactionalExchange for distribution to
+              //   transactionalQueue, userAPIRegistrationQueue and userRegistrationQueue
+              // - could return array rather than user object when user already exists
+              //   based on supplied email. Existing Drupal accounts will be logged.
+              $status = $this->userImportProducer_niche($user, $drupalUser);
+
+            }
+            else {
+              echo 'ERROR - Call to Drupal API to create AT&T-iChannel Drupal user has failed - submitted: ' . print_r($user, TRUE), PHP_EOL;
+              if (isset($drupalUser->errorInfo)) {
+                echo 'Database error: ' . print_r($drupalUser->errorInfo, TRUE), PHP_EOL;
+              }
+              $status = FALSE;
+            }
 
             break;
 
@@ -154,7 +165,7 @@ class MBC_UserImport
             list($drupalUser, $user->password) = $this->toolbox->createDrupalUser($user);
 
             // New user produces object, array returned if existing user
-            if (is_object($drupalUser)) {
+            if (is_object($drupalUser) && (!isset($drupalUser->errorInfo))) {
 
               $drupalUID = $drupalUser->uid;
               $userDetails = array(
@@ -181,7 +192,10 @@ class MBC_UserImport
               $user->uid = $drupalUID;
             }
             else {
-              echo 'ERROR - Call to Drupal API to create user has failed - submitted: ' . print_r($user, TRUE), PHP_EOL;
+              echo 'ERROR - Call to Drupal API to create Her Campus Drupal user has failed - submitted: ' . print_r($user, TRUE), PHP_EOL;
+              if (isset($drupalUser->errorInfo)) {
+                echo 'Database error: ' . print_r($drupalUser->errorInfo, TRUE), PHP_EOL;
+              }
 
               // Skip ack_back, process again on next run
               $drupalUID = FALSE;
@@ -214,12 +228,23 @@ class MBC_UserImport
             // Create Drupal user - https://github.com/DoSomething/dosomething/wiki/API#users
             list($drupalUser, $user->password) = $this->toolbox->createDrupalUser($user);
 
-            // With new user account details from the Drupal site:
-            // - Send transaction to transactionalExchange for distribution to
-            //   transactionalQueue, userAPIRegistrationQueue and userRegistrationQueue
-            // - could return array rather than user object when user already exists
-            //   based on supplied email. Existing Drupal accounts will be logged.
-            $status = $this->userImportProducer_att_ichannel($user, $drupalUser);
+            if ((is_object($drupalUser) && (!isset($drupalUser->errorInfo))) || is_array($drupalUser)) {
+
+              // With new user account details from the Drupal site:
+              // - Send transaction to transactionalExchange for distribution to
+              //   transactionalQueue, userAPIRegistrationQueue and userRegistrationQueue
+              // - could return array rather than user object when user already exists
+              //   based on supplied email. Existing Drupal accounts will be logged.
+              $status = $this->userImportProducer_att_ichannel($user, $drupalUser);
+
+            }
+            else {
+              echo 'ERROR - Call to Drupal API to create AT&T-iChannel Drupal user has failed - submitted: ' . print_r($user, TRUE), PHP_EOL;
+              if (isset($drupalUser->errorInfo)) {
+                echo 'Database error: ' . print_r($drupalUser->errorInfo, TRUE), PHP_EOL;
+              }
+              $status = FALSE;
+            }
 
             break;
         }
