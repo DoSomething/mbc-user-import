@@ -69,7 +69,7 @@ class MBC_UserImport
   /**
    * The number of queue entries to process in each session
    */
-  const BATCH_SIZE = 5000;
+  const BATCH_SIZE = 5;
 
   /**
    * Constructor for MBC_UserImport
@@ -154,9 +154,8 @@ class MBC_UserImport
             list($drupalUser, $user->password) = $this->toolbox->createDrupalUser($user);
 
             // New user produces object, array returned if existing user
-            if (is_array($drupalUser) && $drupalUser[1] == 200) {
+            if (is_object($drupalUser)) {
 
-              $drupalUser = $drupalUser[0];
               $drupalUID = $drupalUser->uid;
               $userDetails = array(
                 'email' => $user->email,
@@ -175,17 +174,20 @@ class MBC_UserImport
               );
               $this->temporaryPasswordTransactional($userDetails);
             }
-            else {
+            elseif (is_array($drupalUser) && is_string($drupalUser[0])) {
               // Email xxx@gmail.com is registered to User uid 2305144.
-              $drupalUID = substr($drupalUser[0][0], strpos($drupalUser[0][0], 'uid') + 4);
+              $drupalUID = substr($drupalUser[0], strpos($drupalUser[0], 'uid') + 4);
               $drupalUID = substr($drupalUID, 0, strlen($drupalUID) - 1);
               $user->uid = $drupalUID;
+            }
+            else {
+              echo 'ERROR - Call to Drupal API to create user has failed.', PHP_EOL;
+              exit;
             }
 
             // Add to Teen for Jeans campaign: 1144
             // Comeback Clothes: 362
             $campaignNID = 362;
-
             $campaignDetails = $this->campaignSignup($campaignNID, $drupalUID, $user->source);
 
             // - [ ] An email from DoSomething.org thanking the user for signing
@@ -511,7 +513,7 @@ class MBC_UserImport
   private function userImportProducer_herCampus($user, $drupalUser) {
 
     if ((isset($user->email) && isset($drupalUser->uid) && $drupalUser->uid > 0) ||
-       (is_array($drupalUser) && isset($drupalUser[0][0]) && strpos($drupalUser[0][0], 'is registered') !== FALSE)) {
+       (is_array($drupalUser) && isset($drupalUser[0]) && strpos($drupalUser[0], 'is registered') !== FALSE)) {
 
       // Check for existing MailChimp and/or Mobile Commons accounts
       $this->checkExistingAccount($user, $drupalUser);
@@ -567,10 +569,10 @@ class MBC_UserImport
       );
 
       if (isset($user->first_name) && $user->first_name != '') {
-        $userDetails['merge_vars']['FNAME'] = $user->first_name;
+        $userDetails['merge_vars']['FNAME'] = ucfirst($user->first_name);
       }
       if (isset($user->last_name) && $user->last_name != '') {
-        $userDetails['merge_vars']['LNAME'] = $user->last_name;
+        $userDetails['merge_vars']['LNAME'] = ucfirst($user->last_name);
       }
       if (isset($user->uid)) {
         $nuserDetails['uid'] = $user->uid;
@@ -818,26 +820,37 @@ class MBC_UserImport
     $signUp = $this->toolbox->curlPOSTauth($curlUrl, $post);
 
     // Results found for campaign - proceed to get campaign details
-    if (is_array($signUp) && $signUp[1] == 200 && $signUp[0][0] != FALSE)   {
+    if (is_array($signUp) && $signUp[0] > 0)   {
 
-      // Lookup campaign details after successful signup
-      // https://www.dosomething.org/api/v1/content/:nid
-      $curlUrl = $this->settings['ds_drupal_api_host'];
-      $port = $this->settings['ds_drupal_api_port'];
-      if ($port != 0) {
-        $curlUrl .= ":$port";
+      // Store campaign details to prevent flooding Drupal API
+      if (!isset($this->campaigns[$campaignNID])) {
+
+        // Lookup campaign details after successful signup
+        // https://www.dosomething.org/api/v1/content/:nid
+        $curlUrl = $this->settings['ds_drupal_api_host'];
+        $port = $this->settings['ds_drupal_api_port'];
+        if ($port != 0) {
+          $curlUrl .= ":$port";
+        }
+        $curlUrl .= '/api/v1/content/' . $campaignNID;
+        $campaignDetails = $this->toolbox->curlGET($curlUrl);
+        if (!is_object($campaignDetails)) {
+          echo 'ERROR - MB_Toolbox->campaignSignup: Target campaign "' . $campaignNID . '" not found with /api/v1/content/' . $campaignNID . ' call.', PHP_EOL;
+          $campaignDetails = FALSE;
+        }
+        else {
+          $this->campaigns[$campaignNID] = $campaignDetails;
+        }
+
       }
-      $curlUrl .= '/api/v1/content/' . $campaignNID;
-      $campaignDetails = $this->toolbox->curlGET($curlUrl);
-      if (!is_object($campaignDetails)) {
-        echo 'ERROR - MB_Toolbox->campaignSignup: Target campaign "' . $campaignNID . '" not found with /api/v1/content/' . $campaignNID . ' call.', PHP_EOL;
-        $campaignDetails = FALSE;
+      else {
+        $campaignDetails = $this->campaigns[$campaignNID];
       }
 
       return $campaignDetails;
     } // Invalid ID or closed campaign
     else {
-      echo 'Drupal UID: ' . $drupalUID . ' may already be signed up for campaign ' . $campaignNID . ' or campaign is not accepting signups.', PHP_EOL; 
+      echo 'Drupal UID: ' . $drupalUID . ' may already be signed up for campaign ' . $campaignNID . ' or campaign is not accepting signups, sid returned is: ' . $signUp[0], PHP_EOL;
       return FALSE;
     }
   }
@@ -936,8 +949,8 @@ class MBC_UserImport
 
     // Log existing Drupal user
     if (is_array($drupalUser)) {
-      $this->existingStatus['drupal-uid'] = substr($drupalUser[0], strpos($drupalUser[0], 'User uid') + 9);
-      $this->existingStatus['drupal-email'] = substr($drupalUser[0], strpos($drupalUser[0], 'mail') + 5, (strpos($drupalUser[0], 'is') - 1) - (strpos($drupalUser[0], 'mail') + 5));
+      $this->existingStatus['drupal-uid'] = substr($drupalUser[0][0], strpos($drupalUser[0][0], 'User uid') + 9);
+      $this->existingStatus['drupal-email'] = substr($drupalUser[0][0], strpos($drupalUser[0][0], 'mail') + 5, (strpos($drupalUser[0][0], 'is') - 1) - (strpos($drupalUser[0][0], 'mail') + 5));
 
       $this->statHat->clearAddedStatNames();
       $this->statHat->addStatName('Drupal - existing account');
