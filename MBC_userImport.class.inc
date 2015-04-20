@@ -153,6 +153,7 @@ class MBC_UserImport
                 echo 'Database error: ' . print_r($drupalUser->errorInfo, TRUE), PHP_EOL;
               }
               $status = FALSE;
+              echo '~~~~~~~~~', PHP_EOL;
             }
 
             break;
@@ -196,10 +197,14 @@ class MBC_UserImport
               if (isset($drupalUser->errorInfo)) {
                 echo 'Database error: ' . print_r($drupalUser->errorInfo, TRUE), PHP_EOL;
               }
+              else {
+                echo '- $drupalUser: ' . print_r($drupalUser, TRUE), PHP_EOL;
+              }
 
               // Skip ack_back, process again on next run
               $drupalUID = FALSE;
               $status = FALSE;
+              echo '~~~~~~~~~', PHP_EOL;
             }
 
             if ($drupalUID != FALSE) {
@@ -244,9 +249,15 @@ class MBC_UserImport
                 echo 'Database error: ' . print_r($drupalUser->errorInfo, TRUE), PHP_EOL;
               }
               $status = FALSE;
+              echo '~~~~~~~~~', PHP_EOL;
             }
 
             break;
+
+          default:
+            echo 'ERROR - Invalid source value - submitted: ' . print_r($user, TRUE), PHP_EOL;
+            $status = FALSE;
+
         }
 
         // Ack message
@@ -1053,7 +1064,7 @@ class MBC_UserImport
         }
         else {
           $mobileCommonsError = $mobilecommonsStatus['error']->attributes()->{'message'};
-          echo 'checkExistingAccoun - Mobile commons error (' . $user->phone . ') : ' . $mobileCommonsError . ' aka Number not found. The number will be added as a new user in userImportProducer_*.', PHP_EOL;
+          echo 'checkExistingAccount - Mobile commons error (' . $user->phone . ') : ' . $mobileCommonsError . ' aka Number not found. The number will be added as a new user in userImportProducer_*.', PHP_EOL;
           $this->statHat->addStatName('Mobile Commons Error - ' . $mobileCommonsError);
           $this->statHat->reportCount(1);
         }
