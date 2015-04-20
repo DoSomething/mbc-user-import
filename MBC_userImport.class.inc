@@ -147,6 +147,7 @@ class MBC_UserImport
             break;
 
           case 'herCampus':
+          case 'hercampus':
 
             // - [ ] Creation of Drupal user that they can access at a later date by resetting their password.
             // Create Drupal user - https://github.com/DoSomething/dosomething/wiki/API#users
@@ -173,15 +174,20 @@ class MBC_UserImport
               );
               $this->temporaryPasswordTransactional($userDetails);
             }
-            else {
+            elseif (is_array($drupalUser) && is_string($drupalUser[0])) {
               // Email xxx@gmail.com is registered to User uid 2305144.
               $drupalUID = substr($drupalUser[0], strpos($drupalUser[0], 'uid') + 4);
               $drupalUID = substr($drupalUID, 0, strlen($drupalUID) - 1);
               $user->uid = $drupalUID;
             }
+            else {
+              echo 'ERROR - Call to Drupal API to create user has failed.', PHP_EOL;
+              exit;
+            }
 
-            // Add to Teen for Jeans campaign
-            $campaignNID = 1144;
+            // Add to Teen for Jeans campaign: 1144
+            // Comeback Clothes: 362
+            $campaignNID = 362;
             $campaignDetails = $this->campaignSignup($campaignNID, $drupalUID, $user->source);
 
             // - [ ] An email from DoSomething.org thanking the user for signing
@@ -557,16 +563,16 @@ class MBC_UserImport
         'activity' => 'user_import',
         'source' => $user->source,
         'mailchimp_list_id' => 'f2fab1dfd4',
-        'mailchimp_group_name' => 'TeensforJeans2014',
-        'mailchimp_grouping_id' => 10637,
+        'mailchimp_group_name' => 'ComebackClothes2015',
+        'mailchimp_grouping_id' => 10641,
         'mc_opt_in_path_id' => 175235
       );
 
       if (isset($user->first_name) && $user->first_name != '') {
-        $userDetails['merge_vars']['FNAME'] = $user->first_name;
+        $userDetails['merge_vars']['FNAME'] = ucfirst($user->first_name);
       }
       if (isset($user->last_name) && $user->last_name != '') {
-        $userDetails['merge_vars']['LNAME'] = $user->last_name;
+        $userDetails['merge_vars']['LNAME'] = ucfirst($user->last_name);
       }
       if (isset($user->uid)) {
         $nuserDetails['uid'] = $user->uid;
@@ -813,27 +819,38 @@ class MBC_UserImport
     $curlUrl .= '/api/v1/campaigns/' . $campaignNID . '/signup';
     $signUp = $this->toolbox->curlPOSTauth($curlUrl, $post);
 
-    // No results found for campaign - invalid ID or closed campaign
-    if ($signUp[0] != 0 && !is_array($signUp))  {
+    // Results found for campaign - proceed to get campaign details
+    if (is_array($signUp) && $signUp[0] > 0)   {
 
-      // Lookup campaign details after successful signup
-      // https://www.dosomething.org/api/v1/content/:nid
-      $curlUrl = $this->settings['ds_drupal_api_host'];
-      $port = $this->settings['ds_drupal_api_port'];
-      if ($port != 0) {
-        $curlUrl .= ":$port";
+      // Store campaign details to prevent flooding Drupal API
+      if (!isset($this->campaigns[$campaignNID])) {
+
+        // Lookup campaign details after successful signup
+        // https://www.dosomething.org/api/v1/content/:nid
+        $curlUrl = $this->settings['ds_drupal_api_host'];
+        $port = $this->settings['ds_drupal_api_port'];
+        if ($port != 0) {
+          $curlUrl .= ":$port";
+        }
+        $curlUrl .= '/api/v1/content/' . $campaignNID;
+        $campaignDetails = $this->toolbox->curlGET($curlUrl);
+        if (!is_object($campaignDetails)) {
+          echo 'ERROR - MB_Toolbox->campaignSignup: Target campaign "' . $campaignNID . '" not found with /api/v1/content/' . $campaignNID . ' call.', PHP_EOL;
+          $campaignDetails = FALSE;
+        }
+        else {
+          $this->campaigns[$campaignNID] = $campaignDetails;
+        }
+
       }
-      $curlUrl .= '/api/v1/content/' . $campaignNID;
-      $campaignDetails = $this->toolbox->curlGET($curlUrl);
-      if (!is_object($campaignDetails)) {
-        echo 'ERROR - MB_Toolbox->campaignSignup: Target campaign "' . $campaignNID . '" not found with /api/v1/content/' . $campaignNID . ' call.', PHP_EOL;
-        $campaignDetails = FALSE;
+      else {
+        $campaignDetails = $this->campaigns[$campaignNID];
       }
 
       return $campaignDetails;
-    }
+    } // Invalid ID or closed campaign
     else {
-      echo 'Drupal UID: ' . $drupalUID . ' may already be signed up for campaign ' . $campaignNID . ' or campaign is not accepting signups: ' . $signUp[0], PHP_EOL; 
+      echo 'Drupal UID: ' . $drupalUID . ' may already be signed up for campaign ' . $campaignNID . ' or campaign is not accepting signups, sid returned is: ' . $signUp[0], PHP_EOL;
       return FALSE;
     }
   }
