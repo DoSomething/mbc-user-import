@@ -147,14 +147,16 @@ class MBC_UserImport
             break;
 
           case 'herCampus':
+          case 'hercampus':
 
             // - [ ] Creation of Drupal user that they can access at a later date by resetting their password.
             // Create Drupal user - https://github.com/DoSomething/dosomething/wiki/API#users
             list($drupalUser, $user->password) = $this->toolbox->createDrupalUser($user);
 
             // New user produces object, array returned if existing user
-            if (is_object($drupalUser)) {
+            if (is_array($drupalUser) && $drupalUser[1] == 200) {
 
+              $drupalUser = $drupalUser[0];
               $drupalUID = $drupalUser->uid;
               $userDetails = array(
                 'email' => $user->email,
@@ -175,13 +177,15 @@ class MBC_UserImport
             }
             else {
               // Email xxx@gmail.com is registered to User uid 2305144.
-              $drupalUID = substr($drupalUser[0], strpos($drupalUser[0], 'uid') + 4);
+              $drupalUID = substr($drupalUser[0][0], strpos($drupalUser[0][0], 'uid') + 4);
               $drupalUID = substr($drupalUID, 0, strlen($drupalUID) - 1);
               $user->uid = $drupalUID;
             }
 
-            // Add to Teen for Jeans campaign
-            $campaignNID = 1144;
+            // Add to Teen for Jeans campaign: 1144
+            // Comeback Clothes: 362
+            $campaignNID = 362;
+
             $campaignDetails = $this->campaignSignup($campaignNID, $drupalUID, $user->source);
 
             // - [ ] An email from DoSomething.org thanking the user for signing
@@ -507,7 +511,7 @@ class MBC_UserImport
   private function userImportProducer_herCampus($user, $drupalUser) {
 
     if ((isset($user->email) && isset($drupalUser->uid) && $drupalUser->uid > 0) ||
-       (is_array($drupalUser) && isset($drupalUser[0]) && strpos($drupalUser[0], 'is registered') !== FALSE)) {
+       (is_array($drupalUser) && isset($drupalUser[0][0]) && strpos($drupalUser[0][0], 'is registered') !== FALSE)) {
 
       // Check for existing MailChimp and/or Mobile Commons accounts
       $this->checkExistingAccount($user, $drupalUser);
@@ -557,8 +561,8 @@ class MBC_UserImport
         'activity' => 'user_import',
         'source' => $user->source,
         'mailchimp_list_id' => 'f2fab1dfd4',
-        'mailchimp_group_name' => 'TeensforJeans2014',
-        'mailchimp_grouping_id' => 10637,
+        'mailchimp_group_name' => 'ComebackClothes2015',
+        'mailchimp_grouping_id' => 10641,
         'mc_opt_in_path_id' => 175235
       );
 
@@ -813,8 +817,8 @@ class MBC_UserImport
     $curlUrl .= '/api/v1/campaigns/' . $campaignNID . '/signup';
     $signUp = $this->toolbox->curlPOSTauth($curlUrl, $post);
 
-    // No results found for campaign - invalid ID or closed campaign
-    if ($signUp[0] != 0 && !is_array($signUp))  {
+    // Results found for campaign - proceed to get campaign details
+    if (is_array($signUp) && $signUp[1] == 200 && $signUp[0][0] != FALSE)   {
 
       // Lookup campaign details after successful signup
       // https://www.dosomething.org/api/v1/content/:nid
@@ -831,9 +835,9 @@ class MBC_UserImport
       }
 
       return $campaignDetails;
-    }
+    } // Invalid ID or closed campaign
     else {
-      echo 'Drupal UID: ' . $drupalUID . ' may already be signed up for campaign ' . $campaignNID . ' or campaign is not accepting signups: ' . $signUp[0], PHP_EOL; 
+      echo 'Drupal UID: ' . $drupalUID . ' may already be signed up for campaign ' . $campaignNID . ' or campaign is not accepting signups.', PHP_EOL; 
       return FALSE;
     }
   }
