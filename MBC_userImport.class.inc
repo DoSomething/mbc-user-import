@@ -343,7 +343,8 @@ class MBC_UserImport
    */
   private function userImportProducer_niche($user, $drupalUser) {
 
-    echo 'userImportProducer_niche - ' . print_r($drupalUser, TRUE), PHP_EOL;
+    echo 'userImportProducer_niche - user: ' . print_r($user, TRUE), PHP_EOL;
+    echo 'userImportProducer_niche - drupalUser: ' . print_r($drupalUser, TRUE), PHP_EOL;
     if (( isset($user->email) && isset($drupalUser->uid) && $drupalUser->uid > 0 ) ||
         ( ( is_array($drupalUser) && !isset($drupalUser['errorInfo']) ) && isset($drupalUser[0]) && strpos($drupalUser[0], 'is registered') !== FALSE) ) {
 
