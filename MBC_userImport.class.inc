@@ -113,6 +113,7 @@ class MBC_UserImport
 
     $targetUsers = array();
     $deliveryTags = array();
+    $status = FALSE;
 
     list($targetUsers, $deliveryTags) = $this->consumeUserImportQueue();
 
