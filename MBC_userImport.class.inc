@@ -1005,9 +1005,11 @@ class MBC_UserImport
 
     // Log existing Drupal user
     if (is_array($drupalUser)) {
-      $this->existingStatus['drupal-uid'] = substr($drupalUser[0], strpos($drupalUser[0], 'User uid') + 9);
-      $this->existingStatus['drupal-email'] = substr($drupalUser[0], strpos($drupalUser[0], 'mail') + 5, (strpos($drupalUser[0], 'is') - 1) - (strpos($drupalUser[0], 'mail') + 5));
-
+      $drupalUID =  substr($drupalUser[0], strpos($drupalUser[0], 'User uid') + 9);
+      $drupalEmail = substr($drupalUser[0], strpos($drupalUser[0], 'mail') + 5, (strpos($drupalUser[0], 'is') - 1) - (strpos($drupalUser[0], 'mail') + 5));
+      $this->existingStatus['drupal-uid'] = $drupalUID;
+      $this->existingStatus['drupal-email'] = $drupalEmail;
+      echo('Already a Drupal: ' . $drupalEmail . ' ('. $drupalUID . ')user.' . PHP_EOL);
       $this->statHat->clearAddedStatNames();
       $this->statHat->addStatName('Drupal - existing account');
       $this->statHat->reportCount(1);
