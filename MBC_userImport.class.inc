@@ -184,7 +184,13 @@ class MBC_UserImport
                   'PASSWORD' => $user->password,
                 )
               );
-              $this->temporaryPasswordTransactional($userDetails);
+
+              // Send password reset transactional email. Don't do further processing
+              // if failure to generate link
+              $status = $this->temporaryPasswordTransactional($userDetails);
+              if ($status == FALSE) {
+                $drupalUID == FALSE;
+              }
             }
             elseif (is_array($drupalUser[0]) && is_string($drupalUser[0][0])) {
               // Email xxx@gmail.com is registered to User uid 2305144.
@@ -819,12 +825,19 @@ class MBC_UserImport
     );
     $mbUserAPI = new MessageBroker($this->credentials, $config);
 
-    $userDetails['merge_vars']['PASSWORD_RESET_LINK'] = $this->toolbox->getPasswordResetURL($userDetails['uid']);
-    $userDetails['activity'] = 'user_password-' . $userDetails['source'];
-    $userDetails['email_template'] = 'mb-user-signup-niche-com-v1-0-0-1';
-    $userDetails['tags'][0] = 'user_password-' . $userDetails['source'];
-    $payload = serialize($userDetails);
-    $mbUserAPI->publishMessage($payload);
+    if ($passwordResetURL = $this->toolbox->getPasswordResetURL($userDetails['uid'])) {
+      $userDetails['merge_vars']['PASSWORD_RESET_LINK'] = $passwordResetURL;
+      $userDetails['activity'] = 'user_password-' . $userDetails['source'];
+      $userDetails['email_template'] = 'mb-user-signup-niche-com-v1-0-0-1';
+      $userDetails['tags'][0] = 'user_password-' . $userDetails['source'];
+      $payload = serialize($userDetails);
+      $mbUserAPI->publishMessage($payload);
+
+      return TRUE;
+    }
+    else {
+      return FALSE;
+    }
 
   }
 
