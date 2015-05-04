@@ -1005,7 +1005,7 @@ class MBC_UserImport
 
     // Log existing Drupal user
     if (is_array($drupalUser)) {
-      $drupalUID =  substr($drupalUser[0], strpos($drupalUser[0], 'User uid') + 8);
+      $drupalUID =  substr($drupalUser[0], strpos($drupalUser[0] + 1, 'User uid') + 8);
       $drupalEmail = substr($drupalUser[0], strpos($drupalUser[0], 'mail') + 5, (strpos($drupalUser[0], 'is') - 1) - (strpos($drupalUser[0], 'mail') + 5));
       $this->existingStatus['drupal-uid'] = $drupalUID;
       $this->existingStatus['drupal-email'] = $drupalEmail;
