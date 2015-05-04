@@ -517,7 +517,7 @@ class MBC_UserImport
 
       // Skip if the Drupal user account already existed
       if (!(is_array($drupalUser) && strpos($drupalUser[0], 'is registered') !== FALSE)) {
-        $this->temporaryPasswordTransactional($userDetails);
+        $status = $this->temporaryPasswordTransactional($userDetails);
         $this->statHat->clearAddedStatNames();
         $this->statHat->addStatName('Sent user_password-niche');
         $this->statHat->reportCount(1);
@@ -772,7 +772,7 @@ class MBC_UserImport
       // with password reset link. Config specific to producing a new user for the Message Broker userAPI
       // Skip if the Drupal user account already existed
       if (!(is_array($drupalUser) && strpos($drupalUser[0], 'is registered') !== FALSE)) {
-        $this->temporaryPasswordTransactional($userDetails);
+        $status = $this->temporaryPasswordTransactional($userDetails);
         $this->statHat->clearAddedStatNames();
         $this->statHat->addStatName('Sent user_password-niche');
         $this->statHat->reportCount(1);
@@ -803,29 +803,31 @@ class MBC_UserImport
    */
   private function temporaryPasswordTransactional($userDetails) {
 
-    $config = array(
-      'exchange' => array(
-        'name' => getenv("MB_TRANSACTIONAL_EXCHANGE"),
-        'type' => getenv("MB_TRANSACTIONAL_EXCHANGE_TYPE"),
-        'passive' => getenv("MB_TRANSACTIONAL_EXCHANGE_PASSIVE"),
-        'durable' => getenv("MB_TRANSACTIONAL_EXCHANGE_DURABLE"),
-        'auto_delete' => getenv("MB_TRANSACTIONAL_EXCHANGE_AUTO_DELETE"),
-      ),
-      'queue' => array(
-        'transactional' => array(
-          'name' => getenv("MB_TRANSACTIONAL_QUEUE"),
-          'passive' => getenv("MB_TRANSACTIONAL_QUEUE_PASSIVE"),
-          'durable' => getenv("MB_TRANSACTIONAL_QUEUE_DURABLE"),
-          'exclusive' => getenv("MB_TRANSACTIONAL_QUEUE_EXCLUSIVE"),
-          'auto_delete' => getenv("MB_TRANSACTIONAL_QUEUE_AUTO_DELETE"),
-          'bindingKey' => getenv("MB_TRANSACTIONAL_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
-        ),
-      ),
-      'routingKey' => 'user.password.transactional',
-    );
-    $mbUserAPI = new MessageBroker($this->credentials, $config);
+    $passwordResetURL = $this->toolbox->getPasswordResetURL($userDetails['uid']);
+    if ($passwordResetURL != NULL) {
 
-    if ($passwordResetURL = $this->toolbox->getPasswordResetURL($userDetails['uid'])) {
+      $config = array(
+        'exchange' => array(
+          'name' => getenv("MB_TRANSACTIONAL_EXCHANGE"),
+          'type' => getenv("MB_TRANSACTIONAL_EXCHANGE_TYPE"),
+          'passive' => getenv("MB_TRANSACTIONAL_EXCHANGE_PASSIVE"),
+          'durable' => getenv("MB_TRANSACTIONAL_EXCHANGE_DURABLE"),
+          'auto_delete' => getenv("MB_TRANSACTIONAL_EXCHANGE_AUTO_DELETE"),
+        ),
+        'queue' => array(
+          'transactional' => array(
+            'name' => getenv("MB_TRANSACTIONAL_QUEUE"),
+            'passive' => getenv("MB_TRANSACTIONAL_QUEUE_PASSIVE"),
+            'durable' => getenv("MB_TRANSACTIONAL_QUEUE_DURABLE"),
+            'exclusive' => getenv("MB_TRANSACTIONAL_QUEUE_EXCLUSIVE"),
+            'auto_delete' => getenv("MB_TRANSACTIONAL_QUEUE_AUTO_DELETE"),
+            'bindingKey' => getenv("MB_TRANSACTIONAL_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
+          ),
+        ),
+        'routingKey' => 'user.password.transactional',
+      );
+      $mbUserAPI = new MessageBroker($this->credentials, $config);
+
       $userDetails['merge_vars']['PASSWORD_RESET_LINK'] = $passwordResetURL;
       $userDetails['activity'] = 'user_password-' . $userDetails['source'];
       $userDetails['email_template'] = 'mb-user-signup-niche-com-v1-0-0-1';
