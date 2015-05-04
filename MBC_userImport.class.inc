@@ -69,7 +69,7 @@ class MBC_UserImport
   /**
    * The number of queue entries to process in each session
    */
-  const BATCH_SIZE = 50;
+  const BATCH_SIZE = 5000;
 
   /**
    * Constructor for MBC_UserImport
@@ -150,7 +150,7 @@ class MBC_UserImport
             elseif (isset($drupalUser[0]->errorInfo)) {
               echo 'ERROR - Call to Drupal API to create niche Drupal user has failed - submitted: ' . print_r($user, TRUE), PHP_EOL;
               echo '$drupalUser: ' . print_r($drupalUser, TRUE), PHP_EOL;
-              echo 'Database error: ' . print_r($drupalUser->errorInfo, TRUE), PHP_EOL;
+              echo 'Database error: ' . print_r($drupalUser[0]->errorInfo, TRUE), PHP_EOL;
               $status = FALSE;
               echo '~~~~~~~~~', PHP_EOL;
             }
