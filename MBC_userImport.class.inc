@@ -69,7 +69,7 @@ class MBC_UserImport
   /**
    * The number of queue entries to process in each session
    */
-  const BATCH_SIZE = 5;
+  const BATCH_SIZE = 50;
 
   /**
    * Constructor for MBC_UserImport
@@ -137,19 +137,19 @@ class MBC_UserImport
             // Create Drupal user - https://github.com/DoSomething/dosomething/wiki/API#users
             list($drupalUser, $user->password) = $this->toolbox->createDrupalUser($user);
 
-            if ((is_object($drupalUser) && (!isset($drupalUser->errorInfo))) || is_array($drupalUser)) {
+            if ((is_object($drupalUser[0]) && (!isset($drupalUser[0]->errorInfo))) || is_array($drupalUser[0])) {
 
               // With new user account details from the Drupal site:
               // - Send transaction to transactionalExchange for distribution to
               //   transactionalQueue, userAPIRegistrationQueue and userRegistrationQueue
               // - could return array rather than user object when user already exists
               //   based on supplied email. Existing Drupal accounts will be logged.
-              $status = $this->userImportProducer_niche($user, $drupalUser);
+              $status = $this->userImportProducer_niche($user, $drupalUser[0]);
 
             }
-            else {
-              echo 'ERROR - Call to Drupal API to create AT&T-iChannel Drupal user has failed - submitted: ' . print_r($user, TRUE), PHP_EOL;
-              if (isset($drupalUser->errorInfo)) {
+            elseif (!(isset($drupalUser[0][0]) && strpos($drupalUser[0][0], 'is registered') > 0)) {
+              echo 'ERROR - Call to Drupal API to create niche Drupal user has failed - submitted: ' . print_r($user, TRUE), PHP_EOL;
+              if (isset($drupalUser[0]->errorInfo)) {
                 echo 'Database error: ' . print_r($drupalUser->errorInfo, TRUE), PHP_EOL;
               }
               $status = FALSE;
@@ -166,9 +166,9 @@ class MBC_UserImport
             list($drupalUser, $user->password) = $this->toolbox->createDrupalUser($user);
 
             // New user produces object, array returned if existing user
-            if (is_object($drupalUser) && (!isset($drupalUser->errorInfo))) {
+            if (is_object($drupalUser[0]) && (!isset($drupalUser[0]->errorInfo))) {
 
-              $drupalUID = $drupalUser->uid;
+              $drupalUID = $drupalUser[0]->uid;
               $userDetails = array(
                 'email' => $user->email,
                 'uid' => $drupalUID,
@@ -186,19 +186,19 @@ class MBC_UserImport
               );
               $this->temporaryPasswordTransactional($userDetails);
             }
-            elseif (is_array($drupalUser) && is_string($drupalUser[0])) {
+            elseif (is_array($drupalUser[0]) && is_string($drupalUser[0][0])) {
               // Email xxx@gmail.com is registered to User uid 2305144.
-              $drupalUID = substr($drupalUser[0], strpos($drupalUser[0], 'uid') + 4);
-              $drupalUID = substr($drupalUID, 0, strlen($drupalUID) - 1);
+              $drupalUID = substr($drupalUser[0][0], strpos($drupalUser[0][0], 'uid') + 4);
+              $drupalUID = substr($drupalUID[0], 0, strlen($drupalUID) - 1);
               $user->uid = $drupalUID;
             }
             else {
               echo 'ERROR - Call to Drupal API to create Her Campus Drupal user has failed - submitted: ' . print_r($user, TRUE), PHP_EOL;
-              if (isset($drupalUser->errorInfo)) {
-                echo 'Database error: ' . print_r($drupalUser->errorInfo, TRUE), PHP_EOL;
+              if (isset($drupalUser[0]->errorInfo)) {
+                echo 'Database error: ' . print_r($drupalUser[0]->errorInfo, TRUE), PHP_EOL;
               }
               else {
-                echo '- $drupalUser: ' . print_r($drupalUser, TRUE), PHP_EOL;
+                echo '- $drupalUser: ' . print_r($drupalUser[0], TRUE), PHP_EOL;
               }
 
               // Skip ack_back, process again on next run
@@ -223,7 +223,7 @@ class MBC_UserImport
 
               // Generate additional messages to trigger related functionality to
               // a user signing up for a campaign
-              $status = $this->userImportProducer_herCampus($user, $drupalUser);
+              $status = $this->userImportProducer_herCampus($user, $drupalUser[0]);
             }
 
             break;
@@ -233,20 +233,20 @@ class MBC_UserImport
             // Create Drupal user - https://github.com/DoSomething/dosomething/wiki/API#users
             list($drupalUser, $user->password) = $this->toolbox->createDrupalUser($user);
 
-            if ((is_object($drupalUser) && (!isset($drupalUser->errorInfo))) || is_array($drupalUser)) {
+            if ((is_object($drupalUser[0]) && (!isset($drupalUser[0]->errorInfo))) || is_array($drupalUser[0])) {
 
               // With new user account details from the Drupal site:
               // - Send transaction to transactionalExchange for distribution to
               //   transactionalQueue, userAPIRegistrationQueue and userRegistrationQueue
               // - could return array rather than user object when user already exists
               //   based on supplied email. Existing Drupal accounts will be logged.
-              $status = $this->userImportProducer_att_ichannel($user, $drupalUser);
+              $status = $this->userImportProducer_att_ichannel($user, $drupalUser[0]);
 
             }
-            else {
+            elseif (!(isset($drupalUser[0][0]) && strpos($drupalUser[0][0], 'is registered') > 0)) {
               echo 'ERROR - Call to Drupal API to create AT&T-iChannel Drupal user has failed - submitted: ' . print_r($user, TRUE), PHP_EOL;
-              if (isset($drupalUser->errorInfo)) {
-                echo 'Database error: ' . print_r($drupalUser->errorInfo, TRUE), PHP_EOL;
+              if (isset($drupalUser[0]->errorInfo)) {
+                echo 'Database error: ' . print_r($drupalUser[0]->errorInfo, TRUE), PHP_EOL;
               }
               $status = FALSE;
               echo '~~~~~~~~~', PHP_EOL;
@@ -343,10 +343,8 @@ class MBC_UserImport
    */
   private function userImportProducer_niche($user, $drupalUser) {
 
-    echo 'userImportProducer_niche - user: ' . print_r($user, TRUE), PHP_EOL;
-    echo 'userImportProducer_niche - drupalUser: ' . print_r($drupalUser, TRUE), PHP_EOL;
     if (( isset($user->email) && isset($drupalUser->uid) && $drupalUser->uid > 0 ) ||
-        ( ( is_array($drupalUser) && !isset($drupalUser['errorInfo']) ) && isset($drupalUser[0]) && strpos($drupalUser[0], 'is registered') !== FALSE) ) {
+        ( ( is_array($drupalUser) && !isset($drupalUser[0]['errorInfo']) ) && isset($drupalUser[0]) && strpos($drupalUser[0], 'is registered') !== FALSE) ) {
 
       // Check for existing MailChimp and/or Mobile Commons accounts
       $this->checkExistingAccount($user, $drupalUser);
@@ -555,8 +553,8 @@ class MBC_UserImport
    */
   private function userImportProducer_herCampus($user, $drupalUser) {
 
-    if ((isset($user->email) && isset($drupalUser->uid) && $drupalUser->uid > 0) ||
-       (is_array($drupalUser) && isset($drupalUser[0]) && strpos($drupalUser[0], 'is registered') !== FALSE)) {
+    if (( isset($user->email) && isset($drupalUser->uid) && $drupalUser->uid > 0 ) ||
+        ( ( is_array($drupalUser) && !isset($drupalUser[0]['errorInfo']) ) && isset($drupalUser[0]) && strpos($drupalUser[0], 'is registered') !== FALSE) ) {
 
       // Check for existing MailChimp and/or Mobile Commons accounts
       $this->checkExistingAccount($user, $drupalUser);
