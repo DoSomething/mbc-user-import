@@ -1064,9 +1064,13 @@ class MBC_UserImport
         }
         else {
           $mobileCommonsError = $mobilecommonsStatus['error']->attributes()->{'message'};
-          echo 'checkExistingAccount - Mobile commons error (' . $user->phone . ') : ' . $mobileCommonsError . ' aka Number not found. The number will be added as a new user in userImportProducer_*.', PHP_EOL;
-          $this->statHat->addStatName('Mobile Commons Error - ' . $mobileCommonsError);
-          $this->statHat->reportCount(1);
+
+          // via Mobile Commons API - "Invalid phone number" aka "number not found", the number is not from an existing user.
+          if (!$mobileCommonsError == 'Invalid phone number') {
+            echo 'Mobile Common Error: ' . $mobileCommonsError, PHP_EOL;
+            $this->statHat->addStatName('Mobile Commons Error - ' . $mobileCommonsError);
+            $this->statHat->reportCount(1);
+          }
         }
 
       }
