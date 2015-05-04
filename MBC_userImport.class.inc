@@ -147,11 +147,10 @@ class MBC_UserImport
               $status = $this->userImportProducer_niche($user, $drupalUser[0]);
 
             }
-            elseif (!(isset($drupalUser[0][0]) && strpos($drupalUser[0][0], 'is registered') > 0)) {
+            elseif (isset($drupalUser[0]->errorInfo)) {
               echo 'ERROR - Call to Drupal API to create niche Drupal user has failed - submitted: ' . print_r($user, TRUE), PHP_EOL;
-              if (isset($drupalUser[0]->errorInfo)) {
-                echo 'Database error: ' . print_r($drupalUser->errorInfo, TRUE), PHP_EOL;
-              }
+              echo '$drupalUser: ' . print_r($drupalUser, TRUE), PHP_EOL;
+              echo 'Database error: ' . print_r($drupalUser->errorInfo, TRUE), PHP_EOL;
               $status = FALSE;
               echo '~~~~~~~~~', PHP_EOL;
             }
