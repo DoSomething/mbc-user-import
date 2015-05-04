@@ -131,6 +131,7 @@ class MBC_UserImport
           $user->last_name = $nameBits['last_name'];
         }
 
+        echo 'Source: ' . $user->source, PHP_EOL;
         switch ($user->source) {
 
           case 'niche':
@@ -188,9 +189,15 @@ class MBC_UserImport
               // Send password reset transactional email. Don't do further processing
               // if failure to generate link
               $status = $this->temporaryPasswordTransactional($userDetails);
-              if ($status == FALSE) {
+              $this->statHat->clearAddedStatNames();
+              if ($status == TRUE) {
+                $this->statHat->addStatName('Sent user_password-herCampus');
+              }
+              else {
+                $this->statHat->addStatName('ERROR generating user_password-herCampus');
                 $drupalUID == FALSE;
               }
+              $this->statHat->reportCount(1);
             }
             elseif (is_array($drupalUser[0]) && is_string($drupalUser[0][0])) {
               // Email xxx@gmail.com is registered to User uid 2305144.
@@ -230,6 +237,9 @@ class MBC_UserImport
               // Generate additional messages to trigger related functionality to
               // a user signing up for a campaign
               $status = $this->userImportProducer_herCampus($user, $drupalUser[0]);
+            }
+            else {
+              echo 'drupalUID not defined, skipped campaign signup and userImportProducer_herCampus() processing', PHP_EOL;
             }
 
             break;
@@ -519,7 +529,12 @@ class MBC_UserImport
       if (!(is_array($drupalUser) && strpos($drupalUser[0], 'is registered') !== FALSE)) {
         $status = $this->temporaryPasswordTransactional($userDetails);
         $this->statHat->clearAddedStatNames();
-        $this->statHat->addStatName('Sent user_password-niche');
+        if ($status == TRUE) {
+          $this->statHat->addStatName('Sent user_password-niche');
+        }
+        else {
+          $this->statHat->addStatName('ERROR generating user_password-niche');
+        }
         $this->statHat->reportCount(1);
       }
       else {
@@ -774,7 +789,12 @@ class MBC_UserImport
       if (!(is_array($drupalUser) && strpos($drupalUser[0], 'is registered') !== FALSE)) {
         $status = $this->temporaryPasswordTransactional($userDetails);
         $this->statHat->clearAddedStatNames();
-        $this->statHat->addStatName('Sent user_password-niche');
+        if ($status == TRUE) {
+          $this->statHat->addStatName('Sent user_password-att_ichannel');
+        }
+        else {
+          $this->statHat->addStatName('ERROR generating user_password-att_ichanne');
+        }
         $this->statHat->reportCount(1);
       }
       else {
@@ -1010,7 +1030,8 @@ class MBC_UserImport
       $drupalEmail = substr($drupalUser[0], strpos($drupalUser[0], 'mail') + 5, (strpos($drupalUser[0], 'is') - 1) - (strpos($drupalUser[0], 'mail') + 5));
       $this->existingStatus['drupal-uid'] = $drupalUID;
       $this->existingStatus['drupal-email'] = $drupalEmail;
-      echo('Already a Drupal: ' . $drupalEmail . ' ('. $drupalUID . ') user.' . PHP_EOL);
+      echo('Already a Drupal user: ' . $drupalEmail . ' ('. $drupalUID . ') user.' . PHP_EOL);
+
       $this->statHat->clearAddedStatNames();
       $this->statHat->addStatName('Drupal - existing account');
       $this->statHat->reportCount(1);
