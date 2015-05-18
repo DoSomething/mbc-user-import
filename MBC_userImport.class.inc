@@ -136,11 +136,8 @@ class MBC_UserImport
 
       foreach ($targetUsers as $userCount => $user) {
 
-        // ack_back empty entry to remove from queue but skip processing
-        if ($user == NULL) {
-          $status = TRUE;
-        }
-        else {
+        // skip processing empty entries
+        if ($user != NULL) {
 
           // Needed for toolbox->createDrupalUser()
           $user->user_registration_source = $user->source;
@@ -253,11 +250,15 @@ class MBC_UserImport
                 if ($campaignDetails !== FALSE) {
                   $user->uid = $drupalUID;
                   $this->campaignSignupTransactional($user, $campaignDetails);
+
+                  // Generate additional messages to trigger related functionality to
+                  // a user signing up for a campaign
+                  $status = $this->userImportProducer_herCampus($user, $drupalUser[0]);
+                }
+                else {
+                  $status = FALSE;
                 }
 
-                // Generate additional messages to trigger related functionality to
-                // a user signing up for a campaign
-                $status = $this->userImportProducer_herCampus($user, $drupalUser[0]);
               }
               else {
                 echo 'drupalUID not defined, skipped campaign signup and userImportProducer_herCampus() processing', PHP_EOL;
@@ -1122,7 +1123,7 @@ class MBC_UserImport
         $curlUrl .= '/api/v1/content/' . $campaignNID;
         $campaignDetails = $this->toolbox->curlGET($curlUrl);
         if (!is_object($campaignDetails[0])) {
-          echo 'ERROR - MB_Toolbox->campaignSignup: Target campaign "' . $campaignNID . '" not found with /api/v1/content/' . $campaignNID . ' call. Error code: ' . $campaignDetails[1], PHP_EOL;
+          echo 'ERROR - MBC_userImport->campaignSignup: Target campaign "' . $campaignNID . '" not found with /api/v1/content/' . $campaignNID . ' call. Error code: ' . $campaignDetails[1], PHP_EOL;
           $campaignDetails = FALSE;
         }
         else {
