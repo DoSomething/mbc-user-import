@@ -136,11 +136,8 @@ class MBC_UserImport
 
       foreach ($targetUsers as $userCount => $user) {
 
-        // ack_back empty entry to remove from queue but skip processing
-        if ($user == NULL) {
-          $status = TRUE;
-        }
-        else {
+        // skip processing empty entries
+        if ($user != NULL) {
 
           // Needed for toolbox->createDrupalUser()
           $user->user_registration_source = $user->source;
@@ -253,14 +250,102 @@ class MBC_UserImport
                 if ($campaignDetails !== FALSE) {
                   $user->uid = $drupalUID;
                   $this->campaignSignupTransactional($user, $campaignDetails);
+
+                  // Generate additional messages to trigger related functionality to
+                  // a user signing up for a campaign
+                  $status = $this->userImportProducer_herCampus($user, $drupalUser[0]);
+                }
+                else {
+                  $status = FALSE;
+                }
+
+              }
+              else {
+                echo 'drupalUID not defined, skipped campaign signup and userImportProducer_herCampus() processing', PHP_EOL;
+              }
+
+              break;
+
+            case 'teenlife':
+
+              // - [ ] Creation of Drupal user that they can access at a later date by resetting their password.
+              // Create Drupal user - https://github.com/DoSomething/dosomething/wiki/API#users
+              list($drupalUser, $user->password) = $this->toolbox->createDrupalUser($user);
+
+              // New user produces object, array returned if existing user
+              if (is_object($drupalUser[0]) && (!isset($drupalUser[0]->errorInfo))) {
+
+                $drupalUID = $drupalUser[0]->uid;
+                $userDetails = array(
+                  'email' => $user->email,
+                  'uid' => $drupalUID,
+                  'subscribed' => 1,
+                  'source' => $user->source,
+                  'tags' => array(
+                    0 => 'user_welcome-' . $user->source,
+                  ),
+                  'merge_vars' => array(
+                    'MEMBER_COUNT' => $this->memberCount,
+                    'FNAME' => $user->first_name,
+                    'LNAME' => $user->last_name,
+                    'PASSWORD' => $user->password,
+                  )
+                );
+
+                // Send password reset transactional email. Don't do further processing
+                // if failure to generate link
+                $status = $this->temporaryPasswordTransactional($userDetails);
+                $this->statHat->clearAddedStatNames();
+                if ($status == TRUE) {
+                  $this->statHat->addStatName('Sent user_password-teenlife');
+                }
+                else {
+                  $this->statHat->addStatName('ERROR generating user_password-teenlife');
+                  $drupalUID == FALSE;
+                }
+                $this->statHat->reportCount(1);
+              }
+              elseif (is_array($drupalUser[0]) && is_string($drupalUser[0][0])) {
+                // Email xxx@gmail.com is registered to User uid 2305144.
+                $drupalUID = substr($drupalUser[0][0], strpos($drupalUser[0][0], 'uid') + 4);
+                $drupalUID = substr($drupalUID, 0, strlen($drupalUID) - 1);
+                $user->uid = $drupalUID;
+              }
+              else {
+                echo 'ERROR - Call to Drupal API to create Teen Life Drupal user has failed - submitted: ' . print_r($user, TRUE), PHP_EOL;
+                if (isset($drupalUser[0]->errorInfo)) {
+                  echo 'Database error: ' . print_r($drupalUser[0]->errorInfo, TRUE), PHP_EOL;
+                }
+                else {
+                  echo '- $drupalUser: ' . print_r($drupalUser[0], TRUE), PHP_EOL;
+                }
+
+                // Skip ack_back, process again on next run
+                $drupalUID = FALSE;
+                $status = FALSE;
+                echo '~~~~~~~~~', PHP_EOL;
+              }
+
+              if ($drupalUID != FALSE) {
+
+                // Campaign: 1 in 3 of Us: 5275
+                // @todo: Add logic to detect what campaign the user is signing up for:
+                $campaignNID = 5275;
+                $campaignDetails = $this->campaignSignup($campaignNID, $drupalUID, $user->source);
+
+                // - [ ] An email from DoSomething.org thanking the user for signing
+                // up to the campaign
+                if ($campaignDetails !== FALSE) {
+                  $user->uid = $drupalUID;
+                  $this->campaignSignupTransactional($user, $campaignDetails);
                 }
 
                 // Generate additional messages to trigger related functionality to
                 // a user signing up for a campaign
-                $status = $this->userImportProducer_herCampus($user, $drupalUser[0]);
+                $status = $this->userImportProducer_teenlife($user, $drupalUser[0]);
               }
               else {
-                echo 'drupalUID not defined, skipped campaign signup and userImportProducer_herCampus() processing', PHP_EOL;
+                echo 'drupalUID not defined, skipped campaign signup and userImportProducer_teenlife() processing', PHP_EOL;
               }
 
               break;
@@ -680,7 +765,111 @@ class MBC_UserImport
     return $status;
   }
 
-    /**
+  /**
+   * Send transaction to transactionalExchange with user.registration.import
+   * routing key for new users from "Teen Life".
+   *
+   * [ ] Addition of the email address to MailChimp for future email broadcasts
+   * related to the campaign as well as a weekly DS newsletter
+   *   mbc-registration-email
+   * [ ] Storage of the optional phone number but not sending them a signup
+   * SMS message,
+   *
+   * @param array $user
+   *   Details about the user based on the import data.
+   * @param array $drupalUser
+   *   Details about the Drupal user based on the account created from the API
+   *   call to /api/v1/users.
+   *
+   * @return string $status
+   *   Results for queue submission.
+   */
+  private function userImportProducer_teenlife($user, $drupalUser) {
+
+    if (( isset($user->email) && isset($drupalUser->uid) && $drupalUser->uid > 0 ) ||
+        ( ( is_array($drupalUser) && !isset($drupalUser[0]['errorInfo']) ) && isset($drupalUser[0]) && strpos($drupalUser[0], 'is registered') !== FALSE) ) {
+
+      // Check for existing MailChimp and/or Mobile Commons accounts
+      $this->checkExistingAccount($user, $drupalUser);
+
+      $config = array(
+        'exchange' => array(
+          'name' => getenv("MB_TRANSACTIONAL_EXCHANGE"),
+          'type' => getenv("MB_TRANSACTIONAL_EXCHANGE_TYPE"),
+          'passive' => getenv("MB_TRANSACTIONAL_EXCHANGE_PASSIVE"),
+          'durable' => getenv("MB_TRANSACTIONAL_EXCHANGE_DURABLE"),
+          'auto_delete' => getenv("MB_TRANSACTIONAL_EXCHANGE_AUTO_DELETE"),
+        ),
+        'queue' => array(
+          'userAPIRegistration' => array(
+            'name' => getenv("MB_USER_API_REGISTRATION_QUEUE"),
+            'passive' => getenv("MB_USER_API_REGISTRATION_QUEUE_PASSIVE"),
+            'durable' => getenv("MB_USER_API_REGISTRATION_QUEUE_DURABLE"),
+            'exclusive' => getenv("MB_USER_API_REGISTRATION_QUEUE_EXCLUSIVE"),
+            'auto_delete' => getenv("MB_USER_API_REGISTRATION_QUEUE_AUTO_DELETE"),
+            'bindingKey' => getenv("MB_USER_API_REGISTRATION_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
+          ),
+          'registrations' => array(
+            'name' => getenv("MB_USER_REGISTRATION_QUEUE"),
+            'passive' => getenv("MB_USER_REGISTRATION_QUEUE_PASSIVE"),
+            'durable' => getenv("MB_USER_REGISTRATION_QUEUE_DURABLE"),
+            'exclusive' => getenv("MB_USER_REGISTRATION_QUEUE_EXCLUSIVE"),
+            'auto_delete' => getenv("MB_USER_REGISTRATION_QUEUE_AUTO_DELETE"),
+            'bindingKey' => getenv("MB_USER_REGISTRATION_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
+          ),
+          'mobileCommons' => array(
+            'name' => getenv("MB_MOBILE_COMMONS_QUEUE"),
+            'passive' => getenv("MB_MOBILE_COMMONS_QUEUE_PASSIVE"),
+            'durable' => getenv("MB_MOBILE_COMMONS_QUEUE_DURABLE"),
+            'exclusive' => getenv("MB_MOBILE_COMMONS_QUEUE_EXCLUSIVE"),
+            'auto_delete' => getenv("MB_MOBILE_COMMONS_QUEUE_AUTO_DELETE"),
+            'bindingKey' => getenv("MB_MOBILE_COMMONS_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
+          ),
+        ),
+        'routingKey' => 'user.registration.import',
+      );
+      $mbUserImport = new MessageBroker($this->credentials, $config);
+
+      // Required
+      $userDetails = array(
+        'email' => $user->email,
+        'subscribed' => 1,
+        'activity' => 'user_import',
+        'source' => $user->source,
+        'mailchimp_list_id' => 'f2fab1dfd4',
+        'mailchimp_group_name' => '1In3OfUs2015',
+        'mailchimp_grouping_id' => 10641,
+        'mc_opt_in_path_id' => 175235
+      );
+
+      if (isset($user->first_name) && $user->first_name != '') {
+        $userDetails['merge_vars']['FNAME'] = ucfirst($user->first_name);
+      }
+      if (isset($user->last_name) && $user->last_name != '') {
+        $userDetails['merge_vars']['LNAME'] = ucfirst($user->last_name);
+      }
+      if (isset($user->uid)) {
+        $nuserDetails['uid'] = $user->uid;
+      }
+      if (isset($user->birthdate_timestamp)) {
+        $userDetails['birthdate_timestamp'] = $user->birthdate_timestamp;
+      }
+      if (isset($user->phone)) {
+        $userDetails['mobile'] = $user->phone;
+      }
+
+      $payload = serialize($userDetails);
+      $mbUserImport->publishMessage($payload);
+      $status = TRUE;
+    }
+    else {
+      $status = FALSE;
+    }
+
+    return $status;
+  }
+
+  /**
    * Send transaction to transactionalExchange with user.registration.import
    * routing key for new users from "AT&T - iChannel".
    *
@@ -934,7 +1123,7 @@ class MBC_UserImport
         $curlUrl .= '/api/v1/content/' . $campaignNID;
         $campaignDetails = $this->toolbox->curlGET($curlUrl);
         if (!is_object($campaignDetails[0])) {
-          echo 'ERROR - MB_Toolbox->campaignSignup: Target campaign "' . $campaignNID . '" not found with /api/v1/content/' . $campaignNID . ' call. Error code: ' . $campaignDetails[1], PHP_EOL;
+          echo 'ERROR - MBC_userImport->campaignSignup: Target campaign "' . $campaignNID . '" not found with /api/v1/content/' . $campaignNID . ' call. Error code: ' . $campaignDetails[1], PHP_EOL;
           $campaignDetails = FALSE;
         }
         else {
