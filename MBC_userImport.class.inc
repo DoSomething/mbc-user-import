@@ -67,6 +67,20 @@ class MBC_UserImport
   private $memberCount;
 
   /**
+   * Campaign details.
+   *
+   * @var array
+   */
+  private $campaigns;
+
+  /**
+   * Setting from external services - Message Broker Toolbox.
+   *
+   * @var object
+   */
+  private $toolbox;
+
+  /**
    * The number of queue entries to process in each session
    */
   const BATCH_SIZE = 5000;
@@ -101,6 +115,7 @@ class MBC_UserImport
     $this->statHat->setIsProduction(TRUE);
 
     $this->existingStatus = array();
+    $this->campaigns = array();
   }
 
   /*
@@ -121,158 +136,166 @@ class MBC_UserImport
 
       foreach ($targetUsers as $userCount => $user) {
 
-        // Needed for toolbox->createDrupalUser()
-        $user->user_registration_source = $user->source;
-
-        // Ensure first_name is defined for Drupal user creation
-        if (isset($user->name) && !isset($user->first_name)) {
-          $nameBits = $this->nameBits($user->name);
-          $user->first_name = $nameBits['first_name'];
-          $user->last_name = $nameBits['last_name'];
+        // ack_back empty entry to remove from queue but skip processing
+        if ($user == NULL) {
+          $status = TRUE;
         }
+        else {
 
-        echo 'Source: ' . $user->source, PHP_EOL;
-        switch ($user->source) {
+          // Needed for toolbox->createDrupalUser()
+          $user->user_registration_source = $user->source;
 
-          case 'niche':
+          // Ensure first_name is defined for Drupal user creation
+          if (isset($user->name) && !isset($user->first_name)) {
+            $nameBits = $this->nameBits($user->name);
+            $user->first_name = $nameBits['first_name'];
+            $user->last_name = $nameBits['last_name'];
+          }
 
-            // Create Drupal user - https://github.com/DoSomething/dosomething/wiki/API#users
-            list($drupalUser, $user->password) = $this->toolbox->createDrupalUser($user);
+          echo 'Source: ' . $user->source, PHP_EOL;
+          switch ($user->source) {
 
-            if ((is_object($drupalUser[0]) && (!isset($drupalUser[0]->errorInfo))) || is_array($drupalUser[0])) {
+            case 'niche':
 
-              // With new user account details from the Drupal site:
-              // - Send transaction to transactionalExchange for distribution to
-              //   transactionalQueue, userAPIRegistrationQueue and userRegistrationQueue
-              // - could return array rather than user object when user already exists
-              //   based on supplied email. Existing Drupal accounts will be logged.
-              $status = $this->userImportProducer_niche($user, $drupalUser[0]);
+              // Create Drupal user - https://github.com/DoSomething/dosomething/wiki/API#users
+              list($drupalUser, $user->password) = $this->toolbox->createDrupalUser($user);
 
-            }
-            elseif (isset($drupalUser[0]->errorInfo)) {
-              echo 'ERROR - Call to Drupal API to create niche Drupal user has failed - submitted: ' . print_r($user, TRUE), PHP_EOL;
-              echo '$drupalUser: ' . print_r($drupalUser, TRUE), PHP_EOL;
-              echo 'Database error: ' . print_r($drupalUser[0]->errorInfo, TRUE), PHP_EOL;
-              $status = FALSE;
-              echo '~~~~~~~~~', PHP_EOL;
-            }
+              if ((is_object($drupalUser[0]) && (!isset($drupalUser[0]->errorInfo))) || is_array($drupalUser[0])) {
 
-            break;
+                // With new user account details from the Drupal site:
+                // - Send transaction to transactionalExchange for distribution to
+                //   transactionalQueue, userAPIRegistrationQueue and userRegistrationQueue
+                // - could return array rather than user object when user already exists
+                //   based on supplied email. Existing Drupal accounts will be logged.
+                $status = $this->userImportProducer_niche($user, $drupalUser[0]);
 
-          case 'herCampus':
-          case 'hercampus':
-
-            // - [ ] Creation of Drupal user that they can access at a later date by resetting their password.
-            // Create Drupal user - https://github.com/DoSomething/dosomething/wiki/API#users
-            list($drupalUser, $user->password) = $this->toolbox->createDrupalUser($user);
-
-            // New user produces object, array returned if existing user
-            if (is_object($drupalUser[0]) && (!isset($drupalUser[0]->errorInfo))) {
-
-              $drupalUID = $drupalUser[0]->uid;
-              $userDetails = array(
-                'email' => $user->email,
-                'uid' => $drupalUID,
-                'subscribed' => 1,
-                'source' => $user->source,
-                'tags' => array(
-                  0 => 'user_welcome-' . $user->source,
-                ),
-                'merge_vars' => array(
-                  'MEMBER_COUNT' => $this->memberCount,
-                  'FNAME' => $user->first_name,
-                  'LNAME' => $user->last_name,
-                  'PASSWORD' => $user->password,
-                )
-              );
-
-              // Send password reset transactional email. Don't do further processing
-              // if failure to generate link
-              $status = $this->temporaryPasswordTransactional($userDetails);
-              $this->statHat->clearAddedStatNames();
-              if ($status == TRUE) {
-                $this->statHat->addStatName('Sent user_password-herCampus');
               }
-              else {
-                $this->statHat->addStatName('ERROR generating user_password-herCampus');
-                $drupalUID == FALSE;
-              }
-              $this->statHat->reportCount(1);
-            }
-            elseif (is_array($drupalUser[0]) && is_string($drupalUser[0][0])) {
-              // Email xxx@gmail.com is registered to User uid 2305144.
-              $drupalUID = substr($drupalUser[0][0], strpos($drupalUser[0][0], 'uid') + 4);
-              $drupalUID = substr($drupalUID[0], 0, strlen($drupalUID) - 1);
-              $user->uid = $drupalUID;
-            }
-            else {
-              echo 'ERROR - Call to Drupal API to create Her Campus Drupal user has failed - submitted: ' . print_r($user, TRUE), PHP_EOL;
-              if (isset($drupalUser[0]->errorInfo)) {
+              elseif (isset($drupalUser[0]->errorInfo)) {
+                echo 'ERROR - Call to Drupal API to create niche Drupal user has failed - submitted: ' . print_r($user, TRUE), PHP_EOL;
+                echo '$drupalUser: ' . print_r($drupalUser, TRUE), PHP_EOL;
                 echo 'Database error: ' . print_r($drupalUser[0]->errorInfo, TRUE), PHP_EOL;
+                $status = FALSE;
+                echo '~~~~~~~~~', PHP_EOL;
               }
-              else {
-                echo '- $drupalUser: ' . print_r($drupalUser[0], TRUE), PHP_EOL;
+
+              break;
+
+            case 'herCampus':
+            case 'hercampus':
+
+              // - [ ] Creation of Drupal user that they can access at a later date by resetting their password.
+              // Create Drupal user - https://github.com/DoSomething/dosomething/wiki/API#users
+              list($drupalUser, $user->password) = $this->toolbox->createDrupalUser($user);
+
+              // New user produces object, array returned if existing user
+              if (is_object($drupalUser[0]) && (!isset($drupalUser[0]->errorInfo))) {
+
+                $drupalUID = $drupalUser[0]->uid;
+                $userDetails = array(
+                  'email' => $user->email,
+                  'uid' => $drupalUID,
+                  'subscribed' => 1,
+                  'source' => $user->source,
+                  'tags' => array(
+                    0 => 'user_welcome-' . $user->source,
+                  ),
+                  'merge_vars' => array(
+                    'MEMBER_COUNT' => $this->memberCount,
+                    'FNAME' => $user->first_name,
+                    'LNAME' => $user->last_name,
+                    'PASSWORD' => $user->password,
+                  )
+                );
+
+                // Send password reset transactional email. Don't do further processing
+                // if failure to generate link
+                $status = $this->temporaryPasswordTransactional($userDetails);
+                $this->statHat->clearAddedStatNames();
+                if ($status == TRUE) {
+                  $this->statHat->addStatName('Sent user_password-herCampus');
+                }
+                else {
+                  $this->statHat->addStatName('ERROR generating user_password-herCampus');
+                  $drupalUID == FALSE;
+                }
+                $this->statHat->reportCount(1);
               }
-
-              // Skip ack_back, process again on next run
-              $drupalUID = FALSE;
-              $status = FALSE;
-              echo '~~~~~~~~~', PHP_EOL;
-            }
-
-            if ($drupalUID != FALSE) {
-
-              // Add to Teen for Jeans campaign: 1144
-              // Comeback Clothes: 362
-              $campaignNID = 362;
-              $campaignDetails = $this->campaignSignup($campaignNID, $drupalUID, $user->source);
-
-              // - [ ] An email from DoSomething.org thanking the user for signing
-              // up to the campaign
-              if ($campaignDetails !== FALSE) {
+              elseif (is_array($drupalUser[0]) && is_string($drupalUser[0][0])) {
+                // Email xxx@gmail.com is registered to User uid 2305144.
+                $drupalUID = substr($drupalUser[0][0], strpos($drupalUser[0][0], 'uid') + 4);
+                $drupalUID = substr($drupalUID, 0, strlen($drupalUID) - 1);
                 $user->uid = $drupalUID;
-                $this->campaignSignupTransactional($user, $campaignDetails);
+              }
+              else {
+                echo 'ERROR - Call to Drupal API to create Her Campus Drupal user has failed - submitted: ' . print_r($user, TRUE), PHP_EOL;
+                if (isset($drupalUser[0]->errorInfo)) {
+                  echo 'Database error: ' . print_r($drupalUser[0]->errorInfo, TRUE), PHP_EOL;
+                }
+                else {
+                  echo '- $drupalUser: ' . print_r($drupalUser[0], TRUE), PHP_EOL;
+                }
+
+                // Skip ack_back, process again on next run
+                $drupalUID = FALSE;
+                $status = FALSE;
+                echo '~~~~~~~~~', PHP_EOL;
               }
 
-              // Generate additional messages to trigger related functionality to
-              // a user signing up for a campaign
-              $status = $this->userImportProducer_herCampus($user, $drupalUser[0]);
-            }
-            else {
-              echo 'drupalUID not defined, skipped campaign signup and userImportProducer_herCampus() processing', PHP_EOL;
-            }
+              if ($drupalUID != FALSE) {
 
-            break;
+                // Add to Teen for Jeans campaign: 1144
+                // Comeback Clothes: 362
+                $campaignNID = 362;
+                $campaignDetails = $this->campaignSignup($campaignNID, $drupalUID, $user->source);
 
-          case 'att-ichannel':
+                // - [ ] An email from DoSomething.org thanking the user for signing
+                // up to the campaign
+                if ($campaignDetails !== FALSE) {
+                  $user->uid = $drupalUID;
+                  $this->campaignSignupTransactional($user, $campaignDetails);
+                }
 
-            // Create Drupal user - https://github.com/DoSomething/dosomething/wiki/API#users
-            list($drupalUser, $user->password) = $this->toolbox->createDrupalUser($user);
-
-            if ((is_object($drupalUser[0]) && (!isset($drupalUser[0]->errorInfo))) || is_array($drupalUser[0])) {
-
-              // With new user account details from the Drupal site:
-              // - Send transaction to transactionalExchange for distribution to
-              //   transactionalQueue, userAPIRegistrationQueue and userRegistrationQueue
-              // - could return array rather than user object when user already exists
-              //   based on supplied email. Existing Drupal accounts will be logged.
-              $status = $this->userImportProducer_att_ichannel($user, $drupalUser[0]);
-
-            }
-            elseif (!(isset($drupalUser[0][0]) && strpos($drupalUser[0][0], 'is registered') > 0)) {
-              echo 'ERROR - Call to Drupal API to create AT&T-iChannel Drupal user has failed - submitted: ' . print_r($user, TRUE), PHP_EOL;
-              if (isset($drupalUser[0]->errorInfo)) {
-                echo 'Database error: ' . print_r($drupalUser[0]->errorInfo, TRUE), PHP_EOL;
+                // Generate additional messages to trigger related functionality to
+                // a user signing up for a campaign
+                $status = $this->userImportProducer_herCampus($user, $drupalUser[0]);
               }
+              else {
+                echo 'drupalUID not defined, skipped campaign signup and userImportProducer_herCampus() processing', PHP_EOL;
+              }
+
+              break;
+
+            case 'att-ichannel':
+
+              // Create Drupal user - https://github.com/DoSomething/dosomething/wiki/API#users
+              list($drupalUser, $user->password) = $this->toolbox->createDrupalUser($user);
+
+              if ((is_object($drupalUser[0]) && (!isset($drupalUser[0]->errorInfo))) || is_array($drupalUser[0])) {
+
+                // With new user account details from the Drupal site:
+                // - Send transaction to transactionalExchange for distribution to
+                //   transactionalQueue, userAPIRegistrationQueue and userRegistrationQueue
+                // - could return array rather than user object when user already exists
+                //   based on supplied email. Existing Drupal accounts will be logged.
+                $status = $this->userImportProducer_att_ichannel($user, $drupalUser[0]);
+
+              }
+              elseif (!(isset($drupalUser[0][0]) && strpos($drupalUser[0][0], 'is registered') > 0)) {
+                echo 'ERROR - Call to Drupal API to create AT&T-iChannel Drupal user has failed - submitted: ' . print_r($user, TRUE), PHP_EOL;
+                if (isset($drupalUser[0]->errorInfo)) {
+                  echo 'Database error: ' . print_r($drupalUser[0]->errorInfo, TRUE), PHP_EOL;
+                }
+                $status = FALSE;
+                echo '~~~~~~~~~', PHP_EOL;
+              }
+
+              break;
+
+            default:
+              echo 'ERROR - Invalid source value - submitted: ' . print_r($user, TRUE), PHP_EOL;
               $status = FALSE;
-              echo '~~~~~~~~~', PHP_EOL;
-            }
 
-            break;
-
-          default:
-            echo 'ERROR - Invalid source value - submitted: ' . print_r($user, TRUE), PHP_EOL;
-            $status = FALSE;
+          }
 
         }
 
@@ -896,7 +919,7 @@ class MBC_UserImport
     $signUp = $this->toolbox->curlPOSTauth($curlUrl, $post);
 
     // Results found for campaign - proceed to get campaign details
-    if (is_array($signUp) && $signUp[0] > 0)   {
+    if (is_array($signUp[0]) && $signUp[0][0] > 0)   {
 
       // Store campaign details to prevent flooding Drupal API
       if (!isset($this->campaigns[$campaignNID])) {
@@ -910,11 +933,12 @@ class MBC_UserImport
         }
         $curlUrl .= '/api/v1/content/' . $campaignNID;
         $campaignDetails = $this->toolbox->curlGET($curlUrl);
-        if (!is_object($campaignDetails)) {
-          echo 'ERROR - MB_Toolbox->campaignSignup: Target campaign "' . $campaignNID . '" not found with /api/v1/content/' . $campaignNID . ' call.', PHP_EOL;
+        if (!is_object($campaignDetails[0])) {
+          echo 'ERROR - MB_Toolbox->campaignSignup: Target campaign "' . $campaignNID . '" not found with /api/v1/content/' . $campaignNID . ' call. Error code: ' . $campaignDetails[1], PHP_EOL;
           $campaignDetails = FALSE;
         }
         else {
+          $campaignDetails = $campaignDetails[0];
           $this->campaigns[$campaignNID] = $campaignDetails;
         }
 
@@ -926,7 +950,7 @@ class MBC_UserImport
       return $campaignDetails;
     } // Invalid ID or closed campaign
     else {
-      echo 'Drupal UID: ' . $drupalUID . ' may already be signed up for campaign ' . $campaignNID . ' or campaign is not accepting signups, sid returned is: ' . $signUp[0], PHP_EOL;
+      echo 'Drupal UID: ' . $drupalUID . ' may already be signed up for campaign ' . $campaignNID . ' or campaign is not accepting signups, sid returned is: ' . $signUp[0][0], PHP_EOL;
       return FALSE;
     }
   }
