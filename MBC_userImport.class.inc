@@ -1,6 +1,7 @@
 <?php
 
 use DoSomething\MB_Toolbox\MB_Toolbox;
+use DoSomething\MB_Toolbox\MB_Configuration;
 use DoSomething\MBStatTracker\StatHat;
 
 /**
@@ -243,21 +244,15 @@ class MBC_UserImport
                 // Add to Teen for Jeans campaign: 1144
                 // Comeback Clothes: 362
                 $campaignNID = 362;
-                $campaignDetails = $this->campaignSignup($campaignNID, $drupalUID, $user->source);
+                list($campaignDetails, $signup) = $this->campaignSignup($campaignNID, $drupalUID, $user->source);
 
                 // - [ ] An email from DoSomething.org thanking the user for signing
                 // up to the campaign
-                if ($campaignDetails !== FALSE) {
+                if (is_object($campaignDetails) && $signup == TRUE) {
                   $user->uid = $drupalUID;
                   $this->campaignSignupTransactional($user, $campaignDetails);
-
-                  // Generate additional messages to trigger related functionality to
-                  // a user signing up for a campaign
-                  $status = $this->userImportProducer_herCampus($user, $drupalUser[0]);
                 }
-                else {
-                  $status = FALSE;
-                }
+                $status = $this->userImportProducer_herCampus($user, $drupalUser[0]);
 
               }
               else {
@@ -331,11 +326,11 @@ class MBC_UserImport
                 // Campaign: 1 in 3 of Us: 5275
                 // @todo: Add logic to detect what campaign the user is signing up for:
                 $campaignNID = 5275;
-                $campaignDetails = $this->campaignSignup($campaignNID, $drupalUID, $user->source);
+                list($campaignDetails, $signup) = $this->campaignSignup($campaignNID, $drupalUID, $user->source);
 
                 // - [ ] An email from DoSomething.org thanking the user for signing
                 // up to the campaign
-                if ($campaignDetails !== FALSE) {
+                if ($signup == TRUE) {
                   $user->uid = $drupalUID;
                   $this->campaignSignupTransactional($user, $campaignDetails);
                 }
@@ -474,50 +469,59 @@ class MBC_UserImport
       $this->checkExistingAccount($user, $drupalUser);
 
       // Config specific to producing a new user for the Message Broker userAPI
-      $config = array(
-        'exchange' => array(
-          'name' => getenv("MB_TRANSACTIONAL_EXCHANGE"),
-          'type' => getenv("MB_TRANSACTIONAL_EXCHANGE_TYPE"),
-          'passive' => getenv("MB_TRANSACTIONAL_EXCHANGE_PASSIVE"),
-          'durable' => getenv("MB_TRANSACTIONAL_EXCHANGE_DURABLE"),
-          'auto_delete' => getenv("MB_TRANSACTIONAL_EXCHANGE_AUTO_DELETE"),
-        ),
-        'queue' => array(
-          'userAPIRegistration' => array(
-            'name' => getenv("MB_USER_API_REGISTRATION_QUEUE"),
-            'passive' => getenv("MB_USER_API_REGISTRATION_QUEUE_PASSIVE"),
-            'durable' => getenv("MB_USER_API_REGISTRATION_QUEUE_DURABLE"),
-            'exclusive' => getenv("MB_USER_API_REGISTRATION_QUEUE_EXCLUSIVE"),
-            'auto_delete' => getenv("MB_USER_API_REGISTRATION_QUEUE_AUTO_DELETE"),
-            'bindingKey' => getenv("MB_USER_API_REGISTRATION_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
-          ),
-          'registrations' => array(
-            'name' => getenv("MB_USER_REGISTRATION_QUEUE"),
-            'passive' => getenv("MB_USER_REGISTRATION_QUEUE_PASSIVE"),
-            'durable' => getenv("MB_USER_REGISTRATION_QUEUE_DURABLE"),
-            'exclusive' => getenv("MB_USER_REGISTRATION_QUEUE_EXCLUSIVE"),
-            'auto_delete' => getenv("MB_USER_REGISTRATION_QUEUE_AUTO_DELETE"),
-            'bindingKey' => getenv("MB_USER_REGISTRATION_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
-          ),
-          'transactional' => array(
-            'name' => getenv("MB_TRANSACTIONAL_QUEUE"),
-            'passive' => getenv("MB_TRANSACTIONAL_QUEUE_PASSIVE"),
-            'durable' => getenv("MB_TRANSACTIONAL_QUEUE_DURABLE"),
-            'exclusive' => getenv("MB_TRANSACTIONAL_QUEUE_EXCLUSIVE"),
-            'auto_delete' => getenv("MB_TRANSACTIONAL_QUEUE_AUTO_DELETE"),
-            'bindingKey' => getenv("MB_TRANSACTIONAL_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
-          ),
-          'mobileCommons' => array(
-            'name' => getenv("MB_MOBILE_COMMONS_QUEUE"),
-            'passive' => getenv("MB_MOBILE_COMMONS_QUEUE_PASSIVE"),
-            'durable' => getenv("MB_MOBILE_COMMONS_QUEUE_DURABLE"),
-            'exclusive' => getenv("MB_MOBILE_COMMONS_QUEUE_EXCLUSIVE"),
-            'auto_delete' => getenv("MB_MOBILE_COMMONS_QUEUE_AUTO_DELETE"),
-            'bindingKey' => getenv("MB_MOBILE_COMMONS_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
-          ),
-        ),
-        'routingKey' => 'user.registration.transactional',
+      $config = array();
+      $source = __DIR__ . '/messagebroker-config/mb_config.json';
+      $mb_config = new MB_Configuration($source, $this->settings);
+      $transactionalExchange = $mb_config->exchangeSettings('transactionalExchange');
+
+      $config['exchange'] = array(
+        'name' => $transactionalExchange->name,
+        'type' => $transactionalExchange->type,
+        'passive' => $transactionalExchange->passive,
+        'durable' => $transactionalExchange->durable,
+        'auto_delete' => $transactionalExchange->auto_delete,
       );
+      foreach ($transactionalExchange->queues->transactionalQueue->binding_patterns as $bindingCount => $bindingKey) {
+        $config['queue'][$bindingCount] = array(
+          'name' => $transactionalExchange->queues->transactionalQueue->name,
+          'passive' => $transactionalExchange->queues->transactionalQueue->passive,
+          'durable' =>  $transactionalExchange->queues->transactionalQueue->durable,
+          'exclusive' =>  $transactionalExchange->queues->transactionalQueue->exclusive,
+          'auto_delete' =>  $transactionalExchange->queues->transactionalQueue->auto_delete,
+          'bindingKey' => $bindingKey,
+        );
+      }
+      foreach ($transactionalExchange->queues->userAPIRegistrationQueue->binding_patterns as $bindingCount => $bindingKey) {
+        $config['queue'][$bindingCount] = array(
+          'name' => $transactionalExchange->queues->userAPIRegistrationQueue->name,
+          'passive' => $transactionalExchange->queues->userAPIRegistrationQueue->passive,
+          'durable' =>  $transactionalExchange->queues->userAPIRegistrationQueue->durable,
+          'exclusive' =>  $transactionalExchange->queues->userAPIRegistrationQueue->exclusive,
+          'auto_delete' =>  $transactionalExchange->queues->userAPIRegistrationQueue->auto_delete,
+          'bindingKey' => $bindingKey,
+        );
+      }
+      foreach ($transactionalExchange->queues->userRegistrationQueue->binding_patterns as $bindingCount => $bindingKey) {
+        $config['queue'][$bindingCount] = array(
+          'name' => $transactionalExchange->queues->userRegistrationQueue->name,
+          'passive' => $transactionalExchange->queues->userRegistrationQueue->passive,
+          'durable' =>  $transactionalExchange->queues->userRegistrationQueue->durable,
+          'exclusive' =>  $transactionalExchange->queues->userRegistrationQueue->exclusive,
+          'auto_delete' =>  $transactionalExchange->queues->userRegistrationQueue->auto_delete,
+          'bindingKey' => $bindingKey,
+        );
+      }
+      foreach ($transactionalExchange->queues->mobileCommonsQueue->binding_patterns as $bindingCount => $bindingKey) {
+        $config['queue'][$bindingCount] = array(
+          'name' => $transactionalExchange->queues->mobileCommonsQueue->name,
+          'passive' => $transactionalExchange->queues->mobileCommonsQueue->passive,
+          'durable' =>  $transactionalExchange->queues->mobileCommonsQueue->durable,
+          'exclusive' =>  $transactionalExchange->queues->mobileCommonsQueue->exclusive,
+          'auto_delete' =>  $transactionalExchange->queues->mobileCommonsQueue->auto_delete,
+          'bindingKey' => $bindingKey,
+        );
+      }
+      $config['routingKey'] = 'user.registration.transactional';
       $mbUserAPI = new MessageBroker($this->credentials, $config);
 
       // Required
@@ -688,42 +692,50 @@ class MBC_UserImport
       // Check for existing MailChimp and/or Mobile Commons accounts
       $this->checkExistingAccount($user, $drupalUser);
 
-      $config = array(
-        'exchange' => array(
-          'name' => getenv("MB_TRANSACTIONAL_EXCHANGE"),
-          'type' => getenv("MB_TRANSACTIONAL_EXCHANGE_TYPE"),
-          'passive' => getenv("MB_TRANSACTIONAL_EXCHANGE_PASSIVE"),
-          'durable' => getenv("MB_TRANSACTIONAL_EXCHANGE_DURABLE"),
-          'auto_delete' => getenv("MB_TRANSACTIONAL_EXCHANGE_AUTO_DELETE"),
-        ),
-        'queue' => array(
-          'userAPIRegistration' => array(
-            'name' => getenv("MB_USER_API_REGISTRATION_QUEUE"),
-            'passive' => getenv("MB_USER_API_REGISTRATION_QUEUE_PASSIVE"),
-            'durable' => getenv("MB_USER_API_REGISTRATION_QUEUE_DURABLE"),
-            'exclusive' => getenv("MB_USER_API_REGISTRATION_QUEUE_EXCLUSIVE"),
-            'auto_delete' => getenv("MB_USER_API_REGISTRATION_QUEUE_AUTO_DELETE"),
-            'bindingKey' => getenv("MB_USER_API_REGISTRATION_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
-          ),
-          'registrations' => array(
-            'name' => getenv("MB_USER_REGISTRATION_QUEUE"),
-            'passive' => getenv("MB_USER_REGISTRATION_QUEUE_PASSIVE"),
-            'durable' => getenv("MB_USER_REGISTRATION_QUEUE_DURABLE"),
-            'exclusive' => getenv("MB_USER_REGISTRATION_QUEUE_EXCLUSIVE"),
-            'auto_delete' => getenv("MB_USER_REGISTRATION_QUEUE_AUTO_DELETE"),
-            'bindingKey' => getenv("MB_USER_REGISTRATION_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
-          ),
-          'mobileCommons' => array(
-            'name' => getenv("MB_MOBILE_COMMONS_QUEUE"),
-            'passive' => getenv("MB_MOBILE_COMMONS_QUEUE_PASSIVE"),
-            'durable' => getenv("MB_MOBILE_COMMONS_QUEUE_DURABLE"),
-            'exclusive' => getenv("MB_MOBILE_COMMONS_QUEUE_EXCLUSIVE"),
-            'auto_delete' => getenv("MB_MOBILE_COMMONS_QUEUE_AUTO_DELETE"),
-            'bindingKey' => getenv("MB_MOBILE_COMMONS_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
-          ),
-        ),
-        'routingKey' => 'user.registration.import',
+      // Config specific to producing a new user for the Message Broker userAPI
+      $config = array();
+      $source = __DIR__ . '/messagebroker-config/mb_config.json';
+      $mb_config = new MB_Configuration($source, $this->settings);
+      $transactionalExchange = $mb_config->exchangeSettings('transactionalExchange');
+
+      $config['exchange'] = array(
+        'name' => $transactionalExchange->name,
+        'type' => $transactionalExchange->type,
+        'passive' => $transactionalExchange->passive,
+        'durable' => $transactionalExchange->durable,
+        'auto_delete' => $transactionalExchange->auto_delete,
       );
+      foreach ($transactionalExchange->queues->userAPIRegistrationQueue->binding_patterns as $bindingCount => $bindingKey) {
+        $config['queue'][$bindingCount] = array(
+          'name' => $transactionalExchange->queues->userAPIRegistrationQueue->name,
+          'passive' => $transactionalExchange->queues->userAPIRegistrationQueue->passive,
+          'durable' =>  $transactionalExchange->queues->userAPIRegistrationQueue->durable,
+          'exclusive' =>  $transactionalExchange->queues->userAPIRegistrationQueue->exclusive,
+          'auto_delete' =>  $transactionalExchange->queues->userAPIRegistrationQueue->auto_delete,
+          'bindingKey' => $bindingKey,
+        );
+      }
+      foreach ($transactionalExchange->queues->userRegistrationQueue->binding_patterns as $bindingCount => $bindingKey) {
+        $config['queue'][$bindingCount] = array(
+          'name' => $transactionalExchange->queues->userRegistrationQueue->name,
+          'passive' => $transactionalExchange->queues->userRegistrationQueue->passive,
+          'durable' =>  $transactionalExchange->queues->userRegistrationQueue->durable,
+          'exclusive' =>  $transactionalExchange->queues->userRegistrationQueue->exclusive,
+          'auto_delete' =>  $transactionalExchange->queues->userRegistrationQueue->auto_delete,
+          'bindingKey' => $bindingKey,
+        );
+      }
+      foreach ($transactionalExchange->queues->mobileCommonsQueue->binding_patterns as $bindingCount => $bindingKey) {
+        $config['queue'][$bindingCount] = array(
+          'name' => $transactionalExchange->queues->mobileCommonsQueue->name,
+          'passive' => $transactionalExchange->queues->mobileCommonsQueue->passive,
+          'durable' =>  $transactionalExchange->queues->mobileCommonsQueue->durable,
+          'exclusive' =>  $transactionalExchange->queues->mobileCommonsQueue->exclusive,
+          'auto_delete' =>  $transactionalExchange->queues->mobileCommonsQueue->auto_delete,
+          'bindingKey' => $bindingKey,
+        );
+      }
+      $config['routingKey'] = 'user.registration.import';
       $mbUserImport = new MessageBroker($this->credentials, $config);
 
       // Required
@@ -792,42 +804,50 @@ class MBC_UserImport
       // Check for existing MailChimp and/or Mobile Commons accounts
       $this->checkExistingAccount($user, $drupalUser);
 
-      $config = array(
-        'exchange' => array(
-          'name' => getenv("MB_TRANSACTIONAL_EXCHANGE"),
-          'type' => getenv("MB_TRANSACTIONAL_EXCHANGE_TYPE"),
-          'passive' => getenv("MB_TRANSACTIONAL_EXCHANGE_PASSIVE"),
-          'durable' => getenv("MB_TRANSACTIONAL_EXCHANGE_DURABLE"),
-          'auto_delete' => getenv("MB_TRANSACTIONAL_EXCHANGE_AUTO_DELETE"),
-        ),
-        'queue' => array(
-          'userAPIRegistration' => array(
-            'name' => getenv("MB_USER_API_REGISTRATION_QUEUE"),
-            'passive' => getenv("MB_USER_API_REGISTRATION_QUEUE_PASSIVE"),
-            'durable' => getenv("MB_USER_API_REGISTRATION_QUEUE_DURABLE"),
-            'exclusive' => getenv("MB_USER_API_REGISTRATION_QUEUE_EXCLUSIVE"),
-            'auto_delete' => getenv("MB_USER_API_REGISTRATION_QUEUE_AUTO_DELETE"),
-            'bindingKey' => getenv("MB_USER_API_REGISTRATION_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
-          ),
-          'registrations' => array(
-            'name' => getenv("MB_USER_REGISTRATION_QUEUE"),
-            'passive' => getenv("MB_USER_REGISTRATION_QUEUE_PASSIVE"),
-            'durable' => getenv("MB_USER_REGISTRATION_QUEUE_DURABLE"),
-            'exclusive' => getenv("MB_USER_REGISTRATION_QUEUE_EXCLUSIVE"),
-            'auto_delete' => getenv("MB_USER_REGISTRATION_QUEUE_AUTO_DELETE"),
-            'bindingKey' => getenv("MB_USER_REGISTRATION_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
-          ),
-          'mobileCommons' => array(
-            'name' => getenv("MB_MOBILE_COMMONS_QUEUE"),
-            'passive' => getenv("MB_MOBILE_COMMONS_QUEUE_PASSIVE"),
-            'durable' => getenv("MB_MOBILE_COMMONS_QUEUE_DURABLE"),
-            'exclusive' => getenv("MB_MOBILE_COMMONS_QUEUE_EXCLUSIVE"),
-            'auto_delete' => getenv("MB_MOBILE_COMMONS_QUEUE_AUTO_DELETE"),
-            'bindingKey' => getenv("MB_MOBILE_COMMONS_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
-          ),
-        ),
-        'routingKey' => 'user.registration.import',
+     // Config specific to producing a new user for the Message Broker userAPI
+      $config = array();
+      $source = __DIR__ . '/messagebroker-config/mb_config.json';
+      $mb_config = new MB_Configuration($source, $this->settings);
+      $transactionalExchange = $mb_config->exchangeSettings('transactionalExchange');
+
+      $config['exchange'] = array(
+        'name' => $transactionalExchange->name,
+        'type' => $transactionalExchange->type,
+        'passive' => $transactionalExchange->passive,
+        'durable' => $transactionalExchange->durable,
+        'auto_delete' => $transactionalExchange->auto_delete,
       );
+      foreach ($transactionalExchange->queues->userAPIRegistrationQueue->binding_patterns as $bindingCount => $bindingKey) {
+        $config['queue'][$bindingCount] = array(
+          'name' => $transactionalExchange->queues->userAPIRegistrationQueue->name,
+          'passive' => $transactionalExchange->queues->userAPIRegistrationQueue->passive,
+          'durable' =>  $transactionalExchange->queues->userAPIRegistrationQueue->durable,
+          'exclusive' =>  $transactionalExchange->queues->userAPIRegistrationQueue->exclusive,
+          'auto_delete' =>  $transactionalExchange->queues->userAPIRegistrationQueue->auto_delete,
+          'bindingKey' => $bindingKey,
+        );
+      }
+      foreach ($transactionalExchange->queues->userRegistrationQueue->binding_patterns as $bindingCount => $bindingKey) {
+        $config['queue'][$bindingCount] = array(
+          'name' => $transactionalExchange->queues->userRegistrationQueue->name,
+          'passive' => $transactionalExchange->queues->userRegistrationQueue->passive,
+          'durable' =>  $transactionalExchange->queues->userRegistrationQueue->durable,
+          'exclusive' =>  $transactionalExchange->queues->userRegistrationQueue->exclusive,
+          'auto_delete' =>  $transactionalExchange->queues->userRegistrationQueue->auto_delete,
+          'bindingKey' => $bindingKey,
+        );
+      }
+      foreach ($transactionalExchange->queues->mobileCommonsQueue->binding_patterns as $bindingCount => $bindingKey) {
+        $config['queue'][$bindingCount] = array(
+          'name' => $transactionalExchange->queues->mobileCommonsQueue->name,
+          'passive' => $transactionalExchange->queues->mobileCommonsQueue->passive,
+          'durable' =>  $transactionalExchange->queues->mobileCommonsQueue->durable,
+          'exclusive' =>  $transactionalExchange->queues->mobileCommonsQueue->exclusive,
+          'auto_delete' =>  $transactionalExchange->queues->mobileCommonsQueue->auto_delete,
+          'bindingKey' => $bindingKey,
+        );
+      }
+      $config['routingKey'] = 'user.registration.import';
       $mbUserImport = new MessageBroker($this->credentials, $config);
 
       // Required
@@ -891,49 +911,59 @@ class MBC_UserImport
       $this->checkExistingAccount($user, $drupalUser);
 
       // Config specific to producing a new user for the Message Broker userAPI
-      $config = array(
-        'exchange' => array(
-          'name' => getenv("MB_TRANSACTIONAL_EXCHANGE"),
-          'type' => getenv("MB_TRANSACTIONAL_EXCHANGE_TYPE"),
-          'passive' => getenv("MB_TRANSACTIONAL_EXCHANGE_PASSIVE"),
-          'durable' => getenv("MB_TRANSACTIONAL_EXCHANGE_DURABLE"),
-          'auto_delete' => getenv("MB_TRANSACTIONAL_EXCHANGE_AUTO_DELETE"),
-        ),
-        'queue' => array(
-          'userAPIRegistration' => array(
-            'name' => getenv("MB_USER_API_REGISTRATION_QUEUE"),
-            'passive' => getenv("MB_USER_API_REGISTRATION_QUEUE_PASSIVE"),
-            'durable' => getenv("MB_USER_API_REGISTRATION_QUEUE_DURABLE"),
-            'exclusive' => getenv("MB_USER_API_REGISTRATION_QUEUE_EXCLUSIVE"),
-            'auto_delete' => getenv("MB_USER_API_REGISTRATION_QUEUE_AUTO_DELETE"),
-          ),
-          'registrations' => array(
-            'name' => getenv("MB_USER_REGISTRATION_QUEUE"),
-            'passive' => getenv("MB_USER_REGISTRATION_QUEUE_PASSIVE"),
-            'durable' => getenv("MB_USER_REGISTRATION_QUEUE_DURABLE"),
-            'exclusive' => getenv("MB_USER_REGISTRATION_QUEUE_EXCLUSIVE"),
-            'auto_delete' => getenv("MB_USER_REGISTRATION_QUEUE_AUTO_DELETE"),
-            'bindingKey' => getenv("MB_USER_REGISTRATION_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
-          ),
-          'transactional' => array(
-            'name' => getenv("MB_TRANSACTIONAL_QUEUE"),
-            'passive' => getenv("MB_TRANSACTIONAL_QUEUE_PASSIVE"),
-            'durable' => getenv("MB_TRANSACTIONAL_QUEUE_DURABLE"),
-            'exclusive' => getenv("MB_TRANSACTIONAL_QUEUE_EXCLUSIVE"),
-            'auto_delete' => getenv("MB_TRANSACTIONAL_QUEUE_AUTO_DELETE"),
-            'bindingKey' => getenv("MB_TRANSACTIONAL_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
-          ),
-          'mobileCommons' => array(
-            'name' => getenv("MB_MOBILE_COMMONS_QUEUE"),
-            'passive' => getenv("MB_MOBILE_COMMONS_QUEUE_PASSIVE"),
-            'durable' => getenv("MB_MOBILE_COMMONS_QUEUE_DURABLE"),
-            'exclusive' => getenv("MB_MOBILE_COMMONS_QUEUE_EXCLUSIVE"),
-            'auto_delete' => getenv("MB_MOBILE_COMMONS_QUEUE_AUTO_DELETE"),
-            'bindingKey' => getenv("MB_MOBILE_COMMONS_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
-          ),
-        ),
-        'routingKey' => 'user.registration.transactional',
+      $config = array();
+      $source = __DIR__ . '/messagebroker-config/mb_config.json';
+      $mb_config = new MB_Configuration($source, $this->settings);
+      $transactionalExchange = $mb_config->exchangeSettings('transactionalExchange');
+
+      $config['exchange'] = array(
+        'name' => $transactionalExchange->name,
+        'type' => $transactionalExchange->type,
+        'passive' => $transactionalExchange->passive,
+        'durable' => $transactionalExchange->durable,
+        'auto_delete' => $transactionalExchange->auto_delete,
       );
+      foreach ($transactionalExchange->queues->transactionalQueue->binding_patterns as $bindingCount => $bindingKey) {
+        $config['queue'][$bindingCount] = array(
+          'name' => $transactionalExchange->queues->transactionalQueue->name,
+          'passive' => $transactionalExchange->queues->transactionalQueue->passive,
+          'durable' =>  $transactionalExchange->queues->transactionalQueue->durable,
+          'exclusive' =>  $transactionalExchange->queues->transactionalQueue->exclusive,
+          'auto_delete' =>  $transactionalExchange->queues->transactionalQueue->auto_delete,
+          'bindingKey' => $bindingKey,
+        );
+      }
+      foreach ($transactionalExchange->queues->userAPIRegistrationQueue->binding_patterns as $bindingCount => $bindingKey) {
+        $config['queue'][$bindingCount] = array(
+          'name' => $transactionalExchange->queues->userAPIRegistrationQueue->name,
+          'passive' => $transactionalExchange->queues->userAPIRegistrationQueue->passive,
+          'durable' =>  $transactionalExchange->queues->userAPIRegistrationQueue->durable,
+          'exclusive' =>  $transactionalExchange->queues->userAPIRegistrationQueue->exclusive,
+          'auto_delete' =>  $transactionalExchange->queues->userAPIRegistrationQueue->auto_delete,
+          'bindingKey' => $bindingKey,
+        );
+      }
+      foreach ($transactionalExchange->queues->userRegistrationQueue->binding_patterns as $bindingCount => $bindingKey) {
+        $config['queue'][$bindingCount] = array(
+          'name' => $transactionalExchange->queues->userRegistrationQueue->name,
+          'passive' => $transactionalExchange->queues->userRegistrationQueue->passive,
+          'durable' =>  $transactionalExchange->queues->userRegistrationQueue->durable,
+          'exclusive' =>  $transactionalExchange->queues->userRegistrationQueue->exclusive,
+          'auto_delete' =>  $transactionalExchange->queues->userRegistrationQueue->auto_delete,
+          'bindingKey' => $bindingKey,
+        );
+      }
+      foreach ($transactionalExchange->queues->mobileCommonsQueue->binding_patterns as $bindingCount => $bindingKey) {
+        $config['queue'][$bindingCount] = array(
+          'name' => $transactionalExchange->queues->mobileCommonsQueue->name,
+          'passive' => $transactionalExchange->queues->mobileCommonsQueue->passive,
+          'durable' =>  $transactionalExchange->queues->mobileCommonsQueue->durable,
+          'exclusive' =>  $transactionalExchange->queues->mobileCommonsQueue->exclusive,
+          'auto_delete' =>  $transactionalExchange->queues->mobileCommonsQueue->auto_delete,
+          'bindingKey' => $bindingKey,
+        );
+      }
+      $config['routingKey'] = 'user.registration.transactional';
       $mbUserAPI = new MessageBroker($this->credentials, $config);
 
       // Required
@@ -1038,26 +1068,30 @@ class MBC_UserImport
     $passwordResetURL = $this->toolbox->getPasswordResetURL($userDetails['uid']);
     if ($passwordResetURL != NULL) {
 
-      $config = array(
-        'exchange' => array(
-          'name' => getenv("MB_TRANSACTIONAL_EXCHANGE"),
-          'type' => getenv("MB_TRANSACTIONAL_EXCHANGE_TYPE"),
-          'passive' => getenv("MB_TRANSACTIONAL_EXCHANGE_PASSIVE"),
-          'durable' => getenv("MB_TRANSACTIONAL_EXCHANGE_DURABLE"),
-          'auto_delete' => getenv("MB_TRANSACTIONAL_EXCHANGE_AUTO_DELETE"),
-        ),
-        'queue' => array(
-          'transactional' => array(
-            'name' => getenv("MB_TRANSACTIONAL_QUEUE"),
-            'passive' => getenv("MB_TRANSACTIONAL_QUEUE_PASSIVE"),
-            'durable' => getenv("MB_TRANSACTIONAL_QUEUE_DURABLE"),
-            'exclusive' => getenv("MB_TRANSACTIONAL_QUEUE_EXCLUSIVE"),
-            'auto_delete' => getenv("MB_TRANSACTIONAL_QUEUE_AUTO_DELETE"),
-            'bindingKey' => getenv("MB_TRANSACTIONAL_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
-          ),
-        ),
-        'routingKey' => 'user.password.transactional',
+      $config = array();
+      $source = __DIR__ . '/messagebroker-config/mb_config.json';
+      $mb_config = new MB_Configuration($source, $this->settings);
+      $transactionalExchange = $mb_config->exchangeSettings('transactionalExchange');
+
+      $config['exchange'] = array(
+        'name' => $transactionalExchange->name,
+        'type' => $transactionalExchange->type,
+        'passive' => $transactionalExchange->passive,
+        'durable' => $transactionalExchange->durable,
+        'auto_delete' => $transactionalExchange->auto_delete,
       );
+      foreach ($transactionalExchange->queues->transactionalQueue->binding_patterns as $bindingCount => $bindingKey) {
+        $config['queue'][$bindingCount] = array(
+          'name' => $transactionalExchange->queues->transactionalQueue->name,
+          'passive' => $transactionalExchange->queues->transactionalQueue->passive,
+          'durable' =>  $transactionalExchange->queues->transactionalQueue->durable,
+          'exclusive' =>  $transactionalExchange->queues->transactionalQueue->exclusive,
+          'auto_delete' =>  $transactionalExchange->queues->transactionalQueue->auto_delete,
+          'bindingKey' => $bindingKey,
+        );
+      }
+      $config['routingKey'] = 'user.password.transactional';
+
       $mbUserAPI = new MessageBroker($this->credentials, $config);
 
       $userDetails['merge_vars']['PASSWORD_RESET_LINK'] = $passwordResetURL;
@@ -1095,53 +1129,73 @@ class MBC_UserImport
    */
   private function campaignSignup($campaignNID, $drupalUID, $source) {
 
-    $post = array(
-      'source' => $source . '_mb_import',
-      'uid' => $drupalUID
-    );
-    $curlUrl = $this->settings['ds_drupal_api_host'];
-    $port = $this->settings['ds_drupal_api_port'];
-    if ($port != 0) {
-      $curlUrl .= ":$port";
+    // Lookup campaign details
+    $campaignDetails = $this->campaignLookup($campaignNID);
+
+    if ( $campaignDetails != FALSE) {
+      $post = array(
+        'source' => $source . '_mb_import',
+        'uid' => $drupalUID
+      );
+      $curlUrl = $this->settings['ds_drupal_api_host'];
+      $port = $this->settings['ds_drupal_api_port'];
+      if ($port != 0) {
+        $curlUrl .= ":$port";
+      }
+      $curlUrl .= '/api/v1/campaigns/' . $campaignNID . '/signup';
+      $signUp = $this->toolbox->curlPOSTauth($curlUrl, $post);
     }
-    $curlUrl .= '/api/v1/campaigns/' . $campaignNID . '/signup';
-    $signUp = $this->toolbox->curlPOSTauth($curlUrl, $post);
 
-    // Results found for campaign - proceed to get campaign details
-    if (is_array($signUp[0]) && $signUp[0][0] > 0)   {
-
-      // Store campaign details to prevent flooding Drupal API
-      if (!isset($this->campaigns[$campaignNID])) {
-
-        // Lookup campaign details after successful signup
-        // https://www.dosomething.org/api/v1/content/:nid
-        $curlUrl = $this->settings['ds_drupal_api_host'];
-        $port = $this->settings['ds_drupal_api_port'];
-        if ($port != 0) {
-          $curlUrl .= ":$port";
-        }
-        $curlUrl .= '/api/v1/content/' . $campaignNID;
-        $campaignDetails = $this->toolbox->curlGET($curlUrl);
-        if (!is_object($campaignDetails[0])) {
-          echo 'ERROR - MBC_userImport->campaignSignup: Target campaign "' . $campaignNID . '" not found with /api/v1/content/' . $campaignNID . ' call. Error code: ' . $campaignDetails[1], PHP_EOL;
-          $campaignDetails = FALSE;
-        }
-        else {
-          $campaignDetails = $campaignDetails[0];
-          $this->campaigns[$campaignNID] = $campaignDetails;
-        }
-
-      }
-      else {
-        $campaignDetails = $this->campaigns[$campaignNID];
-      }
-
-      return $campaignDetails;
+    // Results found for campaign signup
+    if (is_array($signUp[0]) && $signUp[0][0] > 0) {
+      $signUp = TRUE;
     } // Invalid ID or closed campaign
     else {
-      echo 'Drupal UID: ' . $drupalUID . ' may already be signed up for campaign ' . $campaignNID . ' or campaign is not accepting signups, sid returned is: ' . $signUp[0][0], PHP_EOL;
-      return FALSE;
+      echo 'Drupal UID: ' . $drupalUID . ' may already be signed up for campaign ' . $campaignNID . ' or campaign is not accepting signups.' . $signUp[0][0], PHP_EOL;
+      $signUp = FALSE;
     }
+
+    return array($campaignDetails, $signUp);
+  }
+
+  /**
+   * Send transactional email confirming the user has signed up for a campaign.
+   *
+   * @param int $campaignNID
+   *   The target campaign node ID (NID) as defined in the Drupal site.
+   *
+   * @return string $status
+   *   Results for transactional submission.
+   */
+  private function campaignLookup($campaignNID) {
+
+    // Store campaign details to prevent flooding Drupal API
+    if (!isset($this->campaigns[$campaignNID])) {
+
+      // Lookup campaign details after successful signup
+      // https://www.dosomething.org/api/v1/content/:nid
+      $curlUrl = $this->settings['ds_drupal_api_host'];
+      $port = $this->settings['ds_drupal_api_port'];
+      if ($port != 0) {
+        $curlUrl .= ":$port";
+      }
+      $curlUrl .= '/api/v1/content/' . $campaignNID;
+      $campaignDetails = $this->toolbox->curlGET($curlUrl);
+      if (!is_object($campaignDetails[0])) {
+        echo 'ERROR - MBC_userImport->campaignSignup: Target campaign "' . $campaignNID . '" not found with /api/v1/content/' . $campaignNID . ' call. Error code: ' . $campaignDetails[1], PHP_EOL;
+        $campaignDetails = FALSE;
+      }
+      else {
+        $campaignDetails = $campaignDetails[0];
+        $this->campaigns[$campaignNID] = $campaignDetails;
+      }
+
+    }
+    else {
+      $campaignDetails = $this->campaigns[$campaignNID];
+    }
+
+    return $campaignDetails;
   }
 
   /**
@@ -1183,42 +1237,50 @@ class MBC_UserImport
       'application_id' => 200
     );
 
-    $config = array(
-      'exchange' => array(
-        'name' => getenv("MB_TRANSACTIONAL_EXCHANGE"),
-        'type' => getenv("MB_TRANSACTIONAL_EXCHANGE_TYPE"),
-        'passive' => getenv("MB_TRANSACTIONAL_EXCHANGE_PASSIVE"),
-        'durable' => getenv("MB_TRANSACTIONAL_EXCHANGE_DURABLE"),
-        'auto_delete' => getenv("MB_TRANSACTIONAL_EXCHANGE_AUTO_DELETE"),
-      ),
-      'queue' => array(
-        'transactional' => array(
-          'name' => getenv("MB_TRANSACTIONAL_QUEUE"),
-          'passive' => getenv("MB_TRANSACTIONAL_QUEUE_PASSIVE"),
-          'durable' => getenv("MB_TRANSACTIONAL_QUEUE_DURABLE"),
-          'exclusive' => getenv("MB_TRANSACTIONAL_QUEUE_EXCLUSIVE"),
-          'auto_delete' => getenv("MB_TRANSACTIONAL_QUEUE_AUTO_DELETE"),
-          'bindingKey' => getenv("MB_TRANSACTIONAL_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
-        ),
-        'campaign_signups' => array(
-          'name' => getenv("MB_MAILCHIMP_CAMPAIGN_SIGNUP_QUEUE"),
-          'passive' => getenv("MB_MAILCHIMP_CAMPAIGN_SIGNUP_QUEUE_PASSIVE"),
-          'durable' => getenv("MB_MAILCHIMP_CAMPAIGN_SIGNUP_QUEUE_DURABLE"),
-          'exclusive' => getenv("MB_MAILCHIMP_CAMPAIGN_SIGNUP_QUEUE_EXCLUSIVE"),
-          'auto_delete' => getenv("MB_MAILCHIMP_CAMPAIGN_SIGNUP_QUEUE_AUTO_DELETE"),
-          'bindingKey' => getenv("MB_MAILCHIMP_CAMPAIGN_SIGNUP_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
-        ),
-        'userAPICampaignActivity' => array(
-          'name' => getenv("MB_USER_API_CAMPAIGN_ACTIVITY_QUEUE"),
-          'passive' => getenv("MB_USER_API_CAMPAIGN_ACTIVITY_QUEUE_PASSIVE"),
-          'durable' => getenv("MB_USER_API_CAMPAIGN_ACTIVITY_QUEUE_DURABLE"),
-          'exclusive' => getenv("MB_USER_API_CAMPAIGN_ACTIVITY_QUEUE_EXCLUSIVE"),
-          'auto_delete' => getenv("MB_USER_API_CAMPAIGN_ACTIVITY_QUEUE_AUTO_DELETE"),
-          'bindingKey' => getenv("MB_USER_API_CAMPAIGN_ACTIVITY_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
-        ),
-      ),
-      'routingKey' => 'campaign.signup.transactional',
+    $config = array();
+    $source = __DIR__ . '/messagebroker-config/mb_config.json';
+    $mb_config = new MB_Configuration($source, $this->settings);
+    $transactionalExchange = $mb_config->exchangeSettings('transactionalExchange');
+
+    $config['exchange'] = array(
+      'name' => $transactionalExchange->name,
+      'type' => $transactionalExchange->type,
+      'passive' => $transactionalExchange->passive,
+      'durable' => $transactionalExchange->durable,
+      'auto_delete' => $transactionalExchange->auto_delete,
     );
+    foreach ($transactionalExchange->queues->transactionalQueue->binding_patterns as $bindingCount => $bindingKey) {
+      $config['queue'][$bindingCount] = array(
+        'name' => $transactionalExchange->queues->transactionalQueue->name,
+        'passive' => $transactionalExchange->queues->transactionalQueue->passive,
+        'durable' =>  $transactionalExchange->queues->transactionalQueue->durable,
+        'exclusive' =>  $transactionalExchange->queues->transactionalQueue->exclusive,
+        'auto_delete' =>  $transactionalExchange->queues->transactionalQueue->auto_delete,
+        'bindingKey' => $bindingKey,
+      );
+    }
+    foreach ($transactionalExchange->queues->mailchimpCampaignSignupQueue->binding_patterns as $bindingCount => $bindingKey) {
+      $config['queue'][$bindingCount] = array(
+        'name' => $transactionalExchange->queues->mailchimpCampaignSignupQueue->name,
+        'passive' => $transactionalExchange->queues->mailchimpCampaignSignupQueue->passive,
+        'durable' =>  $transactionalExchange->queues->mailchimpCampaignSignupQueue->durable,
+        'exclusive' =>  $transactionalExchange->queues->mailchimpCampaignSignupQueue->exclusive,
+        'auto_delete' =>  $transactionalExchange->queues->mailchimpCampaignSignupQueue->auto_delete,
+        'bindingKey' => $bindingKey,
+      );
+    }
+    foreach ($transactionalExchange->queues->userAPICampaignActivityQueue->binding_patterns as $bindingCount => $bindingKey) {
+      $config['queue'][$bindingCount] = array(
+        'name' => $transactionalExchange->queues->userAPICampaignActivityQueue->name,
+        'passive' => $transactionalExchange->queues->userAPICampaignActivityQueue->passive,
+        'durable' =>  $transactionalExchange->queues->userAPICampaignActivityQueue->durable,
+        'exclusive' =>  $transactionalExchange->queues->userAPICampaignActivityQueue->exclusive,
+        'auto_delete' =>  $transactionalExchange->queues->userAPICampaignActivityQueue->auto_delete,
+        'bindingKey' => $bindingKey,
+      );
+    }
+    $config['routingKey'] = 'campaign.signup.transactional';
+
     $mbCampaignSignup = new MessageBroker($this->credentials, $config);
 
     $payload = serialize($signupDetails);
@@ -1355,22 +1417,26 @@ class MBC_UserImport
   */
   private function logExistingAccounts($source, $origin) {
 
+    $source = __DIR__ . '/messagebroker-config/mb_config.json';
+    $mbConfig = new MB_Configuration($source, $this->settings);
+    $userImportExistingLoggingExchange = $mbConfig->exchangeSettings('directUserImportExistingLogging');
+
     $config = array(
       'exchange' => array(
-        'name' => getenv("MB_USER_IMPORT_LOGGING_EXCHANGE"),
-        'type' => getenv("MB_USER_IMPORT_LOGGING_EXCHANGE_TYPE"),
-        'passive' => getenv("MB_USER_IMPORT_LOGGING_EXCHANGE_PASSIVE"),
-        'durable' => getenv("MB_USER_IMPORT_LOGGING_EXCHANGE_DURABLE"),
-        'auto_delete' => getenv("MB_USER_IMPORT_LOGGING_EXCHANGE_AUTO_DELETE"),
+        'name' => $userImportExistingLoggingExchange->name,
+        'type' => $userImportExistingLoggingExchange->type,
+        'passive' => $userImportExistingLoggingExchange->passive,
+        'durable' => $userImportExistingLoggingExchange->durable,
+        'auto_delete' => $userImportExistingLoggingExchange->auto_delete,
       ),
       'queue' => array(
-        'user_import' => array(
-          'name' => getenv("MB_USER_IMPORT_LOGGING_QUEUE"),
-          'passive' => getenv("MB_USER_IMPORT_LOGGING_QUEUE_PASSIVE"),
-          'durable' => getenv("MB_USER_IMPORT_LOGGING_QUEUE_DURABLE"),
-          'exclusive' => getenv("MB_USER_IMPORT_LOGGING_QUEUE_EXCLUSIVE"),
-          'auto_delete' => getenv("MB_USER_IMPORT_LOGGING_QUEUE_AUTO_DELETE"),
-          'bindingKey' => getenv("MB_USER_IMPORT_LOGGING_QUEUE_TOPIC_MB_TRANSACTIONAL_EXCHANGE_PATTERN"),
+        array(
+          'name' => $userImportExistingLoggingExchange->queues->userImportExistingLoggingQueue->name,
+          'passive' => $userImportExistingLoggingExchange->queues->userImportExistingLoggingQueue->passive,
+          'durable' =>  $userImportExistingLoggingExchange->queues->userImportExistingLoggingQueue->durable,
+          'exclusive' =>  $userImportExistingLoggingExchange->queues->userImportExistingLoggingQueue->exclusive,
+          'auto_delete' =>  $userImportExistingLoggingExchange->queues->userImportExistingLoggingQueue->auto_delete,
+          'bindingKey' => $userImportExistingLoggingExchange->queues->userImportExistingLoggingQueue->binding_key,
         ),
       ),
     );
