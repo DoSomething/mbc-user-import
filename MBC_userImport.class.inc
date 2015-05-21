@@ -113,7 +113,7 @@ class MBC_UserImport
     $this->toolbox = new MB_Toolbox($settings);
     $this->memberCount = $this->toolbox->getDSMemberCount();
     $this->statHat = new StatHat($settings['stathat_ez_key'], 'mbc-user-import:');
-    $this->statHat->setIsProduction(TRUE);
+    $this->statHat->setIsProduction(isset($settings['use_stathat_tracking']) ? $settings['use_stathat_tracking'] : FALSE);
 
     $this->existingStatus = array();
     $this->campaigns = array();
