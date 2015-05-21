@@ -1440,6 +1440,8 @@ class MBC_UserImport
         ),
       ),
     );
+    $config['routingKey'] = $userImportExistingLoggingExchange->queues->userImportExistingLoggingQueue->routing_key;
+
     $mbEistingUserImportLogging = new MessageBroker($this->credentials, $config);
 
     $this->existingStatus['source'] = $source;
