@@ -470,8 +470,8 @@ class MBC_UserImport
 
       // Config specific to producing a new user for the Message Broker userAPI
       $config = array();
-      $source = __DIR__ . '/messagebroker-config/mb_config.json';
-      $mb_config = new MB_Configuration($source, $this->settings);
+      $configSource = __DIR__ . '/messagebroker-config/mb_config.json';
+      $mb_config = new MB_Configuration($configSource, $this->settings);
       $transactionalExchange = $mb_config->exchangeSettings('transactionalExchange');
 
       $config['exchange'] = array(
@@ -694,8 +694,8 @@ class MBC_UserImport
 
       // Config specific to producing a new user for the Message Broker userAPI
       $config = array();
-      $source = __DIR__ . '/messagebroker-config/mb_config.json';
-      $mb_config = new MB_Configuration($source, $this->settings);
+      $configSource = __DIR__ . '/messagebroker-config/mb_config.json';
+      $mb_config = new MB_Configuration($configSource, $this->settings);
       $transactionalExchange = $mb_config->exchangeSettings('transactionalExchange');
 
       $config['exchange'] = array(
@@ -806,8 +806,8 @@ class MBC_UserImport
 
      // Config specific to producing a new user for the Message Broker userAPI
       $config = array();
-      $source = __DIR__ . '/messagebroker-config/mb_config.json';
-      $mb_config = new MB_Configuration($source, $this->settings);
+      $configSource = __DIR__ . '/messagebroker-config/mb_config.json';
+      $mb_config = new MB_Configuration($configSource, $this->settings);
       $transactionalExchange = $mb_config->exchangeSettings('transactionalExchange');
 
       $config['exchange'] = array(
@@ -912,8 +912,8 @@ class MBC_UserImport
 
       // Config specific to producing a new user for the Message Broker userAPI
       $config = array();
-      $source = __DIR__ . '/messagebroker-config/mb_config.json';
-      $mb_config = new MB_Configuration($source, $this->settings);
+      $configSource = __DIR__ . '/messagebroker-config/mb_config.json';
+      $mb_config = new MB_Configuration($configSource, $this->settings);
       $transactionalExchange = $mb_config->exchangeSettings('transactionalExchange');
 
       $config['exchange'] = array(
@@ -1069,8 +1069,8 @@ class MBC_UserImport
     if ($passwordResetURL != NULL) {
 
       $config = array();
-      $source = __DIR__ . '/messagebroker-config/mb_config.json';
-      $mb_config = new MB_Configuration($source, $this->settings);
+      $configSource = __DIR__ . '/messagebroker-config/mb_config.json';
+      $mb_config = new MB_Configuration($configSource, $this->settings);
       $transactionalExchange = $mb_config->exchangeSettings('transactionalExchange');
 
       $config['exchange'] = array(
@@ -1238,8 +1238,8 @@ class MBC_UserImport
     );
 
     $config = array();
-    $source = __DIR__ . '/messagebroker-config/mb_config.json';
-    $mb_config = new MB_Configuration($source, $this->settings);
+    $configSource = __DIR__ . '/messagebroker-config/mb_config.json';
+    $mb_config = new MB_Configuration($configSource, $this->settings);
     $transactionalExchange = $mb_config->exchangeSettings('transactionalExchange');
 
     $config['exchange'] = array(
@@ -1417,8 +1417,8 @@ class MBC_UserImport
   */
   private function logExistingAccounts($source, $origin) {
 
-    $source = __DIR__ . '/messagebroker-config/mb_config.json';
-    $mbConfig = new MB_Configuration($source, $this->settings);
+    $configSource = __DIR__ . '/messagebroker-config/mb_config.json';
+    $mbConfig = new MB_Configuration($configSource, $this->settings);
     $userImportExistingLoggingExchange = $mbConfig->exchangeSettings('directUserImportExistingLogging');
 
     $config = array(
