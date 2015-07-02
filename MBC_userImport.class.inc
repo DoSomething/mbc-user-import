@@ -324,8 +324,9 @@ class MBC_UserImport
               if ($drupalUID != FALSE) {
 
                 // Campaign: 1 in 3 of Us: 5275
+                // Thumb Wars: 1508
                 // @todo: Add logic to detect what campaign the user is signing up for:
-                $campaignNID = 5275;
+                $campaignNID = 1508;
                 list($campaignDetails, $signup) = $this->campaignSignup($campaignNID, $drupalUID, $user->source);
 
                 // - [ ] An email from DoSomething.org thanking the user for signing
