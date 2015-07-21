@@ -325,15 +325,18 @@ class MBC_UserImport
 
                 // Campaign: 1 in 3 of Us: 5275
                 // Thumb Wars: 1508
+                // Backseat Adviser
                 // @todo: Add logic to detect what campaign the user is signing up for:
-                $campaignNID = 1508;
-                list($campaignDetails, $signup) = $this->campaignSignup($campaignNID, $drupalUID, $user->source);
 
-                // - [ ] An email from DoSomething.org thanking the user for signing
-                // up to the campaign
-                if ($signup == TRUE) {
-                  $user->uid = $drupalUID;
-                  $this->campaignSignupTransactional($user, $campaignDetails);
+                if ($user->member_source == 'Backseat Adviser') {
+                  $campaignNID = 2366;
+                  list($campaignDetails, $signup) = $this->campaignSignup($campaignNID, $drupalUID, $user->source);
+
+                  // An email from DoSomething.org thanking the user for signing up to the campaign
+                  if ($signup == TRUE) {
+                    $user->uid = $drupalUID;
+                    $this->campaignSignupTransactional($user, $campaignDetails);
+                  }
                 }
 
                 // Generate additional messages to trigger related functionality to
@@ -848,8 +851,6 @@ class MBC_UserImport
           'bindingKey' => $bindingKey,
         );
       }
-      $config['routingKey'] = 'user.registration.import';
-      $mbUserImport = new MessageBroker($this->credentials, $config);
 
       // Required
       $userDetails = array(
@@ -858,10 +859,37 @@ class MBC_UserImport
         'activity' => 'user_import',
         'source' => $user->source,
         'mailchimp_list_id' => 'f2fab1dfd4',
-        'mailchimp_group_name' => '1In3OfUs2015',
         'mailchimp_grouping_id' => 10641,
-        'mc_opt_in_path_id' => 175235
+        'mc_opt_in_path_id' => 175235,
       );
+
+      if ($user->member_source == 'Backseat Adviser') {
+        $userDetails['mailchimp_group_name'] = '';
+        $config['routingKey'] = 'user.registration.import';
+      }
+      else {
+        $userDetails['email_template'] = 'mb-user-welcome-teenlife-com-v1-0-0';
+        $userDetails['activity'] = 'user_welcome-teenlife';
+        $userDetails['tags'] = array(
+          0 => 'user_welcome-' . $user->source,
+        );
+        $userDetails['merge_vars'] = array(
+          'MEMBER_COUNT' => $this->memberCount,
+        );
+
+        foreach ($transactionalExchange->queues->transactionalQueue->binding_patterns as $bindingCount => $bindingKey) {
+          $config['queue'][$bindingCount] = array(
+            'name' => $transactionalExchange->queues->transactionalQueue->name,
+            'passive' => $transactionalExchange->queues->transactionalQueue->passive,
+            'durable' =>  $transactionalExchange->queues->transactionalQueue->durable,
+            'exclusive' =>  $transactionalExchange->queues->transactionalQueue->exclusive,
+            'auto_delete' =>  $transactionalExchange->queues->transactionalQueue->auto_delete,
+            'bindingKey' => $bindingKey,
+          );
+        }
+        $config['routingKey'] = ' user.registration.transactional';
+      }
+      $mbUserImport = new MessageBroker($this->credentials, $config);
 
       if (isset($user->first_name) && $user->first_name != '') {
         $userDetails['merge_vars']['FNAME'] = ucfirst($user->first_name);
