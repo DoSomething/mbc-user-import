@@ -335,7 +335,8 @@ class MBC_UserImport
                   }
                   else {
                     echo 'Invalid member_source value in Teen Life import: ' . $user->member_source, PHP_EOL;
-                    exit;
+                    echo 'Invalid user object: ' . print_r($user), PHP_EOL;
+                    break;
                   }
                   list($campaignDetails, $signup) = $this->campaignSignup($campaignNID, $drupalUID, $user->source);
 
