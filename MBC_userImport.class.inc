@@ -323,17 +323,40 @@ class MBC_UserImport
 
               if ($drupalUID != FALSE) {
 
-                // Campaign: 1 in 3 of Us: 5275
-                // Thumb Wars: 1508
-                // @todo: Add logic to detect what campaign the user is signing up for:
-                $campaignNID = 1508;
-                list($campaignDetails, $signup) = $this->campaignSignup($campaignNID, $drupalUID, $user->source);
+                if ($user->member_source != 'teenlife_listing') {
+                  if ($user->member_source == '1 in 3 of Us Campaign') {
+                    $campaignNID = 5275;
+                  }
+                  elseif ($user->member_source == 'Backseat Adviser') {
+                    $campaignNID = 2366;
+                  }
+                  elseif ($user->member_source == 'Science Sleuth') {
+                    $campaignNID = 3478;
+                  }
+                  else {
+                    echo 'Invalid member_source value in Teen Life import: ' . $user->member_source, PHP_EOL;
+                    exit;
+                  }
+                  list($campaignDetails, $signup) = $this->campaignSignup($campaignNID, $drupalUID, $user->source);
 
-                // - [ ] An email from DoSomething.org thanking the user for signing
-                // up to the campaign
-                if ($signup == TRUE) {
-                  $user->uid = $drupalUID;
-                  $this->campaignSignupTransactional($user, $campaignDetails);
+                  // Add MailChimp and Mobile Commons details as currently not returned in Drupal API call for campaign signups.
+                  if ($user->member_source == '1 in 3 of Us Campaign') {
+                    $campaignDetails->mailchimp_group_name = '1In3OfUs2015';
+                    $campaignDetails->mailchimp_grouping_id = 10641;
+                    $campaignDetails->mc_opt_in_path_id = 178528;
+                  }
+                  elseif ($user->member_source == 'Backseat Adviser') {
+                    $campaignDetails->mc_opt_in_path_id = 180046;
+                  }
+                  elseif ($user->member_source == 'Science Sleuth') {
+                    // No mc_opt_in_path_id found in Mobile Commons - 23 July 2015
+                  }
+
+                  // An email from DoSomething.org thanking the user for signing up to the campaign
+                  if ($signup == TRUE) {
+                    $user->uid = $drupalUID;
+                    $this->campaignSignupTransactional($user, $campaignDetails);
+                  }
                 }
 
                 // Generate additional messages to trigger related functionality to
@@ -848,8 +871,6 @@ class MBC_UserImport
           'bindingKey' => $bindingKey,
         );
       }
-      $config['routingKey'] = 'user.registration.import';
-      $mbUserImport = new MessageBroker($this->credentials, $config);
 
       // Required
       $userDetails = array(
@@ -858,10 +879,39 @@ class MBC_UserImport
         'activity' => 'user_import',
         'source' => $user->source,
         'mailchimp_list_id' => 'f2fab1dfd4',
-        'mailchimp_group_name' => '1In3OfUs2015',
         'mailchimp_grouping_id' => 10641,
-        'mc_opt_in_path_id' => 175235
+        'mc_opt_in_path_id' => 175235,
       );
+
+      if ($user->member_source == 'Backseat Adviser') {
+        $config['routingKey'] = 'user.registration.import';
+      }
+      elseif ($user->member_source == 'Science Sleuth') {
+        $config['routingKey'] = 'user.registration.import';
+      }
+      else {
+        $userDetails['email_template'] = 'mb-user-welcome-teenlife-com-v1-0-0';
+        $userDetails['activity'] = 'user_welcome-teenlife';
+        $userDetails['tags'] = array(
+          0 => 'user_welcome-' . $user->source,
+        );
+        $userDetails['merge_vars'] = array(
+          'MEMBER_COUNT' => $this->memberCount,
+        );
+
+        foreach ($transactionalExchange->queues->transactionalQueue->binding_patterns as $bindingCount => $bindingKey) {
+          $config['queue'][$bindingCount] = array(
+            'name' => $transactionalExchange->queues->transactionalQueue->name,
+            'passive' => $transactionalExchange->queues->transactionalQueue->passive,
+            'durable' =>  $transactionalExchange->queues->transactionalQueue->durable,
+            'exclusive' =>  $transactionalExchange->queues->transactionalQueue->exclusive,
+            'auto_delete' =>  $transactionalExchange->queues->transactionalQueue->auto_delete,
+            'bindingKey' => $bindingKey,
+          );
+        }
+        $config['routingKey'] = ' user.registration.transactional';
+      }
+      $mbUserImport = new MessageBroker($this->credentials, $config);
 
       if (isset($user->first_name) && $user->first_name != '') {
         $userDetails['merge_vars']['FNAME'] = ucfirst($user->first_name);
@@ -1215,7 +1265,19 @@ class MBC_UserImport
       'activity' => 'campaign_signup',
       'email' => $userDetails->email,
       'uid' => $userDetails->uid,
-      'merge_vars' => array(
+      'subscribed' => 1,
+      'event_id' => $campaignDetails->nid,
+      'activity_timestamp' => time(),
+      'application_id' => 200,
+      'source' => $userDetails->source
+    );
+
+    if (isset($userDetails->birthdate) && !is_int($userDetails->birthdate)) {
+      $signupDetails['birthdate_timestamp'] = strtotime($userDetails->birthdate);
+    }
+
+    if ($campaignDetails->type != 'sms_game') {
+      $signupDetails['merge_vars'] = array(
         'MEMBER_COUNT' => $this->memberCount,
         'FNAME' => $userDetails->first_name,
         'CAMPAIGN_TITLE' => $campaignDetails->title,
@@ -1224,19 +1286,24 @@ class MBC_UserImport
         'STEP_ONE' => $campaignDetails->pre_step_header,
         'STEP_TWO' => 'Snap a Pic', // dosomething_campaigns.module, ln 10, define('DOSOMETHING_CAMPAIGN_PIC_STEP_HEADER', 'Snap a Pic');
         'STEP_THREE' => $campaignDetails->post_step_header,
-      ),
-      'subscribed' => 1,
-      'event_id' => $campaignDetails->nid,
-      'email_tags' => array(
+      );
+      $signupDetails['email_tags'] = array(
         0 => $campaignDetails->nid,
         1 => 'campaign_signup-import-' . $userDetails->source,
-      ),
-      'mailchimp_group_name' => 'TeensforJeans2014',
-      'mailchimp_grouping_id' => 10637,
-      'email_template' => 'mb-campaign-signup',
-      'activity_timestamp' => time(),
-      'application_id' => 200
-    );
+      );
+      $signupDetails['email_template'] = 'mb-campaign-signup';
+      $signupDetails['mailchimp_group_name'] = $campaignDetails->mailchimp_group_name;
+      $signupDetails['mailchimp_grouping_id'] = $campaignDetails->mailchimp_grouping_id;
+    }
+    elseif (isset($userDetails->mobile_number)) {
+      $signupDetails['mobile_number'] = $userDetails->mobile_number;
+      $signupDetails['merge_vars'] = array(
+        'FNAME' => $userDetails->first_name,
+        'LNAME' => $userDetails->last_name,
+      );
+      $signupDetails['zip'] = $userDetails->zip_code;
+      $signupDetails['mc_opt_in_path_id'] = $campaignDetails->mc_opt_in_path_id;
+    }
 
     $config = array();
     $configSource = __DIR__ . '/messagebroker-config/mb_config.json';
