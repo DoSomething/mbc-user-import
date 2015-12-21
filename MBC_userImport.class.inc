@@ -491,7 +491,7 @@ class MBC_UserImport
         ( ( is_array($drupalUser) && !isset($drupalUser[0]['errorInfo']) ) && isset($drupalUser[0]) && strpos($drupalUser[0], 'is registered') !== FALSE) ) {
 
       // Check for existing MailChimp and/or Mobile Commons accounts
-      $this->checkExistingAccount($user, $drupalUser);
+      // $this->checkExistingAccount($user, $drupalUser);
 
       // Config specific to producing a new user for the Message Broker userAPI
       $config = array();
@@ -1503,29 +1503,28 @@ class MBC_UserImport
 
     $configSource = __DIR__ . '/messagebroker-config/mb_config.json';
     $mbConfig = new MB_Configuration($configSource, $this->settings);
-    $userImportExistingLoggingExchange = $mbConfig->exchangeSettings('directUserImportExistingLogging');
+    $loggingGatewayExchange = $mbConfig->exchangeSettings('directLoggingGateway');
 
     $config = array(
       'exchange' => array(
-        'name' => $userImportExistingLoggingExchange->name,
-        'type' => $userImportExistingLoggingExchange->type,
-        'passive' => $userImportExistingLoggingExchange->passive,
-        'durable' => $userImportExistingLoggingExchange->durable,
-        'auto_delete' => $userImportExistingLoggingExchange->auto_delete,
+        'name' => $loggingGatewayExchange->name,
+        'type' => $loggingGatewayExchange->type,
+        'passive' => $loggingGatewayExchange->passive,
+        'durable' => $loggingGatewayExchange->durable,
+        'auto_delete' => $loggingGatewayExchange->auto_delete,
       ),
       'queue' => array(
         array(
-          'name' => $userImportExistingLoggingExchange->queues->userImportExistingLoggingQueue->name,
-          'passive' => $userImportExistingLoggingExchange->queues->userImportExistingLoggingQueue->passive,
-          'durable' =>  $userImportExistingLoggingExchange->queues->userImportExistingLoggingQueue->durable,
-          'exclusive' =>  $userImportExistingLoggingExchange->queues->userImportExistingLoggingQueue->exclusive,
-          'auto_delete' =>  $userImportExistingLoggingExchange->queues->userImportExistingLoggingQueue->auto_delete,
-          'bindingKey' => $userImportExistingLoggingExchange->queues->userImportExistingLoggingQueue->binding_key,
+          'name' => $loggingGatewayExchange->queues->loggingGatewayQueue->name,
+          'passive' => $loggingGatewayExchange->queues->loggingGatewayQueue->passive,
+          'durable' =>  $loggingGatewayExchange->queues->loggingGatewayQueue->durable,
+          'exclusive' =>  $loggingGatewayExchange->queues->loggingGatewayQueue->exclusive,
+          'auto_delete' =>  $loggingGatewayExchange->queues->loggingGatewayQueue->auto_delete,
+          'bindingKey' => $loggingGatewayExchange->queues->loggingGatewayQueue->binding_key,
         ),
       ),
     );
-    $config['routingKey'] = $userImportExistingLoggingExchange->queues->userImportExistingLoggingQueue->routing_key;
-
+    $config['routingKey'] = $loggingGatewayExchange->queues->loggingGatewayQueue->routing_key;
     $mbEistingUserImportLogging = new MessageBroker($this->credentials, $config);
 
     $this->existingStatus['source'] = $source;
