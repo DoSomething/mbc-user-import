@@ -491,7 +491,7 @@ class MBC_UserImport
         ( ( is_array($drupalUser) && !isset($drupalUser[0]['errorInfo']) ) && isset($drupalUser[0]) && strpos($drupalUser[0], 'is registered') !== FALSE) ) {
 
       // Check for existing MailChimp and/or Mobile Commons accounts
-      // $this->checkExistingAccount($user, $drupalUser);
+      $this->checkExistingAccount($user, $drupalUser);
 
       // Config specific to producing a new user for the Message Broker userAPI
       $config = array();
