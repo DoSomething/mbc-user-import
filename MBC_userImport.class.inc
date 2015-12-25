@@ -552,6 +552,7 @@ class MBC_UserImport
       // Required
       $userDetails = array(
         'email' => $user->email,
+        'log-type' => 'transactional',
         'subscribed' => 1,
         'activity' => 'user_welcome-niche',
         'application_id' => 'MUI',
@@ -769,6 +770,7 @@ class MBC_UserImport
       // Required
       $userDetails = array(
         'email' => $user->email,
+        'log-type' => 'transactional',
         'subscribed' => 1,
         'activity' => 'user_import',
         'application_id' => 'MUI',
@@ -882,6 +884,7 @@ class MBC_UserImport
       // Required
       $userDetails = array(
         'email' => $user->email,
+        'log-type' => 'transactional',
         'subscribed' => 1,
         'activity' => 'user_import',
         'application_id' => 'MUI',
@@ -1030,6 +1033,7 @@ class MBC_UserImport
       // Required
       $userDetails = array(
         'email' => $user->email,
+        'log-type' => 'transactional',
         'subscribed' => 1,
         'subscriptions' => array(
           'mailchimp' => 1
@@ -1162,6 +1166,7 @@ class MBC_UserImport
       $userDetails['activity'] = 'user_password-' . $userDetails['source'];
       $userDetails['email_template'] = 'mb-user-signup-niche-com-v1-0-0-1';
       $userDetails['tags'][0] = 'user_password-' . $userDetails['source'];
+      $userDetails['log-type'] = 'transactional';
       $payload = serialize($userDetails);
       $mbUserAPI->publishMessage($payload);
 
@@ -1276,6 +1281,7 @@ class MBC_UserImport
 
     $signupDetails = array(
       'activity' => 'campaign_signup',
+      'log-type' => 'transactional',
       'application_id' => 'MUI',
       'user_country' => 'US',
       'user_language' => 'en',
