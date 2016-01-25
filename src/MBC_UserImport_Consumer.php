@@ -8,7 +8,7 @@ use DoSomething\MBStatTracker\StatHat;
  * MBC_UserImport class - functionality related to the Message Broker
  * producer mbc-user-import.
  */
-class MBC_UserImport
+class MBC_UserImport_Consumer
 {
 
   /**
@@ -117,6 +117,56 @@ class MBC_UserImport
 
     $this->existingStatus = array();
     $this->campaigns = array();
+  }
+
+  /**
+   * Collect a batch of user submissions to prowler from the related RabbitMQ
+   * queue based on produced entries by mbp-user-import.
+   *
+   * @return array $targetUsers
+   *   Details of the new user accounts to be processed.
+   *
+   * @return array $deliveryTags
+   *   Rabbit delivery tag IDs used for ack backs when processing of each queue
+   *   entry is complete.
+   */
+  private function consumeUserImportQueue() {
+
+    // Get the status details of the queue by requesting a declare
+    list($this->channel, $status) = $this->messageBroker->setupQueue($this->config['queue'][0]['name'], $this->channel);
+    $userImportCount = $status[1];
+
+    $userImportDetails = '';
+    $deliveryTags = array();
+    $targetUsers = array();
+    $processedCount = 0;
+
+    while ($userImportCount > 0 && $processedCount < self::BATCH_SIZE) {
+
+      $userImportDetails = $this->channel->basic_get($this->config['queue'][0]['name']);
+      if (is_object($userImportDetails)) {
+        $deliveryTags[] = $userImportDetails->delivery_info['delivery_tag'];
+        $targetUsers[$processedCount] = json_decode($userImportDetails->body);
+
+        $userImportCount--;
+        $processedCount++;
+      }
+      else {
+        echo 'consumeUserImportQueue: ERROR - basic_get failed to get message from: ' . $this->config['queue'][0]['name'], PHP_EOL;
+      }
+
+    }
+
+    if (count($targetUsers) > 0) {
+      $this->statHat->clearAddedStatNames();
+      $this->statHat->addStatName('consumeUserImportQueue');
+      $this->statHat->reportCount($processedCount);
+      return array($targetUsers, $deliveryTags);
+    }
+    else {
+      echo '------- mbc-user-import MBC_UserImport->consumeUserImportQueue() - Queue is empty. -  ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;
+    }
+
   }
 
   /*
@@ -420,56 +470,6 @@ class MBC_UserImport
     }
 
     echo '------- mbc-user-import->produceUserImport() END: ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;
-  }
-
-  /**
-   * Collect a batch of user submissions to prowler from the related RabbitMQ
-   * queue based on produced entries by mbp-user-import.
-   *
-   * @return array $targetUsers
-   *   Details of the new user accounts to be processed.
-   *
-   * @return array $deliveryTags
-   *   Rabbit delivery tag IDs used for ack backs when processing of each queue
-   *   entry is complete.
-   */
-  private function consumeUserImportQueue() {
-
-    // Get the status details of the queue by requesting a declare
-    list($this->channel, $status) = $this->messageBroker->setupQueue($this->config['queue'][0]['name'], $this->channel);
-    $userImportCount = $status[1];
-
-    $userImportDetails = '';
-    $deliveryTags = array();
-    $targetUsers = array();
-    $processedCount = 0;
-
-    while ($userImportCount > 0 && $processedCount < self::BATCH_SIZE) {
-
-      $userImportDetails = $this->channel->basic_get($this->config['queue'][0]['name']);
-      if (is_object($userImportDetails)) {
-        $deliveryTags[] = $userImportDetails->delivery_info['delivery_tag'];
-        $targetUsers[$processedCount] = json_decode($userImportDetails->body);
-
-        $userImportCount--;
-        $processedCount++;
-      }
-      else {
-        echo 'consumeUserImportQueue: ERROR - basic_get failed to get message from: ' . $this->config['queue'][0]['name'], PHP_EOL;
-      }
-
-    }
-
-    if (count($targetUsers) > 0) {
-      $this->statHat->clearAddedStatNames();
-      $this->statHat->addStatName('consumeUserImportQueue');
-      $this->statHat->reportCount($processedCount);
-      return array($targetUsers, $deliveryTags);
-    }
-    else {
-      echo '------- mbc-user-import MBC_UserImport->consumeUserImportQueue() - Queue is empty. -  ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;
-    }
-
   }
 
   /**
