@@ -22,54 +22,119 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
   const BATCH_SIZE = 5000;
 
   /**
-   * Collect a batch of user submissions to prowler from the related RabbitMQ
-   * queue based on produced entries by mbp-user-import.
+   * Initial method triggered by blocked call in mbc-user-import.php.
    *
-   * @return array $targetUsers
-   *   Details of the new user accounts to be processed.
-   *
-   * @return array $deliveryTags
-   *   Rabbit delivery tag IDs used for ack backs when processing of each queue
-   *   entry is complete.
+   * @param array $payload
+   *   The contents of the queue entry message being processed.
    */
-  private function consumeUserImportQueue() {
+  private function consumeUserImportQueue($payload) {
 
-    // Get the status details of the queue by requesting a declare
-    list($this->channel, $status) = $this->messageBroker->setupQueue($this->config['queue'][0]['name'], $this->channel);
-    $userImportCount = $status[1];
+    echo '------ mbc-user-import - MBC_UserImport_Consumer->consumeUserImportQueue() - ' . date('j D M Y G:i:s T') . ' START ------', PHP_EOL . PHP_EOL;
 
-    $userImportDetails = '';
-    $deliveryTags = array();
-    $targetUsers = array();
-    $processedCount = 0;
+    parent::consumeQueue($payload);
+    $this->logConsumption(['email', 'mobile']);
 
-    while ($userImportCount > 0 && $processedCount < self::BATCH_SIZE) {
+    if ($this->canProcess()) {
 
-      $userImportDetails = $this->channel->basic_get($this->config['queue'][0]['name']);
-      if (is_object($userImportDetails)) {
-        $deliveryTags[] = $userImportDetails->delivery_info['delivery_tag'];
-        $targetUsers[$processedCount] = json_decode($userImportDetails->body);
+      try {
 
-        $userImportCount--;
-        $processedCount++;
+        $this->setter($this->message);
+        $this->process();
+
       }
-      else {
-        echo 'consumeUserImportQueue: ERROR - basic_get failed to get message from: ' . $this->config['queue'][0]['name'], PHP_EOL;
+      catch(Exception $e) {
+        echo '- Error processing message, send to deadLetterQueue: ' . date('j D M Y G:i:s T'), PHP_EOL;
+        echo '- Error message: ' . $e->getMessage(), PHP_EOL;
+        parent::deadLetter($this->message, 'MBC_UserImport_Consumer->consumeUserImportQueue() Error', $e->getMessage());
       }
 
-    }
-
-    if (count($targetUsers) > 0) {
-      $this->statHat->clearAddedStatNames();
-      $this->statHat->addStatName('consumeUserImportQueue');
-      $this->statHat->reportCount($processedCount);
-      return array($targetUsers, $deliveryTags);
     }
     else {
-      echo '------- mbc-user-import MBC_UserImport->consumeUserImportQueue() - Queue is empty. -  ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;
+      echo '- failed canProcess(), removing from queue.', PHP_EOL;
+      $this->messageBroker->sendAck($this->message['payload']);
+    }
+
+    // @todo: Throttle the number of consumers running. Based on the number of messages
+    // waiting to be processed start / stop consumers. Make "reactive"!
+    $queueStatus = parent::queueStatus('transactionalQueue');
+
+    echo '------ mbc-user-import - MBC_UserImport_Consumer->consumeUserImportQueue() - ' . date('j D M Y G:i:s T') . ' END ------', PHP_EOL . PHP_EOL;
+
+  }
+
+  /**
+   * Method to determine if message can / should be processed. Conditions based on minimum message
+   * content requirements.
+   *
+   * @retun boolean
+   */
+  protected function canProcess() {
+
+    return TRUE;
+  }
+
+  /**
+   * Sets values for processing based on contents of message from consumed queue.
+   *
+   * @param array $message
+   *  The payload of the message being processed.
+   */
+  protected function setter($message) {
+
+  }
+
+  /**
+   * Method to process user import data.
+   *
+   * @param array $payload
+   *   The contents of the queue entry
+   */
+  protected function process() {
+
+  }
+
+  /**
+   * logConsumption(): Extended to log the status of processing a specific message
+   * elements - email and mobile.
+   *
+   * @param array $targetNames
+   */
+  protected function logConsumption($targetNames = null) {
+
+    if ($targetNames != null && is_array($targetNames)) {
+
+      echo '** Consuming ';
+      $targetNameFound = false;
+      foreach ($targetNames as $targetName) {
+        if (isset($this->message[$targetName])) {
+          if ($targetNameFound) {
+             echo ', ';
+          }
+          echo $targetName . ': ' . $this->message[$targetName];
+          $targetNameFound = true;
+        }
+      }
+      if ($targetNameFound) {
+        echo ' from: ' .  $this->message['source'], PHP_EOL;
+      }
+      else {
+        echo 'xx Target property not found in message.', PHP_EOL;
+      }
+
+    } else {
+      echo 'Target names: ' . print_r($targetNames, true) . ' are not defined.', PHP_EOL;
     }
 
   }
+
+
+
+
+
+
+
+
+
 
   /*
    * Consume entries in the MB_USER_IMPORT_QUEUE create entries in other
