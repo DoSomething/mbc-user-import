@@ -1,123 +1,25 @@
 <?php
+/**
+ *
+ */
 
-use DoSomething\MB_Toolbox\MB_Toolbox;
-use DoSomething\MB_Toolbox\MB_Configuration;
-use DoSomething\MBStatTracker\StatHat;
+namespace DoSomething\MBC_UserImport;
+
+use DoSomething\StatHat\Client as StatHat;
+use DoSomething\MB_Toolbox\MB_Toolbox_BaseConsumer;
+use \Exception;
 
 /**
  * MBC_UserImport class - functionality related to the Message Broker
  * producer mbc-user-import.
  */
-class MBC_UserImport_Consumer
+class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
 {
-
-  /**
-   * Message Broker object that details the connection to RabbitMQ.
-   *
-   * @var object
-   */
-  private $messageBroker;
-
-  /**
-   * Details of the channel connection in use by RabbitMQ.
-   *
-   * @var object
-   */
-  private $channel;
-
-  /**
-   * Collection of secret connection settings.
-   *
-   * @var array
-   */
-  private $credentials;
-
-  /**
-   * Collection of configuration settings.
-   *
-   * @var array
-   */
-  private $config;
-
-  /**
-   * Collection of settings.
-   *
-   * @var array
-   */
-  private $settings;
-
-  /**
-   * Setting from external services - Mailchimp.
-   *
-   * @var array
-   */
-  private $statHat;
-
-  /**
-   * Keep track of the existing email and mobile accounts.
-   *
-   * @var array
-   */
-  private $existingStatus;
-
-  /**
-   * Current DoSomething member count value.
-   *
-   * @var array
-   */
-  private $memberCount;
-
-  /**
-   * Campaign details.
-   *
-   * @var array
-   */
-  private $campaigns;
-
-  /**
-   * Setting from external services - Message Broker Toolbox.
-   *
-   * @var object
-   */
-  private $toolbox;
 
   /**
    * The number of queue entries to process in each session
    */
   const BATCH_SIZE = 5000;
-
-  /**
-   * Constructor for MBC_UserImport
-   *
-   * @param array $credentials
-   *   Secret settings from mb-secure-config.inc
-   *
-   * @param array $config
-   *   Configuration from mb-config.inc
-   *
-   * @param array $settings
-   *   Configuration settings from mb-config.inc
-   */
-  public function __construct($credentials, $config, $settings) {
-
-    $this->credentials = $credentials;
-    $this->config = $config;
-    $this->settings = $settings;
-
-    // Setup RabbitMQ connection
-    $this->messageBroker = new MessageBroker($credentials, $config);
-    
-    $connection = $this->messageBroker->connection;
-    $this->channel = $connection->channel();
-
-    $this->toolbox = new MB_Toolbox($settings);
-    $this->memberCount = $this->toolbox->getDSMemberCount();
-    $this->statHat = new StatHat($settings['stathat_ez_key'], 'mbc-user-import:');
-    $this->statHat->setIsProduction(isset($settings['use_stathat_tracking']) ? $settings['use_stathat_tracking'] : FALSE);
-
-    $this->existingStatus = array();
-    $this->campaigns = array();
-  }
 
   /**
    * Collect a batch of user submissions to prowler from the related RabbitMQ
