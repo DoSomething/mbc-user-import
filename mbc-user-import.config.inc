@@ -5,7 +5,7 @@
 
 use DoSomething\MB_Toolbox\MB_Configuration;
 use DoSomething\StatHat\Client as StatHat;
-use DoSomething\MB_Toolbox\MB_Toolbox;
+use DoSomething\MB_Toolbox\MB_MailChimp;
 use DoSomething\MB_Toolbox\MB_RabbitMQManagementAPI;
 
 // Load configuration settings common to the Message Broker system
@@ -13,11 +13,17 @@ use DoSomething\MB_Toolbox\MB_RabbitMQManagementAPI;
 require_once __DIR__ . '/messagebroker-config/mb-secure-config.inc';
 
 define("ALLOWED_SOURCES", serialize([
-  'niche',
-  'afterSchool'
+  'Niche',
+  'AfterSchool'
 ]));
 
 $mbConfig = MB_Configuration::getInstance();
+
+// StatHat
+$mbConfig->setProperty('statHat', new StatHat([
+  'ez_key' => getenv("STATHAT_EZKEY"),
+  'debug' => getenv('DISABLE_STAT_TRACKING')
+]));
 
 // RabbitMQ
 $mbConfig->setProperty('rabbit_credentials', array(
@@ -98,10 +104,3 @@ $mbConfig->setProperty('messageBrokerLogging', new MessageBroker($rabbitCredenti
 
 $mbRabbitConfig = $mbConfig->constructRabbitConfig('directDeadLetterExchange', ['deadLetterQueue']);
 $mbConfig->setProperty('messageBroker_deadLetter', new MessageBroker($rabbitCredentials, $mbRabbitConfig));
-
-$mbConfig->setProperty('statHat', new StatHat([
-  'ez_key' => getenv("STATHAT_EZKEY"),
-  'debug' => getenv('DISABLE_STAT_TRACKING')
-]));
-
-
