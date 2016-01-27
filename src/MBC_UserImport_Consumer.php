@@ -27,7 +27,7 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
    * @param array $payload
    *   The contents of the queue entry message being processed.
    */
-  private function consumeUserImportQueue($payload) {
+  public function consumeUserImportQueue($payload) {
 
     echo '------ mbc-user-import - MBC_UserImport_Consumer->consumeUserImportQueue() - ' . date('j D M Y G:i:s T') . ' START ------', PHP_EOL . PHP_EOL;
 
