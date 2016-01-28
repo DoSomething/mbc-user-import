@@ -87,7 +87,7 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
     // Validate phone number based on the North American Numbering Plan
     // https://en.wikipedia.org/wiki/North_American_Numbering_Plan
     $regex = "/^(\d[\s-]?)?[\(\[\s-]{0,2}?\d{3}[\)\]\s-]{0,2}?\d{3}[\s-]?\d{4}$/i";
-    if (!(preg_match( $regex, $this->message['mobile']))) {
+    if (isset($this->message['mobile']) && !(preg_match( $regex, $this->message['mobile']))) {
       echo '- canProcess(), invalid phone number based on  North American Numbering Plan standard.', PHP_EOL;
       parent::reportErrorPayload();
       return false;
