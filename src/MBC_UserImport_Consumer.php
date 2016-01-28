@@ -70,7 +70,30 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
    */
   protected function canProcess() {
 
-    return TRUE;
+    if (empty($this->message['email']) && empty($this->message['mobile'])) {
+      echo '- canProcess(), email or mobile not set.', PHP_EOL;
+      parent::reportErrorPayload();
+      return false;
+    }
+
+   if (isset($this->message['email']) && filter_var($this->message['email'], FILTER_VALIDATE_EMAIL) === false) {
+      echo '- canProcess(), failed FILTER_VALIDATE_EMAIL: ' . $this->message['email'], PHP_EOL;
+      parent::reportErrorPayload();
+      return false;
+    }
+    elseif (isset($this->message['email'])) {
+      $this->message['email'] = filter_var($this->message['email'], FILTER_VALIDATE_EMAIL);
+    }
+    // Validate phone number based on the North American Numbering Plan
+    // https://en.wikipedia.org/wiki/North_American_Numbering_Plan
+    $regex = "/^(\d[\s-]?)?[\(\[\s-]{0,2}?\d{3}[\)\]\s-]{0,2}?\d{3}[\s-]?\d{4}$/i";
+    if (!(preg_match( $regex, $this->message['mobile']))) {
+      echo '- canProcess(), invalid phone number based on  North American Numbering Plan standard.', PHP_EOL;
+      parent::reportErrorPayload();
+      return false;
+    }
+
+    return true;
   }
 
   /**
