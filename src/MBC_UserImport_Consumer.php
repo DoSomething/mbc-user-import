@@ -32,12 +32,12 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
     echo '------ mbc-user-import - MBC_UserImport_Consumer->consumeUserImportQueue() - ' . date('j D M Y G:i:s T') . ' START ------', PHP_EOL . PHP_EOL;
 
     parent::consumeQueue($payload);
-    $this->logConsumption(['email', 'mobile']);
 
     if ($this->canProcess()) {
 
       try {
 
+        $this->logConsumption(['email', 'mobile']);
         $this->setter($this->message);
         $this->process();
 
@@ -114,6 +114,14 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
    */
   protected function process() {
 
+    $source = __NAMESPACE__ . '\MBC_UserImport_Source_' . $this->message['source'];
+    $userImportSource = new $source();
+
+    if ($userImportSource->canProcess($this->message)) {
+      $userImportSource->setter($this->message);
+      $userImportSource->process();
+    }
+
   }
 
   /**
@@ -124,30 +132,23 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
    */
   protected function logConsumption($targetNames = null) {
 
-    if ($targetNames != null && is_array($targetNames)) {
-
-      echo '** Consuming ';
-      $targetNameFound = false;
-      foreach ($targetNames as $targetName) {
-        if (isset($this->message[$targetName])) {
-          if ($targetNameFound) {
-             echo ', ';
-          }
-          echo $targetName . ': ' . $this->message[$targetName];
-          $targetNameFound = true;
+    echo '** Consuming ';
+    $targetNameFound = false;
+    foreach ($targetNames as $targetName) {
+      if (isset($this->message[$targetName])) {
+        if ($targetNameFound) {
+           echo ', ';
         }
+        echo $targetName . ': ' . $this->message[$targetName];
+        $targetNameFound = true;
       }
-      if ($targetNameFound) {
-        echo ' from: ' .  $this->message['source'], PHP_EOL;
-      }
-      else {
-        echo 'xx Target property not found in message.', PHP_EOL;
-      }
-
-    } else {
-      echo 'Target names: ' . print_r($targetNames, true) . ' are not defined.', PHP_EOL;
     }
-
+    if ($targetNameFound) {
+      echo ' from: ' .  $this->message['source'], PHP_EOL;
+    }
+    else {
+      echo 'xx Target property not found in message.', PHP_EOL;
+    }
   }
 
 }
