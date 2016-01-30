@@ -15,7 +15,7 @@
   "require": {
     "php": ">= 5.3.0",
     "DoSomething/messagebroker-phplib": "0.2.*",
-      "dosomething/mb-toolbox": "0.8.*",
+      "dosomething/mb-toolbox": "0.9.*",
       "dosomething/mobilecommons-php": "1.0.*",
       "dosomething/stathat": "1.*",
       "drewm/mailchimp-api": "1.*"

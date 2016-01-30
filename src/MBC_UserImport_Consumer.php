@@ -32,12 +32,12 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
     echo '------ mbc-user-import - MBC_UserImport_Consumer->consumeUserImportQueue() - ' . date('j D M Y G:i:s T') . ' START ------', PHP_EOL . PHP_EOL;
 
     parent::consumeQueue($payload);
-    $this->logConsumption(['email', 'mobile']);
 
     if ($this->canProcess()) {
 
       try {
 
+        $this->logConsumption(['email', 'mobile']);
         $this->setter($this->message);
         $this->process();
 
@@ -70,7 +70,30 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
    */
   protected function canProcess() {
 
-    return TRUE;
+    if (empty($this->message['email']) && empty($this->message['mobile'])) {
+      echo '- canProcess(), email or mobile not set.', PHP_EOL;
+      parent::reportErrorPayload();
+      return false;
+    }
+
+   if (isset($this->message['email']) && filter_var($this->message['email'], FILTER_VALIDATE_EMAIL) === false) {
+      echo '- canProcess(), failed FILTER_VALIDATE_EMAIL: ' . $this->message['email'], PHP_EOL;
+      parent::reportErrorPayload();
+      return false;
+    }
+    elseif (isset($this->message['email'])) {
+      $this->message['email'] = filter_var($this->message['email'], FILTER_VALIDATE_EMAIL);
+    }
+    // Validate phone number based on the North American Numbering Plan
+    // https://en.wikipedia.org/wiki/North_American_Numbering_Plan
+    $regex = "/^(\d[\s-]?)?[\(\[\s-]{0,2}?\d{3}[\)\]\s-]{0,2}?\d{3}[\s-]?\d{4}$/i";
+    if (isset($this->message['mobile']) && !(preg_match( $regex, $this->message['mobile']))) {
+      echo '- canProcess(), invalid phone number based on  North American Numbering Plan standard.', PHP_EOL;
+      parent::reportErrorPayload();
+      return false;
+    }
+
+    return true;
   }
 
   /**
@@ -91,6 +114,14 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
    */
   protected function process() {
 
+    $source = __NAMESPACE__ . '\MBC_UserImport_Source_' . $this->message['source'];
+    $userImportSource = new $source();
+
+    if ($userImportSource->canProcess($this->message)) {
+      $userImportSource->setter($this->message);
+      $userImportSource->process();
+    }
+
   }
 
   /**
@@ -101,30 +132,23 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
    */
   protected function logConsumption($targetNames = null) {
 
-    if ($targetNames != null && is_array($targetNames)) {
-
-      echo '** Consuming ';
-      $targetNameFound = false;
-      foreach ($targetNames as $targetName) {
-        if (isset($this->message[$targetName])) {
-          if ($targetNameFound) {
-             echo ', ';
-          }
-          echo $targetName . ': ' . $this->message[$targetName];
-          $targetNameFound = true;
+    echo '** Consuming ';
+    $targetNameFound = false;
+    foreach ($targetNames as $targetName) {
+      if (isset($this->message[$targetName])) {
+        if ($targetNameFound) {
+           echo ', ';
         }
+        echo $targetName . ': ' . $this->message[$targetName];
+        $targetNameFound = true;
       }
-      if ($targetNameFound) {
-        echo ' from: ' .  $this->message['source'], PHP_EOL;
-      }
-      else {
-        echo 'xx Target property not found in message.', PHP_EOL;
-      }
-
-    } else {
-      echo 'Target names: ' . print_r($targetNames, true) . ' are not defined.', PHP_EOL;
     }
-
+    if ($targetNameFound) {
+      echo ' from: ' .  $this->message['source'], PHP_EOL;
+    }
+    else {
+      echo 'xx Target property not found in message.', PHP_EOL;
+    }
   }
 
 }
