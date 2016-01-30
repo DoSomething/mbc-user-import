@@ -48,19 +48,19 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
    */
   public function canProcess($message) {
     
-   if (empty($this->message['email'])) {
+   if (empty($message['email'])) {
       echo '- canProcess(), email not set.', PHP_EOL;
       parent::reportErrorPayload();
       return false;
     }
 
-   if (filter_var($this->message['email'], FILTER_VALIDATE_EMAIL) === false) {
-      echo '- canProcess(), failed FILTER_VALIDATE_EMAIL: ' . $this->message['email'], PHP_EOL;
+   if (filter_var($message['email'], FILTER_VALIDATE_EMAIL) === false) {
+      echo '- canProcess(), failed FILTER_VALIDATE_EMAIL: ' . $message['email'], PHP_EOL;
       parent::reportErrorPayload();
       return false;
     }
-    elseif (isset($this->message['email'])) {
-      $this->message['email'] = filter_var($this->message['email'], FILTER_VALIDATE_EMAIL);
+    elseif (isset($message['email'])) {
+      $this->message['email'] = filter_var($message['email'], FILTER_VALIDATE_EMAIL);
     }
 
   }
@@ -73,21 +73,32 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
    */
   public function setter($message) {
     
-    if (isset($this->message['source'])) {
-      $this->importUser->user_registration_source = $this->message['source'];
+    if (isset($message['source'])) {
+      $this->importUser->user_registration_source = $message['source'];
     }
     else {
       $this->importUser->user_registration_source = 'Niche';
     }
     
-    if (isset($this->message['email'])) {
-      $this->importUser->email = $this->message['email'];
+    if (isset($message['email'])) {
+      $this->importUser->email = $message['email'];
     }
+    
+    if (isset($message['name']) && !isset($message['first_name'])) {
+      $nameBits = $this->mbcUserImportToolbox->nameBits($message['name']);
+      $this->importUser->first_name = $nameBits['first_name'];
+      $this->importUser->last_name = $nameBits['last_name'];
+    }
+    
+    $firstName = isset($message['first_name']) && $message['first_name'] != '' ? $message['first_name'] : 'DS';
+    $this->importUser->password = str_replace(' ', '', $firstName) . '-Doer' . rand(1, 1000);
 
   }
 
   /**
    * process(): Process validated and processed message from queue.
+   *
+   * Assume email exists?
    */
   public function process() {
     
@@ -96,7 +107,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     
     // create Drupal user
     if (empty($existing['drupal'])) {
-      $this->drupalUID = $this->mbcUserImportToolbox->createDrupalUser($this->message);
+      $this->drupalUID = $this->mbcUserImportToolbox->createDrupalUser($this->importUser);
     }
     else {
       $this->drupalUID = $existing['drupal'];
@@ -106,7 +117,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     $this->mbcUserImportToolbox->sendWelcomeEmail();
     
     // send welcome SMS
-    if (!(empty($existing['mobile']))) {
+    if (empty($existing['mobile'])) {
       $this->mbcUserImportToolbox->sendWelcomeSMS();
     }
     else {
