@@ -107,7 +107,7 @@ class MBC_UserImport_Toolbox
     $payload['user_country'] = 'US';
     $payload['user_language'] = 'en';
     $payload['source'] = $user->source;
-    
+
     return $payload;
   }
   
