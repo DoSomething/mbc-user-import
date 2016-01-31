@@ -11,24 +11,10 @@ use \Exception;
 
 class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
 {
-  
-  /**
-   * User settings used to check for existing and create new user accounts in various
-   * systems defined in process().
-   *
-   * @var object $importUser
-   */
-  private $importUser;
-  
-  /**
-   * Common class for sources to access as a resopuce to process user data.
-   *
-   * @var object $mbcUserImportToolbox
-   */
-  private $mbcUserImportToolbox;
 
   /**
-   * Constructor for MBC_BaseConsumer - all consumer applications should extend this base class.
+   * Constructor for MBC_UserImport_Source_Nice - extension of the base source class
+   * that's specific to Niche.
    *
    * @param array $message
    *  The payload of the unseralized message being processed.
@@ -36,12 +22,12 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
   public function __construct($message) {
 
     parent::__construct($message);
-    $this->mbcUserImportToolbox = new MBC_UserImport_Toolbox($message);
     $this->sourceName = 'Niche';
   }
 
   /**
-   * canProcess(): Test if message can be processed by consumer.
+   * canProcess(): Test if message can be processed by consumer. Niche user imports must have at
+   * least an email address.
    *
    * @param array
    *   The message contents to test if it can be processed.
@@ -63,6 +49,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       $this->message['email'] = filter_var($message['email'], FILTER_VALIDATE_EMAIL);
     }
 
+    return true;
   }
 
   /**
@@ -86,112 +73,102 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
 
     if (isset($message['name']) && !isset($message['first_name'])) {
       $nameBits = $this->mbcUserImportToolbox->nameBits($message['name']);
-      $this->importUser->first_name = $nameBits['first_name'];
-      $this->importUser->last_name = $nameBits['last_name'];
+      $this->importUser['first_name'] = $nameBits['first_name'];
+      $this->importUser['last_name'] = $nameBits['last_name'];
     }
 
     $firstName = isset($message['first_name']) && $message['first_name'] != '' ? $message['first_name'] : 'DS';
-    $this->importUser->password = str_replace(' ', '', $firstName) . '-Doer' . rand(1, 1000);
+    $this->importUser['password'] = str_replace(' ', '', $firstName) . '-Doer' . rand(1, 1000);
 
-
-
-
-
-
-     if (isset($user->birthdate) && $user->birthdate != 0) {
-        $userDetails['birthdate_timestamp'] = strtotime($user->birthdate);
-      }
-      if (isset($user->first_name) && $user->first_name != '') {
-        $userDetails['merge_vars']['FNAME'] = $user->first_name;
-      }
-      if (isset($user->last_name) && $user->last_name != '') {
-        $userDetails['merge_vars']['LNAME'] = $user->last_name;
-      }
-      if (isset($user->password) && $user->password != '') {
-        $userDetails['merge_vars']['PASSWORD'] = $user->password;
-      }
-      if (isset($user->address1) && $user->address1 != '') {
-        $userDetails['address1'] = $user->address1;
-      }
-      if (isset($user->address2) && $user->address2 != '') {
-        $userDetails['address2'] = $user->address2;
-      }
-      if (isset($user->city) && $user->city != '') {
-        $userDetails['city'] = $user->city;
-      }
-      if (isset($user->state) && $user->state != '') {
-        $userDetails['state'] = $user->state;
-      }
-      if (isset($user->zip) && $user->zip != '') {
-        $userDetails['zip'] = $user->zip;
-      }
-      if (isset($user->phone) && $user->phone != '') {
-        $userDetails['mobile'] = $user->phone;
-      }
-      if (isset($user->hs_gradyear) && $user->hs_gradyear != 0) {
-        $userDetails['hs_gradyear'] = $user->hs_gradyear;
-      }
-      if (isset($user->race) && $user->race != '') {
-        $userDetails['race'] = $user->race;
-      }
-      if (isset($user->religion) && $user->religion != '') {
-        $userDetails['religion'] = $user->religion;
-      }
-      if (isset($user->hs_name) && $user->hs_name != '') {
-        $userDetails['hs_name'] = $user->hs_name;
-      }
-      if (isset($user->college_name) && $user->college_name != '') {
-        $userDetails['college_name'] = $user->college_name;
-      }
-      if (isset($user->major_name) && $user->major_name != '') {
-        $userDetails['major_name'] = $user->major_name;
-      }
-      if (isset($user->degree_type) && $user->degree_type != '') {
-        $userDetails['degree_type'] = $user->degree_type;
-      }
-      if (isset($user->sat_math) && $user->sat_math != 0) {
-        $userDetails['sat_math'] = $user->sat_math;
-      }
-      if (isset($user->sat_verbal) && $user->sat_verbal != 0) {
-        $userDetails['sat_verbal'] = $user->sat_verbal;
-      }
-      if (isset($user->sat_writing) && $user->sat_writing != 0) {
-        $userDetails['sat_writing'] = $user->sat_writing;
-      }
-      if (isset($user->act_math) && $user->act_math != 0) {
-        $userDetails['act_math'] = $user->act_math;
-      }
-      if (isset($user->gpa) && $user->gpa != 0) {
-        $userDetails['gpa'] = $user->gpa;
-      }
-      if (isset($user->role) && $user->role != '') {
-        $userDetails['role'] = $user->role;
-      }
-
-
-
-
-
+    // Optional fields
+    if (isset($message['birthdate']) && $message['birthdate'] != 0) {
+      $this->importUser['birthdate_timestamp'] = strtotime($message['birthdate']);
+    }
+    if (isset($message['first_name']) && $message['first_name'] != '') {
+      $this->importUser['merge_vars']['FNAME'] = $message['first_name'];
+    }
+    if (isset($message['last_name']) && $message['last_name'] != '') {
+      $this->importUser['merge_vars']['LNAME'] = $message['last_name'];
+    }
+    if (isset($message['password']) && $message['password'] != '') {
+      $this->importUser['merge_vars']['PASSWORD'] = $message['password'];
+    }
+    if (isset($message['address1']) && $message['address1'] != '') {
+      $this->importUser['address1'] = $message['address1'];
+    }
+    if (isset($message['address2']) && $message['address2'] != '') {
+      $this->importUser['address2'] = $message['address2'];
+    }
+    if (isset($message['city']) && $message['city'] != '') {
+      $this->importUser['city'] = $message['city'];
+    }
+    if (isset($message['state']) && $message['state'] != '') {
+      $this->importUser['state'] = $message['state'];
+    }
+    if (isset($message['zip']) && $message['zip'] != '') {
+      $this->importUser['zip'] = $message['zip'];
+    }
+    if (isset($message['phone']) && $message['phone'] != '') {
+      $this->importUser['mobile'] = $message['phone'];
+    }
+    if (isset($message['hs_gradyear']) && $message['hs_gradyear'] != 0) {
+      $this->importUser['hs_gradyear'] = $message['hs_gradyear'];
+    }
+    if (isset($message['race']) && $message['race'] != '') {
+      $this->importUser['race'] = $message['race'];
+    }
+    if (isset($message['religion']) && $message['religion'] != '') {
+      $this->importUser['religion'] = $message['religion'];
+    }
+    if (isset($message['hs_name']) && $message['hs_name'] != '') {
+      $this->importUser['hs_name'] = $message['hs_name'];
+    }
+    if (isset($message['college_name']) && $message['college_name'] != '') {
+      $this->importUser['college_name'] = $message['college_name'];
+    }
+    if (isset($message['major_name']) && $message['major_name'] != '') {
+      $this->importUser['major_name'] = $message['major_name'];
+    }
+    if (isset($message['degree_type']) && $message['degree_type'] != '') {
+      $this->importUser['degree_type'] = $message['degree_type'];
+    }
+    if (isset($message['sat_math']) && $message['sat_math'] != 0) {
+      $this->importUser['sat_math'] = $message['sat_math'];
+    }
+    if (isset($message['sat_verbal']) && $message['sat_verbal'] != 0) {
+      $this->importUser['sat_verbal'] = $message['sat_verbal'];
+    }
+    if (isset($message['sat_writing']) && $message['sat_writing'] != 0) {
+      $this->importUser['sat_writing'] = $message['sat_writing'];
+    }
+    if (isset($message['act_math']) && $message['act_math'] != 0) {
+      $this->importUser['act_math'] = $message['act_math'];
+    }
+    if (isset($message['gpa']) && $message['gpa'] != 0) {
+      $this->importUser['gpa'] = $message['gpa'];
+    }
+    if (isset($message['role']) && $message['role'] != '') {
+      $this->importUser['role'] = $message['role'];
+    }
 
   }
 
   /**
-   * process(): Process validated and processed message from queue.
-   *
-   * Assume email exists?
+   * process(): Functional hum of class specific to the source. Defined steps specific
+   * to Niche user import.
    */
   public function process() {
     
     $existing = NULL;
-    $payload = NULL;
-    
+    $payload = $this->addCommonPayload($this->importUser);
+
     // Add welcome email details to payload
-    $this->mbcUserImportToolbox->addWelcomeEmail($this->importUser, $payload);
+    $this->addWelcomeEmail($this->importUser, $payload);
     
     // Check for existing email account in MailChimp
     $existing['email'] = $this->mbcUserImportToolbox->checkExisting($this->importUser, 'email');
     if (empty($existing['email'])) {
-      $this->mbcUserImportToolbox->addEmailSubscription($this->importUser, $payload);
+      $this->addEmailSubscription($this->importUser, $payload);
     }
     
     // Drupal user
@@ -205,12 +182,62 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     $existing['sms'] = $this->mbcUserImportToolbox->checkExisting($this->importUser, 'sms');
     
     // Add SMS welcome details to payload
-    $this->mbcUserImportToolbox->addWelcomeSMS($this->importUser, $payload);
+    $this->addWelcomeSMS($this->importUser, $payload);
     
     // @todo: transition to using JSON formatted messages when all of the consumers are able to
     // detect the message format and process either seralized or JSON.
     $message = seralize($payload);
     $this->messageBroker->publishMessage($message, 'user.registration.transactional');
+  }
+
+  /**
+   *
+   */
+  public function addWelcomeEmail($user, &$payload) {
+
+    $payload['email'] = $user->email;
+    $payload['email_template'] = 'mb-user-welcome-niche-com-v1-0-0-1';
+    $payload['merge_vars'] = [
+      'MEMBER_COUNT' => $this->memberCount, // TODO: lookup value in __construct
+    ];
+    $payload['tags'] = [
+      0 => 'user_welcome-niche',
+    ];
+  }
+
+  /**
+   *
+   */
+  public function addCommonPayload($user) {
+
+    $payload = $user;
+    $this->mbcUserImportToolbox->addCommonPayload($payload);
+    $payload['activity'] = 'user_welcome-niche';
+
+    return $payload;
+  }
+
+  /**
+   *
+   */
+  public function addEmailSubscription($user, &$payload) {
+
+    $payload['mailchimp_list_id'] = 'f2fab1dfd4';
+  }
+
+  /**
+   *
+   */
+  public function addWelcomeSMS($user, &$payload) {
+
+    $payload['mobile_opt_in_path_id'] = 170071;
+  }
+
+  /**
+   *
+   */
+  public function sendPasswordResetEmail() {
+
   }
 
 }
