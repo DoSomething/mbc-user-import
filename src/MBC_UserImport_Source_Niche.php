@@ -46,6 +46,10 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       $this->message['email'] = filter_var($message['email'], FILTER_VALIDATE_EMAIL);
     }
 
+    if (isset($message['email']) && empty($message['mailchimp_list_id'])) {
+      throw new Exception('mailchimp_list_id not set when email is set.');
+    }
+
     return true;
   }
 
@@ -63,9 +67,12 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     else {
       $this->importUser['user_registration_source'] = 'Niche';
     }
-    
+
     if (isset($message['email'])) {
       $this->importUser['email'] = $message['email'];
+    }
+    if (isset($message['mailchimp_list_id'])) {
+      $this->importUser['mailchimp_list_id'] = $message['mailchimp_list_id'];
     }
 
     if (isset($message['name']) && !isset($message['first_name'])) {
