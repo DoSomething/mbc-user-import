@@ -15,6 +15,22 @@ class MBC_UserImport_Toolbox
 {
 
   /**
+   * MailChimp objects for each of the accounts used by DoSomething.org.
+   *
+   * @var array $mailChimpObjects
+   */
+  private $mailChimpObjects;
+
+  /**
+   *
+   */
+  public function __construct() {
+
+    $mbConfig = MB_Configuration::getInstance();
+    $this->mailChimpObjects = $mbConfig->getProperty('mbcURMailChimp_Objects');
+  }
+
+  /**
    * User settings used to check for existing and create new user accounts in various
    * systems defined in process().
    *
@@ -36,18 +52,6 @@ class MBC_UserImport_Toolbox
    */
   protected $sourceName;
 
-    /**
-   * Constructor for MBC_BaseConsumer - all consumer applications should extend this base class.
-   *
-   * @param array $message
-   *  The payload of the unseralized message being processed.
-   */
-  public function __construct($message) {
-
-    $this->mbcUserImportToolbox = new MBC_UserImport_Toolbox($message);
-    $this->sourceName = 'Niche';
-  }
-
   /**
   * Check for the existence of email (Mailchimp) and SMS (Mobile Commons)
   * accounts.
@@ -61,14 +65,34 @@ class MBC_UserImport_Toolbox
 
     switch ($target) {
       
-      case "drupal":
-        
-        
-        break;
-      
       case "email":
         
+        // http://apidocs.mailchimp.com/api/2.0/lists/member-info.php
+        $MailChimp = mailChimpObjects['us'];
+        $mailchimpStatus = $MailChimp->call("/lists/member-info", [
+          'id' => $this->settings['mailchimp_list_id'],
+          'emails' => [
+            0 => [
+              'email' => $user->email
+            ]
+          ]
+        ]);
         
+        if (isset($mailchimpStatus['data']) && count($mailchimpStatus['data']) > 0) {
+          echo($user->email . ' already a Mailchimp user.' . PHP_EOL);
+          $existingStatus['email-status'] = 'Existing account';
+          $existingStatus['email'] = $user->email;
+          $existingStatus['email-acquired'] = $mailchimpStatus['data'][0]['timestamp'];
+        }
+        elseif ($mailchimpStatus == false) {
+          $existingStatus['email-status'] = 'Mailchimp Error';
+          $existingStatus['email'] = $user->email;
+        }
+
+        break;
+      
+    case "drupal":
+
         break;
       
       case "sms":
@@ -80,6 +104,7 @@ class MBC_UserImport_Toolbox
         break;
     }
 
+    return $existingStatus;
   }
   
   /**
@@ -106,7 +131,6 @@ class MBC_UserImport_Toolbox
     $payload['application_id'] = 'MUI';
     $payload['user_country'] = 'US';
     $payload['user_language'] = 'en';
-    $payload['source'] = $user->source;
 
     return $payload;
   }

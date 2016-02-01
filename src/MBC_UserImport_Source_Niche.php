@@ -6,7 +6,6 @@
 namespace DoSomething\MBC_UserImport;
 
 use DoSomething\MBC_UserImport\MBC_UserImport_BaseSource;
-use DoSomething\MBC_UserImport\MBC_UserImport_Toolbox;
 use \Exception;
 
 class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
@@ -15,14 +14,12 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
   /**
    * Constructor for MBC_UserImport_Source_Nice - extension of the base source class
    * that's specific to Niche.
-   *
-   * @param array $message
-   *  The payload of the unseralized message being processed.
    */
-  public function __construct($message) {
+  public function __construct() {
 
-    parent::__construct($message);
+    parent::__construct();
     $this->sourceName = 'Niche';
+    $this->mbcUserImportToolbox = new MBC_UserImport_Toolbox();
   }
 
   /**
@@ -61,14 +58,14 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
   public function setter($message) {
     
     if (isset($message['source'])) {
-      $this->importUser->user_registration_source = $message['source'];
+      $this->importUser['user_registration_source'] = $message['source'];
     }
     else {
-      $this->importUser->user_registration_source = 'Niche';
+      $this->importUser['user_registration_source'] = 'Niche';
     }
     
     if (isset($message['email'])) {
-      $this->importUser->email = $message['email'];
+      $this->importUser['email'] = $message['email'];
     }
 
     if (isset($message['name']) && !isset($message['first_name'])) {
@@ -195,10 +192,10 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
    */
   public function addWelcomeEmail($user, &$payload) {
 
-    $payload['email'] = $user->email;
+    $payload['email'] = $user['email'];
     $payload['email_template'] = 'mb-user-welcome-niche-com-v1-0-0-1';
     $payload['merge_vars'] = [
-      'MEMBER_COUNT' => $this->memberCount, // TODO: lookup value in __construct
+      'MEMBER_COUNT' => $this->memberCount,
     ];
     $payload['tags'] = [
       0 => 'user_welcome-niche',
@@ -210,9 +207,9 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
    */
   public function addCommonPayload($user) {
 
-    $payload = $user;
-    $this->mbcUserImportToolbox->addCommonPayload($payload);
+    $payload = $this->mbcUserImportToolbox->addCommonPayload($user);
     $payload['activity'] = 'user_welcome-niche';
+    $payload['source'] = 'niche';
 
     return $payload;
   }
