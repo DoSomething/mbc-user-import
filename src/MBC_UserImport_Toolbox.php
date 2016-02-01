@@ -5,6 +5,7 @@
 
 namespace DoSomething\MBC_UserImport;
 
+use DoSomething\MB_Toolbox\MB_Configuration;
 use DoSomething\StatHat\Client as StatHat;
 use \Exception;
  
@@ -67,26 +68,18 @@ class MBC_UserImport_Toolbox
       
       case "email":
         
-        // http://apidocs.mailchimp.com/api/2.0/lists/member-info.php
-        $MailChimp = mailChimpObjects['us'];
-        $mailchimpStatus = $MailChimp->call("/lists/member-info", [
-          'id' => $this->settings['mailchimp_list_id'],
-          'emails' => [
-            0 => [
-              'email' => $user->email
-            ]
-          ]
-        ]);
+        $MailChimp = $this->mailChimpObjects['us'];
+        $mailchimpStatus = $MailChimp->memberInfo($user['email'], $user['mailchimp_list_id']);
         
         if (isset($mailchimpStatus['data']) && count($mailchimpStatus['data']) > 0) {
-          echo($user->email . ' already a Mailchimp user.' . PHP_EOL);
+          echo($user['email'] . ' already a Mailchimp user.' . PHP_EOL);
           $existingStatus['email-status'] = 'Existing account';
-          $existingStatus['email'] = $user->email;
+          $existingStatus['email'] = $user['email'];
           $existingStatus['email-acquired'] = $mailchimpStatus['data'][0]['timestamp'];
         }
         elseif ($mailchimpStatus == false) {
           $existingStatus['email-status'] = 'Mailchimp Error';
-          $existingStatus['email'] = $user->email;
+          $existingStatus['email'] = $user['email'];
         }
 
         break;
