@@ -4,6 +4,7 @@
  */
 
 use DoSomething\MB_Toolbox\MB_Configuration;
+use DoSomething\MB_Toolbox\MB_Toolbox;
 use DoSomething\StatHat\Client as StatHat;
 use DoSomething\MB_Toolbox\MB_MailChimp;
 use DoSomething\MB_Toolbox\MB_RabbitMQManagementAPI;
@@ -104,3 +105,5 @@ $mbConfig->setProperty('messageBrokerLogging', new MessageBroker($rabbitCredenti
 
 $mbRabbitConfig = $mbConfig->constructRabbitConfig('directDeadLetterExchange', ['deadLetterQueue']);
 $mbConfig->setProperty('messageBroker_deadLetter', new MessageBroker($rabbitCredentials, $mbRabbitConfig));
+
+$mbConfig->setProperty('mbToolbox', new MB_Toolbox());
