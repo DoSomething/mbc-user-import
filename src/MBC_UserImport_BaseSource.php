@@ -3,12 +3,11 @@
  *
  */
 
- namespace DoSomething\MBC_UserImport;
+namespace DoSomething\MBC_UserImport;
 
 use DoSomething\StatHat\Client as StatHat;
 use DoSomething\MB_Toolbox\MB_Toolbox;
 use DoSomething\MB_Toolbox\MB_Configuration;
-
 
 /*
  * MBC_UserAPICampaignActivity.class.in: Used to process the transactionalQueue
@@ -54,11 +53,11 @@ abstract class MBC_UserImport_BaseSource
   protected $statHat;
 
   /**
-   * Value of message from queue to be consumed / processed.
+   * The number of DoSomething users.
    *
-   * @var array
+   * @var string
    */
-  protected $message;
+  public $memberCount;
 
   /**
    * The name of the user data source being processed.
@@ -66,23 +65,26 @@ abstract class MBC_UserImport_BaseSource
    * @var string
    */
   public $sourceName;
-  
+
+  /**
+   * The collection of common methods used by source classes.
+   *
+   * @var object
+   */
+  public $mbcUserImportToolbox;
+
   /**
    * Constructor for MBC_UserImport_BaseSource - all source classes should extend this base class.
-   *
-   * @param array $message
-   *   The message to process by the service from the connected queue.
    */
-  public function __construct($message) {
+  public function __construct() {
 
     $this->mbConfig = MB_Configuration::getInstance();
     $this->messageBroker = $this->mbConfig->getProperty('messageBroker');
     $this->messageBroker_deadLetter = $this->mbConfig->getProperty('messageBroker_deadLetter');
     $this->statHat = $this->mbConfig->getProperty('statHat');
     $this->mbToolbox = $this->mbConfig->getProperty('mbToolbox');
-    $this->memberCount = $this->mbToolbox->getMemberCount();
-
-    $this->message = $message;
+    $this->memberCount = $this->mbToolbox->getDSMemberCount();
+    $this->mbcUserImportToolbox = $this->mbConfig->getProperty('mbcUserImportToolbox');
   }
 
   /**
