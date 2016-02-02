@@ -17,9 +17,20 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
 {
 
   /**
-   * The number of queue entries to process in each session
+   * User settings to be used for general import message generation.
+   *
+   * @var array $user
    */
-  const BATCH_SIZE = 5000;
+  private $user;
+
+  /**
+   *
+   */
+  public function __construct() {
+
+    parent::__construct();
+    $this->allowedSources = unserialize(ALLOWED_SOURCES);
+  }
 
   /**
    * Initial method triggered by blocked call in mbc-user-import.php.
@@ -40,6 +51,7 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
         $this->logConsumption(['email', 'mobile']);
         $this->setter($this->message);
         $this->process();
+        $this->messageBroker->sendAck($this->message['payload']);
 
       }
       catch(Exception $e) {
@@ -56,7 +68,7 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
 
     // @todo: Throttle the number of consumers running. Based on the number of messages
     // waiting to be processed start / stop consumers. Make "reactive"!
-    $queueStatus = parent::queueStatus('transactionalQueue');
+    $queueStatus = parent::queueStatus('userImportQueue');
 
     echo '------ mbc-user-import - MBC_UserImport_Consumer->consumeUserImportQueue() - ' . date('j D M Y G:i:s T') . ' END ------', PHP_EOL . PHP_EOL;
 
@@ -69,6 +81,16 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
    * @retun boolean
    */
   protected function canProcess() {
+
+    if (empty($this->message['source'])) {
+      echo '- canProcess(), source not defined.', PHP_EOL;
+      throw new Exception('Source not defined');
+    }
+
+    if (!(in_array($this->message['source'], $this->allowedSources))) {
+      echo '- canProcess(), unsupported source: ' . $this->message['source'], PHP_EOL;
+      throw new Exception('Unsupported source: '. $this->message['source']);
+    }
 
     if (empty($this->message['email']) && empty($this->message['mobile'])) {
       echo '- canProcess(), email or mobile not set.', PHP_EOL;
@@ -104,6 +126,8 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
    */
   protected function setter($message) {
 
+    unset($message['original']);
+    $this->user = $message;
   }
 
   /**
@@ -114,12 +138,12 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
    */
   protected function process() {
 
-    $source = __NAMESPACE__ . '\MBC_UserImport_Source_' . $this->message['source'];
-    $userImportSource = new $source();
+    $sourceClass = __NAMESPACE__ . '\MBC_UserImport_Source_' . $this->user['source'];
+    $userImportProcessor = new $sourceClass();
 
-    if ($userImportSource->canProcess($this->message)) {
-      $userImportSource->setter($this->message);
-      $userImportSource->process();
+    if ($userImportProcessor->canProcess($this->user)) {
+      $userImportProcessor->setter($this->user);
+      $userImportProcessor->process();
     }
 
   }

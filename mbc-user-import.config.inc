@@ -4,6 +4,7 @@
  */
 
 use DoSomething\MB_Toolbox\MB_Configuration;
+use DoSomething\MB_Toolbox\MB_Toolbox;
 use DoSomething\StatHat\Client as StatHat;
 use DoSomething\MB_Toolbox\MB_MailChimp;
 use DoSomething\MB_Toolbox\MB_RabbitMQManagementAPI;
@@ -49,29 +50,12 @@ $mbConfig->setProperty('ds_drupal_api_config', [
   'password' => getenv('DS_DRUPAL_API_PASSWORD'),
 ]);
 
-// SMS - Mobile Commons (United States and Canada)
-// CA is for future use - currently only support interaction with US account
-$mbConfig->setProperty('mobileCommons_config', array(
-  'US' => array(
-    'username' => getenv("MOBILE_COMMONS_US_USER"),
-    'password' => getenv("MOBILE_COMMONS_US_PASSWORD"),
-    'company_key' => getenv("MOBILE_COMMONS_US_COMPANY_KEY"),
-  ),
-  'CA' => array(
-    'username' => getenv("MOBILE_COMMONS_CA_USER"),
-    'password' => getenv("MOBILE_COMMONS_CA_PASSWORD"),
-    'company_key' => getenv("MOBILE_COMMONS_CA_COMPANY_KEY"),
-  )
-));
-
-// SMS - mGage
-// Future use, MX and BR
-$mobileConfig = $mbConfig->gatherSettings('mobile');
-$mbConfig->setProperty('communicatePro_config', array(
-  'settings' => $mobileConfig->mGage,
-  'username' => getenv("COMMUNICATE_PRO_USER"),
-  'password' => getenv("COMMUNICATE_PRO_PASSWORD")
-));
+// SMS
+$mbConfig->setProperty('mobileCommons', new \MobileCommons([
+  'username' => getenv("MOBILE_COMMONS_US_USER"),
+  'password' => getenv("MOBILE_COMMONS_US_PASSWORD"),
+  'company_key' => getenv("MOBILE_COMMONS_US_COMPANY_KEY"),
+]));
 
 // MailChimp
 $mbConfig->setProperty('mailchimpAPIkeys', [
@@ -104,3 +88,5 @@ $mbConfig->setProperty('messageBrokerLogging', new MessageBroker($rabbitCredenti
 
 $mbRabbitConfig = $mbConfig->constructRabbitConfig('directDeadLetterExchange', ['deadLetterQueue']);
 $mbConfig->setProperty('messageBroker_deadLetter', new MessageBroker($rabbitCredentials, $mbRabbitConfig));
+
+$mbConfig->setProperty('mbToolbox', new MB_Toolbox());
