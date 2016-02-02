@@ -23,12 +23,21 @@ class MBC_UserImport_Toolbox
   private $mailChimpObjects;
 
   /**
+   * Mobile Commons DoSomething.org US connection.
+   *
+   * @var object $mobileCommons
+   */
+  private $moblieCommons;
+
+  /**
    *
    */
   public function __construct() {
 
     $mbConfig = MB_Configuration::getInstance();
     $this->mailChimpObjects = $mbConfig->getProperty('mbcURMailChimp_Objects');
+    $this->mobileCommons = $mbConfig->getProperty('mobileCommons');
+    $this->mbToolbox = $mbConfig->getProperty('mbToolbox');
   }
 
   /**
@@ -67,9 +76,8 @@ class MBC_UserImport_Toolbox
     switch ($target) {
       
       case "email":
-        
-        $MailChimp = $this->mailChimpObjects['us'];
-        $mailchimpStatus = $MailChimp->memberInfo($user['email'], $user['mailchimp_list_id']);
+
+        $mailchimpStatus = $this->mailChimpObjects['us']->memberInfo($user['email'], $user['mailchimp_list_id']);
         
         if (isset($mailchimpStatus['data']) && count($mailchimpStatus['data']) > 0) {
           echo($user['email'] . ' already a Mailchimp user.' . PHP_EOL);
@@ -84,11 +92,38 @@ class MBC_UserImport_Toolbox
 
         break;
       
-    case "drupal":
+      case "drupal":
 
+        $drupalUID = $this->mbToolbox->lookupDrupalUser($user['email']);
+
+        if (isset($drupalUID)) {
+          $existingStatus['drupal-uid'] = $drupalUID;
+          $existingStatus['drupal-email'] = $user['email'];
+        }
         break;
       
       case "sms":
+
+        $mobilecommonsStatus = (array) $this->mobileCommons->profiles_get(array('phone_number' => $user['mobile']));
+        if (!isset($mobilecommonsStatus['error'])) {
+          echo($user['mobile'] . ' already a Mobile Commons user.' . PHP_EOL);
+          if (isset($mobilecommonsStatus['profile']->status)) {
+            $existingStatus['mobile-error'] = (string)$mobilecommonsStatus['profile']->status;
+            // opted_out_source
+            $existingStatus['mobile-acquired'] = (string)$mobilecommonsStatus['profile']->created_at;
+          }
+          else {
+            $existingStatus['mobile-error'] = 'Existing account';
+          }
+          $existingStatus['mobile'] = $user['mobile'];
+        }
+        else {
+          $mobileCommonsError = $mobilecommonsStatus['error']->attributes()->{'message'};
+          // via Mobile Commons API - "Invalid phone number" aka "number not found", the number is not from an existing user.
+          if (!$mobileCommonsError == 'Invalid phone number') {
+            echo 'Mobile Common Error: ' . $mobileCommonsError, PHP_EOL;
+          }
+        }
         
         break;
       
@@ -116,9 +151,9 @@ class MBC_UserImport_Toolbox
   /**
    *
    */
-  public function addCommonPayload($payload) {
+  public function addCommonPayload($user) {
     
-    $payload['activity_timestamp'] = '';
+    $payload['activity_timestamp'] = $user['activity_timestamp'];
     $payload['log-type'] = 'transactional';
     $payload['subscribed'] = 1;
     $payload['application_id'] = 'MUI';
@@ -129,19 +164,40 @@ class MBC_UserImport_Toolbox
   }
   
   /**
+   * Create the Drupal user based on user settings. email is a
+   * required value.
    *
+   * @param array $user
+   *   Values that define the user being imported.
    */
   public function addDrupalUser($user) {
-    list($drupalUser, $user->password) = $this->toolbox->createDrupalUser($user);
+    $drupalUser = $this->mbToolbox->createDrupalUser($user);
   }
   
   /**
+   * Send password reset email after welcome to DoSomething email is sent.
    *
+   * @param array $user
+   *   User settings to use when building messages transactional values.
    */
   public function sendPasswordResetEmail($user) {
 
+    $passwordResetURL = $this->mbToolbox->getPasswordResetURL($user['uid']);
+    if (empty($passwordResetURL)) {
+      throw new Exception('Failed to generate password reset URL.');
+    }
+
+    $userDetails['merge_vars']['PASSWORD_RESET_LINK'] = $passwordResetURL;
+    $userDetails['activity'] = 'user_password-niche';
+    $userDetails['email_template'] = 'mb-userImport-niche_password_v1-0-0';
+
+    $userDetails['tags'][0] = 'user_password-niche';
+    $userDetails['log-type'] = 'transactional';
+
+    $payload = serialize($userDetails);
+    $this->messageBroker->publishMessage($payload, 'user.password.transactional');
   }
-  
+
   /*
   * Utility method - Converts full name to first and last name.
   *
