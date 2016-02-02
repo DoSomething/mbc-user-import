@@ -67,6 +67,9 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     else {
       $this->importUser['user_registration_source'] = 'Niche';
     }
+    if (isset($message['activity_timestamp'])) {
+      $this->importUser['activity_timestamp'] = $message['activity_timestamp'];
+    }
 
     if (isset($message['email'])) {
       $this->importUser['email'] = $message['email'];
@@ -167,18 +170,18 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     $payload = $this->addCommonPayload($this->importUser);
 
     // Add welcome email details to payload
-    $this->addWelcomeEmail($this->importUser, $payload);
+    $this->addWelcomeEmailSettings($this->importUser, $payload);
     
     // Check for existing email account in MailChimp
     $existing['email'] = $this->mbcUserImportToolbox->checkExisting($this->importUser, 'email');
     if (empty($existing['email'])) {
-      $this->addEmailSubscription($this->importUser, $payload);
+      $this->addEmailSubscriptionSettings($this->importUser, $payload);
     }
     
     // Drupal user
     $existing['drupal'] = $this->mbcUserImportToolbox->checkExisting($this->importUser, 'drupal');
     if (empty($existing['drupal'])) {
-      $this->drupalUID = $this->mbcUserImportToolbox->createDrupalUser($this->importUser);
+      $this->importUser['uid'] = $this->mbcUserImportToolbox->createDrupalUser($this->importUser);
       $this->mbcUserImportToolbox->sendPasswordResetEmail($this->importUser);
     }
 
@@ -186,18 +189,18 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     $existing['sms'] = $this->mbcUserImportToolbox->checkExisting($this->importUser, 'sms');
     
     // Add SMS welcome details to payload
-    $this->addWelcomeSMS($this->importUser, $payload);
+    $this->addWelcomeSMSSettings($this->importUser, $payload);
     
     // @todo: transition to using JSON formatted messages when all of the consumers are able to
     // detect the message format and process either seralized or JSON.
-    $message = seralize($payload);
-    $this->messageBroker->publishMessage($message, 'user.registration.transactional');
+    $message = serialize($payload);
+    $this->messageBroker_transactionals->publish($message, 'user.registration.transactional');
   }
 
   /**
    *
    */
-  public function addWelcomeEmail($user, &$payload) {
+  public function addWelcomeEmailSettings($user, &$payload) {
 
     $payload['email'] = $user['email'];
     $payload['email_template'] = 'mb-user-welcome-niche-com-v1-0-0-1';
@@ -224,15 +227,18 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
   /**
    *
    */
-  public function addEmailSubscription($user, &$payload) {
+  public function addEmailSubscriptionSettings($user, &$payload) {
 
+    if (isset($user['mailchimp_list_id'])) {
+      return;
+    }
     $payload['mailchimp_list_id'] = 'f2fab1dfd4';
   }
 
   /**
    *
    */
-  public function addWelcomeSMS($user, &$payload) {
+  public function addWelcomeSMSSettings($user, &$payload) {
 
     $payload['mobile_opt_in_path_id'] = 170071;
   }
