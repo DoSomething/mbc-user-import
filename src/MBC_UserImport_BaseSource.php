@@ -39,6 +39,13 @@ abstract class MBC_UserImport_BaseSource
   protected $messageBroker;
 
   /**
+   * Message Broker connection to RabbitMQ
+   *
+   * @var object
+   */
+  protected $messageBroker_transactionals;
+
+  /**
    * Message Broker connection to RabbitMQ for Dead Letter messages.
    *
    * @var object
@@ -80,6 +87,7 @@ abstract class MBC_UserImport_BaseSource
 
     $this->mbConfig = MB_Configuration::getInstance();
     $this->messageBroker = $this->mbConfig->getProperty('messageBroker');
+    $this->messageBroker_transactionals = $this->mbConfig->getProperty('messageBrokerTransactionals');
     $this->messageBroker_deadLetter = $this->mbConfig->getProperty('messageBroker_deadLetter');
     $this->statHat = $this->mbConfig->getProperty('statHat');
     $this->mbToolbox = $this->mbConfig->getProperty('mbToolbox');
@@ -113,16 +121,16 @@ abstract class MBC_UserImport_BaseSource
   /**
    *
    */
-  abstract public function addWelcomeEmail($user, &$payload);
+  abstract public function addWelcomeEmailSettings($user, &$payload);
 
   /**
    *
    */
-  abstract public function addEmailSubscription($user, &$payload);
+  abstract public function addEmailSubscriptionSettings($user, &$payload);
 
   /**
    *
    */
-  abstract public function addWelcomeSMS($user, &$payload);
+  abstract public function addWelcomeSMSSettings($user, &$payload);
 
 }
