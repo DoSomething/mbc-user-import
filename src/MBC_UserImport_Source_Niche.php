@@ -67,6 +67,9 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     else {
       $this->importUser['user_registration_source'] = 'Niche';
     }
+    if (isset($message['source_file'])) {
+      $this->importUser['origin'] = $message['source_file'];
+    }
     if (isset($message['activity_timestamp'])) {
       $this->importUser['activity_timestamp'] = $message['activity_timestamp'];
     }
@@ -88,11 +91,23 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     $this->importUser['password'] = str_replace(' ', '', $firstName) . '-Doer' . rand(1, 1000);
 
     // Optional fields
-    if (isset($message['birthdate']) && $message['birthdate'] != 0) {
+    if (isset($message['birthdate']) && is_int($message['birthdate'])) {
+      $this->importUser['birthdate_timestamp'] = $message['birthdate'];
+    }
+    elseif (isset($message['birthdate']) && ctype_digit($message['birthdate'])) {
+      $this->importUser['birthdate_timestamp'] = (int) $message['birthdate'];
+    }
+    elseif (isset($message['birthdate']) && is_string($message['birthdate'])) {
       $this->importUser['birthdate_timestamp'] = strtotime($message['birthdate']);
     }
     if (isset($message['first_name']) && $message['first_name'] != '') {
+      $this->importUser['first_name'] = $message['first_name'];
+    }
+    if (isset($message['first_name']) && $message['first_name'] != '') {
       $this->importUser['merge_vars']['FNAME'] = $message['first_name'];
+    }
+    if (isset($message['last_name']) && $message['last_name'] != '') {
+      $this->importUser['last_name'] = $message['last_name'];
     }
     if (isset($message['last_name']) && $message['last_name'] != '') {
       $this->importUser['merge_vars']['LNAME'] = $message['last_name'];
@@ -165,36 +180,43 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
    * to Niche user import.
    */
   public function process() {
-    
-    $existing = NULL;
+
     $payload = $this->addCommonPayload($this->importUser);
+    $existing['log-type'] = 'user-import-niche';
+    $existing['source'] = $payload['source'];
 
     // Add welcome email details to payload
     $this->addWelcomeEmailSettings($this->importUser, $payload);
     
     // Check for existing email account in MailChimp
-    $existing['email'] = $this->mbcUserImportToolbox->checkExisting($this->importUser, 'email');
+    $this->mbcUserImportToolbox->checkExistingEmail($this->importUser, $existing);
     if (empty($existing['email'])) {
       $this->addEmailSubscriptionSettings($this->importUser, $payload);
     }
     
     // Drupal user
-    $existing['drupal'] = $this->mbcUserImportToolbox->checkExisting($this->importUser, 'drupal');
-    if (empty($existing['drupal'])) {
-      $this->importUser['uid'] = $this->mbcUserImportToolbox->createDrupalUser($this->importUser);
-      $this->mbcUserImportToolbox->sendPasswordResetEmail($this->importUser);
+    $this->mbcUserImportToolbox->checkExistingDrupal($this->importUser, $existing);
+    if (empty($existing['drupal-uid'])) {
+      $drupalUser = $this->mbToolbox->createDrupalUser((object) $this->importUser);
+      $this->addImportUserInfo($drupalUser);
+      $this->mbcUserImportToolbox->sendPasswordResetEmail($drupalUser->uid);
     }
 
     // Check for existing user account in Mobile Commons
-    $existing['sms'] = $this->mbcUserImportToolbox->checkExisting($this->importUser, 'sms');
+    $this->mbcUserImportToolbox->checkExistingSMS($this->importUser, $existing);
     
     // Add SMS welcome details to payload
-    $this->addWelcomeSMSSettings($this->importUser, $payload);
-    
+    if (empty($existing['mobile-acquired'])) {
+      $this->addWelcomeSMSSettings($this->importUser, $payload);
+    }
+
     // @todo: transition to using JSON formatted messages when all of the consumers are able to
     // detect the message format and process either seralized or JSON.
     $message = serialize($payload);
     $this->messageBroker_transactionals->publish($message, 'user.registration.transactional');
+
+    // Log existing users
+    $this->mbcUserImportToolbox->logExisting($existing, $this->importUser);
   }
 
   /**
@@ -206,6 +228,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     $payload['email_template'] = 'mb-user-welcome-niche-com-v1-0-0-1';
     $payload['merge_vars'] = [
       'MEMBER_COUNT' => $this->memberCount,
+      'FNAME' => $user['first_name']
     ];
     $payload['tags'] = [
       0 => 'user_welcome-niche',
@@ -230,9 +253,11 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
   public function addEmailSubscriptionSettings($user, &$payload) {
 
     if (isset($user['mailchimp_list_id'])) {
-      return;
+      $payload['mailchimp_list_id'] = $user['mailchimp_list_id'];
     }
-    $payload['mailchimp_list_id'] = 'f2fab1dfd4';
+    else {
+      $payload['mailchimp_list_id'] = 'f2fab1dfd4';
+    }
   }
 
   /**
@@ -240,7 +265,10 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
    */
   public function addWelcomeSMSSettings($user, &$payload) {
 
-    $payload['mobile_opt_in_path_id'] = 170071;
+    if (isset($user['mobile'])) {
+      $payload['mobile'] = $user['mobile'];
+      $payload['mobile_opt_in_path_id'] = 170071;
+    }
   }
 
   /**
@@ -248,6 +276,14 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
    */
   public function sendPasswordResetEmail() {
 
+  }
+
+  /**
+   *
+   */
+  public function addImportUserInfo($drupalUser) {
+
+    $this->importUser['uid'] = $drupalUser->uid;
   }
 
 }
