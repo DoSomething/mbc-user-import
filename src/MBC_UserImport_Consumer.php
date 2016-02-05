@@ -57,6 +57,12 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
       catch(Exception $e) {
 
         if (strpos($e->getMessage(), 'Failed to generate password') !== false) {
+          echo '- Error message: ' . $e->getMessage() . ', retry in 10 seconds.', PHP_EOL;
+          sleep(10);
+          $this->messageBroker->sendNack($this->message['payload']);
+        }
+        elseif (strpos($e->getMessage(), 'Failed to create Drupal user') !== false) {
+          echo '- Error message: ' . $e->getMessage() . ', retry in 10 seconds.', PHP_EOL;
           sleep(10);
           $this->messageBroker->sendNack($this->message['payload']);
         }

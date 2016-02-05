@@ -198,6 +198,9 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     $this->mbcUserImportToolbox->checkExistingDrupal($this->importUser, $existing);
     if (empty($existing['drupal-uid'])) {
       $drupalUser = $this->mbToolbox->createDrupalUser((object) $this->importUser);
+      if (!is_object($drupalUser[0])) {
+        throw new Exception('Failed to create Drupal user.');
+      }
       $this->addImportUserInfo($drupalUser);
       $this->mbcUserImportToolbox->sendPasswordResetEmail($drupalUser->uid);
     }
