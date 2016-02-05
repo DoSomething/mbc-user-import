@@ -220,7 +220,7 @@ class MBC_UserImport_Toolbox
   public function sendPasswordResetEmail($uid) {
 
     $passwordResetURL = $this->mbToolbox->getPasswordResetURL($uid);
-    if (empty($passwordResetURL)) {
+    if ($passwordResetURL === null) {
       throw new Exception('Failed to generate password reset URL.');
     }
 
