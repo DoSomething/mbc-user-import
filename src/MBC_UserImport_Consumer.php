@@ -55,9 +55,17 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
 
       }
       catch(Exception $e) {
-        echo '- Error processing message, send to deadLetterQueue: ' . date('j D M Y G:i:s T'), PHP_EOL;
-        echo '- Error message: ' . $e->getMessage(), PHP_EOL;
-        parent::deadLetter($this->message, 'MBC_UserImport_Consumer->consumeUserImportQueue() Error', $e->getMessage());
+
+        if (strpos($e->getMessage(), 'Failed to generate password') !== false) {
+          sleep(10);
+          $this->messageBroker->sendNack($this->message['payload']);
+        }
+        else {
+          echo '- Error processing message, send to deadLetterQueue: ' . date('j D M Y G:i:s T'), PHP_EOL;
+          echo '- Error message: ' . $e->getMessage(), PHP_EOL;
+          parent::deadLetter($this->message, 'MBC_UserImport_Consumer->consumeUserImportQueue() Error', $e->getMessage());
+        }
+
       }
 
     }
