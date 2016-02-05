@@ -70,6 +70,7 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
           echo '- Error processing message, send to deadLetterQueue: ' . date('j D M Y G:i:s T'), PHP_EOL;
           echo '- Error message: ' . $e->getMessage(), PHP_EOL;
           parent::deadLetter($this->message, 'MBC_UserImport_Consumer->consumeUserImportQueue() Error', $e->getMessage());
+          $this->messageBroker->sendAck($this->message['payload']);
         }
 
       }
