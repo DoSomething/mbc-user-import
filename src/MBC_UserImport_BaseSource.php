@@ -92,7 +92,6 @@ abstract class MBC_UserImport_BaseSource
     $this->statHat = $this->mbConfig->getProperty('statHat');
     $this->mbToolbox = $this->mbConfig->getProperty('mbToolbox');
     $this->memberCount = $this->mbToolbox->getDSMemberCount();
-    $this->mbcUserImportToolbox = $this->mbConfig->getProperty('mbcUserImportToolbox');
   }
 
   /**
