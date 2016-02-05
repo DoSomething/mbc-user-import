@@ -16,6 +16,13 @@ class MBC_UserImport_Toolbox
 {
 
   /**
+   * Message Broker object for sending logging messages.
+   *
+   * @var object $mbLogging
+   */
+  private $mbLogging;
+
+  /**
    * MailChimp objects for each of the accounts used by DoSomething.org.
    *
    * @var array $mailChimpObjects
@@ -30,11 +37,27 @@ class MBC_UserImport_Toolbox
   private $moblieCommons;
 
   /**
+   * Collection of tools related to the Message Broker system.
+   *
+   * @var object $mbToolbox
+   */
+  private $mbToolbox;
+
+  /**
+   * Message Broker connection to RabbitMQ
+   *
+   * @var object
+   */
+  protected $messageBroker_transactionals;
+
+  /**
    *
    */
   public function __construct() {
 
     $mbConfig = MB_Configuration::getInstance();
+    $this->messageBroker_transactionals = $mbConfig->getProperty('messageBrokerTransactionals');
+    $this->mbLogging = $mbConfig->getProperty('messageBrokerLogging');
     $this->mailChimpObjects = $mbConfig->getProperty('mbcURMailChimp_Objects');
     $this->mobileCommons = $mbConfig->getProperty('mobileCommons');
     $this->mbToolbox = $mbConfig->getProperty('mbToolbox');
@@ -63,6 +86,49 @@ class MBC_UserImport_Toolbox
   protected $sourceName;
 
   /**
+  * Check for the existence of email (Mailchimp) account.
+  *
+  * @param array $user
+  *   Settings of user account to check against.
+  * @param array $existingStatus
+  *   Details of existing accounts for the user email address.
+  */
+  public function checkExistingEmail($user, &$existingStatus) {
+
+    $mailchimpStatus = $this->mailChimpObjects['us']->memberInfo($user['email'], $user['mailchimp_list_id']);
+        
+    if (isset($mailchimpStatus['data']) && count($mailchimpStatus['data']) > 0) {
+      echo($user['email'] . ' already a Mailchimp user.' . PHP_EOL);
+      $existingStatus['email-status'] = 'Existing account';
+      $existingStatus['email'] = $user['email'];
+      $existingStatus['email-acquired'] = $mailchimpStatus['data'][0]['timestamp'];
+    }
+    elseif ($mailchimpStatus == false) {
+      $existingStatus['email-status'] = 'Mailchimp Error';
+      $existingStatus['email'] = $user['email'];
+    }
+
+  }
+  
+ /**
+  * Check for the existence of Drupal account.
+  *
+  * @param array $user
+  *   Settings of user account to check against.
+  * @param array $existingStatus
+  *   Details of existing accounts for the user email address.
+  */
+  public function checkExistingDrupal($user, &$existingStatus) {
+
+    $drupalUID = $this->mbToolbox->lookupDrupalUser($user['email']);
+
+    if ($drupalUID != 0) {
+      $existingStatus['drupal-uid'] = $drupalUID;
+      $existingStatus['drupal-email'] = $user['email'];
+    }
+  }
+
+ /**
   * Check for the existence of email (Mailchimp) and SMS (Mobile Commons)
   * accounts.
   *
@@ -71,81 +137,52 @@ class MBC_UserImport_Toolbox
   * @param string $target
   *   The type of account to check
   */
-  public function checkExisting($user, $target) {
+  public function checkExistingSMS($user, &$existingStatus) {
 
-    switch ($target) {
-      
-      case "email":
-
-        $mailchimpStatus = $this->mailChimpObjects['us']->memberInfo($user['email'], $user['mailchimp_list_id']);
-        
-        if (isset($mailchimpStatus['data']) && count($mailchimpStatus['data']) > 0) {
-          echo($user['email'] . ' already a Mailchimp user.' . PHP_EOL);
-          $existingStatus['email-status'] = 'Existing account';
-          $existingStatus['email'] = $user['email'];
-          $existingStatus['email-acquired'] = $mailchimpStatus['data'][0]['timestamp'];
-        }
-        elseif ($mailchimpStatus == false) {
-          $existingStatus['email-status'] = 'Mailchimp Error';
-          $existingStatus['email'] = $user['email'];
-        }
-
-        break;
-      
-      case "drupal":
-
-        $drupalUID = $this->mbToolbox->lookupDrupalUser($user['email']);
-
-        if (isset($drupalUID)) {
-          $existingStatus['drupal-uid'] = $drupalUID;
-          $existingStatus['drupal-email'] = $user['email'];
-        }
-        break;
-      
-      case "sms":
-
-        $mobilecommonsStatus = (array) $this->mobileCommons->profiles_get(array('phone_number' => $user['mobile']));
-        if (!isset($mobilecommonsStatus['error'])) {
-          echo($user['mobile'] . ' already a Mobile Commons user.' . PHP_EOL);
-          if (isset($mobilecommonsStatus['profile']->status)) {
-            $existingStatus['mobile-error'] = (string)$mobilecommonsStatus['profile']->status;
-            // opted_out_source
-            $existingStatus['mobile-acquired'] = (string)$mobilecommonsStatus['profile']->created_at;
-          }
-          else {
-            $existingStatus['mobile-error'] = 'Existing account';
-          }
-          $existingStatus['mobile'] = $user['mobile'];
-        }
-        else {
-          $mobileCommonsError = $mobilecommonsStatus['error']->attributes()->{'message'};
-          // via Mobile Commons API - "Invalid phone number" aka "number not found", the number is not from an existing user.
-          if (!$mobileCommonsError == 'Invalid phone number') {
-            echo 'Mobile Common Error: ' . $mobileCommonsError, PHP_EOL;
-          }
-        }
-        
-        break;
-      
-      default:
-        echo "Unsupported target: " . $target, PHP_EOL;
-        break;
+    $mobilecommonsStatus = (array) $this->mobileCommons->profiles_get(array('phone_number' => $user['mobile']));
+    if (!isset($mobilecommonsStatus['error'])) {
+      echo($user['mobile'] . ' already a Mobile Commons user.' . PHP_EOL);
+      if (isset($mobilecommonsStatus['profile']->status)) {
+        $existingStatus['mobile-error'] = (string)$mobilecommonsStatus['profile']->status;
+        // opted_out_source
+        $existingStatus['mobile-acquired'] = (string)$mobilecommonsStatus['profile']->created_at;
+      }
+      else {
+        $existingStatus['mobile-error'] = 'Existing account';
+      }
+      $existingStatus['mobile'] = $user['mobile'];
+    }
+    else {
+      $mobileCommonsError = $mobilecommonsStatus['error']->attributes()->{'message'};
+      // via Mobile Commons API - "Invalid phone number" aka "number not found", the number is not from an existing user.
+      if (!$mobileCommonsError == 'Invalid phone number') {
+        echo 'Mobile Common Error: ' . $mobileCommonsError, PHP_EOL;
+      }
     }
 
-    return $existingStatus;
   }
-  
+
   /**
   * Check for the existence of email (Mailchimp) and SMS (Mobile Commons)
   * accounts.
   *
-  * @param array $user
-  *   Settings of user account to check against.
-  * @param string $target
-  *   The type of account to check
+  * @param array $existing
+  *   Values to submit for existing user log entry.
   */
-  public function logExisting($user) {
+  public function logExisting($existing, $importUser) {
     
+    if (isset($existing['email']) ||
+        isset($existing['drupal-uid']) ||
+        isset($existing['mobile'])) {
+
+      $existing['origin'] = [
+        'name' => $importUser['origin'],
+        'processed' => time()
+      ];
+      $payload = serialize($existing);
+      $this->mbLogging->publishMessage($payload);
+
+    }
   }
   
   /**
@@ -177,25 +214,25 @@ class MBC_UserImport_Toolbox
   /**
    * Send password reset email after welcome to DoSomething email is sent.
    *
-   * @param array $user
-   *   User settings to use when building messages transactional values.
+   * @param integer uid
+   *   Drupal User ID.
    */
-  public function sendPasswordResetEmail($user) {
+  public function sendPasswordResetEmail($uid) {
 
-    $passwordResetURL = $this->mbToolbox->getPasswordResetURL($user['uid']);
+    $passwordResetURL = $this->mbToolbox->getPasswordResetURL($uid);
     if (empty($passwordResetURL)) {
       throw new Exception('Failed to generate password reset URL.');
     }
 
-    $userDetails['merge_vars']['PASSWORD_RESET_LINK'] = $passwordResetURL;
-    $userDetails['activity'] = 'user_password-niche';
-    $userDetails['email_template'] = 'mb-userImport-niche_password_v1-0-0';
+    $message['merge_vars']['PASSWORD_RESET_LINK'] = $passwordResetURL;
+    $message['activity'] = 'user_password-niche';
+    $message['email_template'] = 'mb-userImport-niche_password_v1-0-0';
 
-    $userDetails['tags'][0] = 'user_password-niche';
-    $userDetails['log-type'] = 'transactional';
+    $message['tags'][0] = 'user_password-niche';
+    $message['log-type'] = 'transactional';
 
-    $payload = serialize($userDetails);
-    $this->messageBroker->publishMessage($payload, 'user.password.transactional');
+    $payload = serialize($message);
+    $this->messageBroker_transactionals->publishMessage($payload, 'user.password.transactional');
   }
 
   /*
