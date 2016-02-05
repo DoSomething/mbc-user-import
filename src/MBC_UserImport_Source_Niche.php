@@ -201,8 +201,8 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       if (!is_object($drupalUser[0])) {
         throw new Exception('Failed to create Drupal user: ' . print_r($this->importUser, true));
       }
-      $this->addImportUserInfo($drupalUser);
-      $this->mbcUserImportToolbox->sendPasswordResetEmail($drupalUser->uid);
+      $this->addImportUserInfo($drupalUser[0]);
+      $this->mbcUserImportToolbox->sendPasswordResetEmail($drupalUser[0]->uid);
     }
 
     // Check for existing user account in Mobile Commons
