@@ -107,13 +107,8 @@ class MBC_UserImport_Source_AfterSchool extends MBC_UserImport_BaseSource
     $existing['log-type'] = 'user-import-afterschool';
     $existing['source'] = $payload['source'];
 
-    // Check for existing user account in Mobile Commons
     $this->mbcUserImportToolbox->checkExistingSMS($this->importUser, $existing);
-    
-    // Add SMS welcome details to payload
-    if (empty($existing['mobile-acquired'])) {
-      $this->addWelcomeSMSSettings($this->importUser, $payload);
-    }
+    $this->addWelcomeSMSSettings($this->importUser, $payload);
 
     // @todo: transition to using JSON formatted messages when all of the consumers are able to
     // detect the message format and process either seralized or JSON.
