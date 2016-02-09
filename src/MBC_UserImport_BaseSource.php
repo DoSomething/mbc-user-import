@@ -118,17 +118,35 @@ abstract class MBC_UserImport_BaseSource
   abstract public function process();
 
   /**
+   * Settings specific to welcome email messages
    *
+   * @param array $user
+   *   Setting specific to the user being imported.
+   *
+   * @return array &$payload
+   *   Adjusted based on email and user settings.
    */
   abstract public function addWelcomeEmailSettings($user, &$payload);
 
   /**
+   * Settings specific to email subscriptions (MailChimp lists).
    *
+   * @param array $user
+   *   Setting specific to the user being imported.
+   *
+   * @return array &$payload
+   *   Adjusted based on email and user settings.
    */
   abstract public function addEmailSubscriptionSettings($user, &$payload);
 
   /**
+   * Settings specific to SMS welcome message.
    *
+   * @param array $user
+   *   Setting specific to the user being imported.
+   *
+   * @return array &$payload
+   *   Adjusted based on email and user settings.
    */
   abstract public function addWelcomeSMSSettings($user, &$payload);
 
