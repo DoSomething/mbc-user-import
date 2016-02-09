@@ -145,6 +145,30 @@ class MBC_UserImport_Source_AfterSchool extends MBC_UserImport_BaseSource
   }
 
   /**
+   * NOT USED
+   * Settings specific to welcome email messages
+   *
+   * @param array $user
+   *   Setting specific to the user being imported.
+   *
+   * @return array &$payload
+   *   Adjusted based on email and user settings.
+   */
+  public function addWelcomeEmailSettings($user, &$payload) {}
+
+  /**
+   * NOT USED
+   * Settings specific to email subscriptions (MailChimp lists).
+   *
+   * @param array $user
+   *   Setting specific to the user being imported.
+   *
+   * @return array &$payload
+   *   Adjusted based on email and user settings.
+   */
+  public function addEmailSubscriptionSettings($user, &$payload) {}
+
+  /**
    * addWelcomeSMSSettings(): Add settings to message payload that are specific to SMS.
    *
    * @param array $user
