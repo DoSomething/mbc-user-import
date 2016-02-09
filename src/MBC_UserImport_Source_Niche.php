@@ -40,7 +40,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
    if (filter_var($message['email'], FILTER_VALIDATE_EMAIL) === false) {
       echo '- canProcess(), failed FILTER_VALIDATE_EMAIL: ' . $message['email'], PHP_EOL;
       parent::reportErrorPayload();
-      return false;
+      throw new Exception('canProcess(), failed FILTER_VALIDATE_EMAIL: ' . $message['email']);
     }
     elseif (isset($message['email'])) {
       $this->message['email'] = filter_var($message['email'], FILTER_VALIDATE_EMAIL);
