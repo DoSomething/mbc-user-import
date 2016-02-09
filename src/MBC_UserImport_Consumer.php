@@ -44,9 +44,9 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
 
     parent::consumeQueue($payload);
 
-    if ($this->canProcess()) {
+    try {
 
-      try {
+      if ($this->canProcess()) {
 
         $this->logConsumption(['email', 'mobile']);
         $this->setter($this->message);
@@ -54,31 +54,31 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
         $this->messageBroker->sendAck($this->message['payload']);
 
       }
-      catch(Exception $e) {
-
-        if (strpos($e->getMessage(), 'Failed to generate password') !== false) {
-          echo '- Error message: ' . $e->getMessage() . ', retry in 10 seconds.', PHP_EOL;
-          sleep(10);
-          $this->messageBroker->sendNack($this->message['payload']);
-        }
-        elseif (strpos($e->getMessage(), 'Failed to create Drupal user') !== false) {
-          echo '- Error message: ' . $e->getMessage() . ', retry in 10 seconds.', PHP_EOL;
-          sleep(10);
-          $this->messageBroker->sendNack($this->message['payload']);
-        }
-        else {
-          echo '- Error processing message, send to deadLetterQueue: ' . date('j D M Y G:i:s T'), PHP_EOL;
-          echo '- Error message: ' . $e->getMessage(), PHP_EOL;
-          parent::deadLetter($this->message, 'MBC_UserImport_Consumer->consumeUserImportQueue() Error', $e->getMessage());
-          $this->messageBroker->sendAck($this->message['payload']);
-        }
-
+      else {
+        echo '- failed canProcess(), removing from queue.', PHP_EOL;
+        $this->messageBroker->sendAck($this->message['payload']);
       }
 
     }
-    else {
-      echo '- failed canProcess(), removing from queue.', PHP_EOL;
-      $this->messageBroker->sendAck($this->message['payload']);
+    catch(Exception $e) {
+
+      if (strpos($e->getMessage(), 'Failed to generate password') !== false) {
+        echo '- Error message: ' . $e->getMessage() . ', retry in 10 seconds.', PHP_EOL;
+        sleep(10);
+        $this->messageBroker->sendNack($this->message['payload']);
+      }
+      elseif (strpos($e->getMessage(), 'Failed to create Drupal user') !== false) {
+        echo '- Error message: ' . $e->getMessage() . ', retry in 10 seconds.', PHP_EOL;
+        sleep(10);
+        $this->messageBroker->sendNack($this->message['payload']);
+      }
+      else {
+        echo '- Error processing message, send to deadLetterQueue: ' . date('j D M Y G:i:s T'), PHP_EOL;
+        echo '- Error message: ' . $e->getMessage(), PHP_EOL;
+        parent::deadLetter($this->message, 'MBC_UserImport_Consumer->consumeUserImportQueue() Error', $e->getMessage());
+        $this->messageBroker->sendAck($this->message['payload']);
+      }
+
     }
 
     // @todo: Throttle the number of consumers running. Based on the number of messages
@@ -105,29 +105,6 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
     if (!(in_array($this->message['source'], $this->allowedSources))) {
       echo '- canProcess(), unsupported source: ' . $this->message['source'], PHP_EOL;
       throw new Exception('Unsupported source: '. $this->message['source']);
-    }
-
-    if (empty($this->message['email']) && empty($this->message['mobile'])) {
-      echo '- canProcess(), email or mobile not set.', PHP_EOL;
-      parent::reportErrorPayload();
-      return false;
-    }
-
-   if (isset($this->message['email']) && filter_var($this->message['email'], FILTER_VALIDATE_EMAIL) === false) {
-      echo '- canProcess(), failed FILTER_VALIDATE_EMAIL: ' . $this->message['email'], PHP_EOL;
-      parent::reportErrorPayload();
-      return false;
-    }
-    elseif (isset($this->message['email'])) {
-      $this->message['email'] = filter_var($this->message['email'], FILTER_VALIDATE_EMAIL);
-    }
-    // Validate phone number based on the North American Numbering Plan
-    // https://en.wikipedia.org/wiki/North_American_Numbering_Plan
-    $regex = "/^(\d[\s-]?)?[\(\[\s-]{0,2}?\d{3}[\)\]\s-]{0,2}?\d{3}[\s-]?\d{4}$/i";
-    if (isset($this->message['mobile']) && !(preg_match( $regex, $this->message['mobile']))) {
-      echo '- canProcess(), invalid phone number based on  North American Numbering Plan standard.', PHP_EOL;
-      parent::reportErrorPayload();
-      return false;
     }
 
     return true;
