@@ -17,6 +17,11 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
 {
 
   /**
+   * The amount of time for the application to sleep / wait when an exception is encountered.
+   */
+  const SLEEP = 10;
+
+  /**
    * User settings to be used for general import message generation.
    *
    * @var array $user
@@ -63,13 +68,13 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
     catch(Exception $e) {
 
       if (strpos($e->getMessage(), 'Failed to generate password') !== false) {
-        echo '- Error message: ' . $e->getMessage() . ', retry in 10 seconds.', PHP_EOL;
-        sleep(10);
+        echo '- Error message: ' . $e->getMessage() . ', retry in ' . self::SLEEP . ' seconds.', PHP_EOL;
+        sleep(self::SLEEP);
         $this->messageBroker->sendNack($this->message['payload']);
       }
       elseif (strpos($e->getMessage(), 'Failed to create Drupal user') !== false) {
-        echo '- Error message: ' . $e->getMessage() . ', retry in 10 seconds.', PHP_EOL;
-        sleep(10);
+        echo '- Error message: ' . $e->getMessage() . ', retry in ' . self::SLEEP . ' seconds.', PHP_EOL;
+        sleep(self::SLEEP);
         $this->messageBroker->sendNack($this->message['payload']);
       }
       else {
