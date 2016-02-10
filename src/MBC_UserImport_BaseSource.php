@@ -123,7 +123,7 @@ abstract class MBC_UserImport_BaseSource
    * @param array $user
    *   Setting specific to the user being imported.
    *
-   * @return array &$payload
+   * @return array $payload
    *   Adjusted based on email and user settings.
    */
   abstract public function addWelcomeEmailSettings($user, &$payload);
@@ -134,7 +134,7 @@ abstract class MBC_UserImport_BaseSource
    * @param array $user
    *   Setting specific to the user being imported.
    *
-   * @return array &$payload
+   * @return array $payload
    *   Adjusted based on email and user settings.
    */
   abstract public function addEmailSubscriptionSettings($user, &$payload);
@@ -145,7 +145,7 @@ abstract class MBC_UserImport_BaseSource
    * @param array $user
    *   Setting specific to the user being imported.
    *
-   * @return array &$payload
+   * @return array $payload
    *   Adjusted based on email and user settings.
    */
   abstract public function addWelcomeSMSSettings($user, &$payload);
