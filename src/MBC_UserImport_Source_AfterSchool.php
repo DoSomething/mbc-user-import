@@ -178,6 +178,13 @@ class MBC_UserImport_Source_AfterSchool extends MBC_UserImport_BaseSource
       $payload['mobile'] = $user['mobile'];
       $payload['mobile_opt_in_path_id'] = $user['mobile_opt_in_path_id'];
 
+      if (isset($user['first_name'])) {
+        $payload['first_name'] = $user['first_name'];
+      }
+      if (isset($user['last_name'])) {
+        $payload['last_name'] = $user['last_name'];
+      }
+
       if (isset($user['hs_name'])) {
         $payload['hs_name'] = $user['hs_name'];
         $payload['hs_id'] = $user['hs_id'];
