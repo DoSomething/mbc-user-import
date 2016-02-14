@@ -190,7 +190,12 @@ class MBC_UserImport_Source_AfterSchool extends MBC_UserImport_BaseSource
 
       if (isset($user['hs_name'])) {
         $payload['hs_name'] = $user['hs_name'];
+      }
+      if (isset($user['hs_id'])) {
         $payload['hs_id'] = $user['hs_id'];
+      }
+      if (isset($user['optin'])) {
+        $payload['afterschool_optin'] = $user['optin'];
       }
     }
   }
