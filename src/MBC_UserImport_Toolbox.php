@@ -44,6 +44,13 @@ class MBC_UserImport_Toolbox
   private $mbToolbox;
 
   /**
+   * Connection to StatHat service for reporting monitoring counters.
+   *
+   * @var object $statHat
+   */
+  private $statHat;
+
+  /**
    * Message Broker connection to RabbitMQ
    *
    * @var object
@@ -61,6 +68,7 @@ class MBC_UserImport_Toolbox
     $this->mailChimpObjects = $mbConfig->getProperty('mbcURMailChimp_Objects');
     $this->mobileCommons = $mbConfig->getProperty('mobileCommons');
     $this->mbToolbox = $mbConfig->getProperty('mbToolbox');
+    $this->statHat = $mbConfig->getProperty('statHat');
   }
 
   /**
