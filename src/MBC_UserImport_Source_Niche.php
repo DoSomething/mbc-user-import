@@ -199,6 +199,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     if (empty($existing['drupal-uid'])) {
       $drupalUser = $this->mbToolbox->createDrupalUser((object) $this->importUser);
       if (!is_object($drupalUser[0])) {
+        $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Source_Niche: Failed to create Drupal user', 1);
         throw new Exception('Failed to create Drupal user: ' . print_r($this->importUser, true));
       }
       $this->addImportUserInfo($drupalUser[0]);
@@ -217,6 +218,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     // detect the message format and process either seralized or JSON.
     $message = serialize($payload);
     $this->messageBroker_transactionals->publish($message, 'user.registration.transactional');
+    $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Source_Niche: process', 1);
 
     // Log existing users
     $this->mbcUserImportToolbox->logExisting($existing, $this->importUser);
