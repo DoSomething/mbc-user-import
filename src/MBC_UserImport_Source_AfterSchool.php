@@ -95,6 +95,7 @@ class MBC_UserImport_Source_AfterSchool extends MBC_UserImport_BaseSource
     if (isset($message['hs_id'])) {
       $this->importUser['hs_id'] = $message['hs_id'];
     }
+
   }
 
   /**
@@ -114,6 +115,7 @@ class MBC_UserImport_Source_AfterSchool extends MBC_UserImport_BaseSource
     // detect the message format and process either seralized or JSON.
     $message = serialize($payload);
     $this->messageBroker_transactionals->publish($message, 'user.registration.transactional');
+    $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Source_AfterSchool: process', 1);
 
     // Log existing users
     $this->mbcUserImportToolbox->logExisting($existing, $this->importUser);
@@ -187,6 +189,9 @@ class MBC_UserImport_Source_AfterSchool extends MBC_UserImport_BaseSource
 
       if (isset($user['hs_name'])) {
         $payload['hs_name'] = $user['hs_name'];
+        $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Source_AfterSchool: hs_name: ' . $payload['hs_name'], 1);
+      }
+      if (isset($user['hs_id'])) {
         $payload['hs_id'] = $user['hs_id'];
       }
     }

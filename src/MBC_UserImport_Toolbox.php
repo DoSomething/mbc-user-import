@@ -44,6 +44,13 @@ class MBC_UserImport_Toolbox
   private $mbToolbox;
 
   /**
+   * Connection to StatHat service for reporting monitoring counters.
+   *
+   * @var object $statHat
+   */
+  private $statHat;
+
+  /**
    * Message Broker connection to RabbitMQ
    *
    * @var object
@@ -61,6 +68,7 @@ class MBC_UserImport_Toolbox
     $this->mailChimpObjects = $mbConfig->getProperty('mbcURMailChimp_Objects');
     $this->mobileCommons = $mbConfig->getProperty('mobileCommons');
     $this->mbToolbox = $mbConfig->getProperty('mbToolbox');
+    $this->statHat = $mbConfig->getProperty('statHat');
   }
 
   /**
@@ -102,10 +110,12 @@ class MBC_UserImport_Toolbox
       $existingStatus['email-status'] = 'Existing account';
       $existingStatus['email'] = $user['email'];
       $existingStatus['email-acquired'] = $mailchimpStatus['data'][0]['timestamp'];
+      $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Toolbox: checkExistingEmail: Existing MailChimp account', 1);
     }
     elseif ($mailchimpStatus == false) {
       $existingStatus['email-status'] = 'Mailchimp Error';
       $existingStatus['email'] = $user['email'];
+      $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Toolbox: checkExistingEmail: MailChimp error', 1);
     }
 
   }
@@ -125,6 +135,7 @@ class MBC_UserImport_Toolbox
     if ($drupalUID != 0) {
       $existingStatus['drupal-uid'] = $drupalUID;
       $existingStatus['drupal-email'] = $user['email'];
+      $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Toolbox: checkExistingDrupal: Existing user', 1);
     }
   }
 
@@ -144,11 +155,13 @@ class MBC_UserImport_Toolbox
       echo($user['mobile'] . ' already a Mobile Commons user.' . PHP_EOL);
       if (isset($mobilecommonsStatus['profile']->status)) {
         $existingStatus['mobile-error'] = (string)$mobilecommonsStatus['profile']->status;
+        $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Toolbox: checkExistingSMS: ' . $existingStatus['mobile-error'], 1);
         // opted_out_source
         $existingStatus['mobile-acquired'] = (string)$mobilecommonsStatus['profile']->created_at;
       }
       else {
         $existingStatus['mobile-error'] = 'Existing account';
+        $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Toolbox: checkExistingSMS: Existing account', 1);
       }
       $existingStatus['mobile'] = $user['mobile'];
     }
@@ -157,6 +170,7 @@ class MBC_UserImport_Toolbox
       // via Mobile Commons API - "Invalid phone number" aka "number not found", the number is not from an existing user.
       if (!$mobileCommonsError == 'Invalid phone number') {
         echo 'Mobile Common Error: ' . $mobileCommonsError, PHP_EOL;
+        $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Toolbox: checkExistingSMS: Invalid phone number', 1);
       }
     }
 
@@ -181,6 +195,7 @@ class MBC_UserImport_Toolbox
       ];
       $payload = serialize($existing);
       $this->mbLogging->publishMessage($payload);
+      $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Toolbox: logExisting', 1);
 
     }
   }
@@ -208,7 +223,9 @@ class MBC_UserImport_Toolbox
    *   Values that define the user being imported.
    */
   public function addDrupalUser($user) {
+
     $drupalUser = $this->mbToolbox->createDrupalUser($user);
+    $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Toolbox: addDrupalUser', 1);
   }
   
   /**
@@ -233,6 +250,7 @@ class MBC_UserImport_Toolbox
 
     $payload = serialize($message);
     $this->messageBroker_transactionals->publishMessage($payload, 'user.password.transactional');
+    $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Toolbox: sendPasswordResetEmail', 1);
   }
 
   /*
