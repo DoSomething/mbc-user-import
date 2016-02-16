@@ -95,7 +95,9 @@ class MBC_UserImport_Source_AfterSchool extends MBC_UserImport_BaseSource
     if (isset($message['hs_id'])) {
       $this->importUser['hs_id'] = $message['hs_id'];
     }
-
+    if (isset($message['optin'])) {
+      $this->importUser['optin'] = $message['optin'];
+    }
   }
 
   /**
@@ -193,6 +195,10 @@ class MBC_UserImport_Source_AfterSchool extends MBC_UserImport_BaseSource
       }
       if (isset($user['hs_id'])) {
         $payload['hs_id'] = $user['hs_id'];
+      }
+      if (isset($user['optin'])) {
+        $payload['afterschool_optin'] = $user['optin'];
+        $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Source_AfterSchool: optin: ' . $payload['afterschool_optin'], 1);
       }
     }
   }
