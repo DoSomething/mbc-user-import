@@ -203,7 +203,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
         throw new Exception('Failed to create Drupal user: ' . print_r($this->importUser, true));
       }
       $this->addImportUserInfo($drupalUser[0]);
-      $this->mbcUserImportToolbox->sendPasswordResetEmail($drupalUser[0]->uid);
+      $this->mbcUserImportToolbox->sendPasswordResetEmail($drupalUser[0]);
     }
 
     // Check for existing user account in Mobile Commons
@@ -225,7 +225,12 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
   }
 
   /**
+   * addWelcomeEmailSettings(r): Initial settings related to initial welcome messages.
    *
+   * @param array $user
+   *   User settings
+   * @param array $payload
+   *   Settings for submission to service specific to the user and what they signed up for.
    */
   public function addWelcomeEmailSettings($user, &$payload) {
 
@@ -241,7 +246,13 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
   }
 
   /**
+   * addCommonPayload(): OPayload values common to all message for submission to all services and exchanges.
    *
+   * @param array $user
+   *   Values related to the user being processed.
+   *
+   * @return array $payload
+   *   Constructed values for submission to exchanges for message distribution.
    */
   public function addCommonPayload($user) {
 
@@ -253,7 +264,12 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
   }
 
   /**
+   * addEmailSubscriptionSettings(): Settings related to email services.
    *
+   * @param array $user
+   *   User settings
+   * @param array $payload
+   *   Settings for submission to service specific to the user and what they signed up for.
    */
   public function addEmailSubscriptionSettings($user, &$payload) {
 
@@ -266,7 +282,12 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
   }
 
   /**
+   * addWelcomeSMSSettings(): Settings related to SMS services.
    *
+   * @param array $user
+   *   User settings
+   * @param array $payload
+   *   Settings for submission to service specific to the user and what they signed up for.
    */
   public function addWelcomeSMSSettings($user, &$payload) {
 
@@ -277,14 +298,17 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
   }
 
   /**
-   *
+   * sendPasswordResetEmail(): Details about sending password reset email.
    */
   public function sendPasswordResetEmail() {
 
   }
 
   /**
+   * addImportUserInfo() Details about the Drulal user created for the user import.
    *
+   * @param object $drupalUser
+   *   The user object created by the call to the Drupal API.
    */
   public function addImportUserInfo($drupalUser) {
 
