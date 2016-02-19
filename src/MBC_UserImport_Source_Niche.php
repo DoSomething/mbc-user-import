@@ -129,6 +129,11 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     }
     if (isset($message['zip']) && $message['zip'] != '') {
       $this->importUser['zip'] = $message['zip'];
+      $this->importUser['postal_code'] = $message['zip'];
+    }
+    elseif (isset($message['postal_code']) && $message['postal_code'] != '') {
+      $this->importUser['zip'] = $message['postal_code'];
+      $this->importUser['postal_code'] = $message['postal_code'];
     }
     if (isset($message['phone']) && $message['phone'] != '') {
       $this->importUser['mobile'] = $message['phone'];
