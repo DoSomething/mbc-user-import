@@ -231,16 +231,19 @@ class MBC_UserImport_Toolbox
   /**
    * Send password reset email after welcome to DoSomething email is sent.
    *
-   * @param integer uid
-   *   Drupal User ID.
+   * @param object $user
+   *   Drupal User properties.
    */
-  public function sendPasswordResetEmail($uid) {
+  public function sendPasswordResetEmail($user) {
 
-    $passwordResetURL = $this->mbToolbox->getPasswordResetURL($uid);
+    $firstName = $user->field_first_name->und[0]->value != NULL ? ucfirst($user->field_first_name->und[0]->value) : 'Doer';
+    $passwordResetURL = $this->mbToolbox->getPasswordResetURL($user->uid);
     if ($passwordResetURL === null) {
       throw new Exception('Failed to generate password reset URL.');
     }
 
+    $message['email'] = $user->mail;
+    $message['merge_vars']['FNAME'] = $firstName;
     $message['merge_vars']['PASSWORD_RESET_LINK'] = $passwordResetURL;
     $message['activity'] = 'user_password-niche';
     $message['email_template'] = 'mb-userImport-niche_password_v1-0-0';
