@@ -196,6 +196,10 @@ class MBC_UserImport_Source_AfterSchool extends MBC_UserImport_BaseSource
         $payload['hs_name'] = $user['hs_name'];
         $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Source_AfterSchool: hs_name: ' . $payload['hs_name'], 1);
       }
+      if (isset($user['school_name'])) {
+        $payload['school_name'] = $user['school_name'];
+        $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Source_AfterSchool: school_name: ' . $payload['school_name'], 1);
+      }
       if (isset($user['hs_id'])) {
         $payload['hs_id'] = $user['hs_id'];
       }
