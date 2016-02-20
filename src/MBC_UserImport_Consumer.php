@@ -57,10 +57,11 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
         $this->setter($this->message);
         $this->process();
         $this->messageBroker->sendAck($this->message['payload']);
-
+        $this->statHat->ezCount('mbc-user-import:MBC_UserImport_Consumer: processed', 1);
       }
       else {
         echo '- failed canProcess(), removing from queue.', PHP_EOL;
+        $this->statHat->ezCount('mbc-user-import:MBC_UserImport_Consumer: skipping', 1);
         $this->messageBroker->sendAck($this->message['payload']);
       }
 
@@ -69,17 +70,20 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
 
       if (strpos($e->getMessage(), 'Failed to generate password') !== false) {
         echo '- Error message: ' . $e->getMessage() . ', retry in ' . self::SLEEP . ' seconds.', PHP_EOL;
+        $this->statHat->ezCount('mbc-user-import:MBC_UserImport_Consumer: Exception: Failed to generate password', 1);
         sleep(self::SLEEP);
         $this->messageBroker->sendNack($this->message['payload']);
       }
       elseif (strpos($e->getMessage(), 'Failed to create Drupal user') !== false) {
         echo '- Error message: ' . $e->getMessage() . ', retry in ' . self::SLEEP . ' seconds.', PHP_EOL;
+        $this->statHat->ezCount('mbc-user-import:MBC_UserImport_Consumer: Exception: Failed to create Drupal user', 1);
         sleep(self::SLEEP);
         $this->messageBroker->sendNack($this->message['payload']);
       }
       else {
         echo '- Error processing message, send to deadLetterQueue: ' . date('j D M Y G:i:s T'), PHP_EOL;
         echo '- Error message: ' . $e->getMessage(), PHP_EOL;
+        $this->statHat->ezCount('mbc-user-import:MBC_UserImport_Consumer: Exception: deadLetter', 1);
         parent::deadLetter($this->message, 'MBC_UserImport_Consumer->consumeUserImportQueue() Error', $e->getMessage());
         $this->messageBroker->sendAck($this->message['payload']);
       }
