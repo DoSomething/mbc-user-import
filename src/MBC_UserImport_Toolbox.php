@@ -196,7 +196,6 @@ class MBC_UserImport_Toolbox
       $payload = serialize($existing);
       $this->mbLogging->publishMessage($payload);
       $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Toolbox: logExisting', 1);
-
     }
   }
   
