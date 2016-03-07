@@ -80,6 +80,12 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
         sleep(self::SLEEP);
         $this->messageBroker->sendNack($this->message['payload']);
       }
+      elseif (strpos($e->getMessage(), 'Error making curlGETauth request to https://www.dosomething.org/api/v1/users.json?parameters[email]=') !== false) {
+        echo '- Error message: ' . $e->getMessage() . ', retry in ' . self::SLEEP . ' seconds.', PHP_EOL;
+        $this->statHat->ezCount('mbc-user-import:MBC_UserImport_Consumer: Exception: Failed to lookup Drupal user, 302 returned', 1);
+        sleep(self::SLEEP);
+        $this->messageBroker->sendNack($this->message['payload']);
+      }
       else {
         echo '- Error processing message, send to deadLetterQueue: ' . date('j D M Y G:i:s T'), PHP_EOL;
         echo '- Error message: ' . $e->getMessage(), PHP_EOL;
