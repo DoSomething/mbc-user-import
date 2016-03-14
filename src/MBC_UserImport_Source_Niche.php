@@ -91,13 +91,13 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     $this->importUser['password'] = str_replace(' ', '', $firstName) . '-Doer' . rand(1, 1000);
 
     // Optional fields
-    if (isset($message['birthdate']) && is_int($message['birthdate'])) {
+    if (isset($message['birthdate']) && is_int($message['birthdate']) && !($message['birthdate'] > time())) {
       $this->importUser['birthdate_timestamp'] = $message['birthdate'];
     }
-    elseif (isset($message['birthdate']) && ctype_digit($message['birthdate'])) {
+    elseif (isset($message['birthdate']) && ctype_digit($message['birthdate'] && !($message['birthdate'] > time()))) {
       $this->importUser['birthdate_timestamp'] = (int) $message['birthdate'];
     }
-    elseif (isset($message['birthdate']) && is_string($message['birthdate'])) {
+    elseif (isset($message['birthdate']) && is_string($message['birthdate'] && !($message['birthdate'] > time()))) {
       $this->importUser['birthdate_timestamp'] = strtotime($message['birthdate']);
     }
     if (isset($message['first_name']) && $message['first_name'] != '') {
