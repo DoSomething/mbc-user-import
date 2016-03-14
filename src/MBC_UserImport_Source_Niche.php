@@ -91,14 +91,19 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     $this->importUser['password'] = str_replace(' ', '', $firstName) . '-Doer' . rand(1, 1000);
 
     // Optional fields
-    if (isset($message['birthdate']) && is_int($message['birthdate']) && !($message['birthdate'] > time())) {
-      $this->importUser['birthdate_timestamp'] = $message['birthdate'];
+    if ($message['birthdate'] > time()) {
+      echo '- WARNING: Invalid birthdate: ' . $message['birthdate'] . ' -> date(): ' . date('r', $message['birthdate']), PHP_EOL;
     }
-    elseif (isset($message['birthdate']) && ctype_digit($message['birthdate'] && !($message['birthdate'] > time()))) {
-      $this->importUser['birthdate_timestamp'] = (int) $message['birthdate'];
-    }
-    elseif (isset($message['birthdate']) && is_string($message['birthdate'] && !($message['birthdate'] > time()))) {
-      $this->importUser['birthdate_timestamp'] = strtotime($message['birthdate']);
+    else {
+      if (isset($message['birthdate']) && is_int($message['birthdate'])) {
+        $this->importUser['birthdate_timestamp'] = $message['birthdate'];
+      }
+      elseif (isset($message['birthdate']) && ctype_digit($message['birthdate'])) {
+        $this->importUser['birthdate_timestamp'] = (int) $message['birthdate'];
+      }
+      elseif (isset($message['birthdate']) && is_string($message['birthdate'])) {
+        $this->importUser['birthdate_timestamp'] = strtotime($message['birthdate']);
+      }
     }
     if (isset($message['first_name']) && $message['first_name'] != '') {
       $this->importUser['first_name'] = $message['first_name'];
