@@ -116,6 +116,12 @@ class MBC_UserImport_Source_AfterSchool extends MBC_UserImport_BaseSource
     $this->mbcUserImportToolbox->checkExistingSMS($this->importUser, $existing);
     $this->addWelcomeSMSSettings($this->importUser, $payload);
 
+    // Remove submitting source if account already exists in Mobile Commons to ensure not
+    // overwriting existing source value.
+    if (isset($existing['mobile-error'])) {
+      unset($payload['source']);
+    }
+
     // @todo: transition to using JSON formatted messages when all of the consumers are able to
     // detect the message format and process either seralized or JSON.
     $message = serialize($payload);

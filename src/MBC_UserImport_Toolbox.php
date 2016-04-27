@@ -93,7 +93,7 @@ class MBC_UserImport_Toolbox
    */
   protected $sourceName;
 
-  /**
+ /**
   * Check for the existence of email (Mailchimp) account.
   *
   * @param array $user
