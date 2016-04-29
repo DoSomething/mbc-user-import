@@ -101,6 +101,9 @@ class MBC_UserImport_Source_AfterSchool extends MBC_UserImport_BaseSource
     if (isset($message['optin'])) {
       $this->importUser['optin'] = $message['optin'];
     }
+    if (isset($message['as_campaign_id'])) {
+      $this->importUser['as_campaign_id'] = $message['as_campaign_id'];
+    }
 
   }
 
