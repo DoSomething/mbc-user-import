@@ -131,7 +131,7 @@ class MBC_UserImport_Source_AfterSchool extends MBC_UserImport_BaseSource
     $message = serialize($payload);
     $this->messageBroker_transactionals->publish($message, 'user.registration.transactional');
     $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Source_AfterSchool: process', 1);
-    $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Source_AfterSchool: CampaignID: ' . $payload['as_campaign_id'], 1);
+    $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Source_AfterSchool: CampaignID: ' . $this->importUser['as_campaign_id'], 1);
 
     // Log existing users
     $this->mbcUserImportToolbox->logExisting($existing, $this->importUser);
