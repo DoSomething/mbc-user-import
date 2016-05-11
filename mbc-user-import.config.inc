@@ -43,7 +43,7 @@ $mbConfig->setProperty('mbRabbitMQManagementAPI', new MB_RabbitMQManagementAPI([
 ]));
 
 // Drupal API
-$mbConfig->setProperty('ds_drupal_api_config', [
+$mbConfig->setProperty('pheonixAPI_config', [
   'host' => getenv("DS_DRUPAL_API_HOST"),
   'port' => getenv('DS_DRUPAL_API_PORT'),
   'username' => getenv("DS_DRUPAL_API_USERNAME"),
