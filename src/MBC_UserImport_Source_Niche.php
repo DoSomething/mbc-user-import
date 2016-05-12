@@ -313,7 +313,11 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
 
     if (isset($user['mobile'])) {
       $payload['mobile'] = $user['mobile'];
-      $payload['mobile_opt_in_path_id'] = 170071;
+      // NicheUsers : Conversation
+      // $payload['mobile_opt_in_path_id'] = 170071;
+
+      // Birthday Mail
+      $payload['mobile_opt_in_path_id'] = 206777;
     }
   }
 
