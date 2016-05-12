@@ -296,8 +296,8 @@ class MBC_UserImport_Toolbox
    * @param string $source
    *   The name of the import source
    *
-   * @return string $status
-   *   Results for transactional submission.
+   * @return bool
+   *   Was the user signed up to the campaign.
    */
   public function campaignSignup($campaignNID, $drupalUID, $source) {
 
@@ -322,9 +322,11 @@ class MBC_UserImport_Toolbox
     if (!(is_array($signUp[0]) && $signUp[0][0] > 0)) {
       echo 'Drupal UID: ' . $drupalUID . ' may already be signed up for campaign ' . $campaignNID . ' or campaign is not accepting signups.' . $signUp[0][0], PHP_EOL;
       $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Toolbox: existing campaignSignup', 1);
+      return false;
     }
     else {
       $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Toolbox: campaignSignup', 1);
+      return true;
     }
 
   }

@@ -219,12 +219,17 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     else {
       // Existing Drupal user. Set UID for campaign signup
       $drupalUID = $existing['drupal-uid'];
+      $payload['email_template'] = 'mb-current-user-welcome-niche-com-v1-0-0';
     }
 
     // Campaign signup
     // Birthday Mail
     $campaignNID = 2461;
-    $this->mbcUserImportToolbox->campaignSignup($campaignNID, $drupalUID, 'niche');
+    $campaignSignup = $this->mbcUserImportToolbox->campaignSignup($campaignNID, $drupalUID, 'niche');
+    if (!$campaignSignup) {
+      // User was not signed up to campaign because they're already signed up.
+      $payload['email_template'] = 'mb-current-signedup-user-welcome-niche-com-v1-0-0';
+    }
 
     // Check for existing user account in Mobile Commons
     $this->mbcUserImportToolbox->checkExistingSMS($this->importUser, $existing);
