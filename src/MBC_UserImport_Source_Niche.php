@@ -214,10 +214,13 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       }
       $this->addImportUserInfo($drupalUser[0]);
       $drupalUID = $drupalUser[0]->uid;
+      // #1, user_welcome, New/New
+      $payload['email_template'] = 'mb-user-welcome-niche-com-v1-0-0-1';
     }
     else {
       // Existing Drupal user. Set UID for campaign signup
       $drupalUID = $existing['drupal-uid'];
+      // #2, current_user, Existing/New
       $payload['email_template'] = 'mb-current-user-welcome-niche-com-v1-0-0';
     }
 
@@ -227,6 +230,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     $campaignSignup = $this->mbcUserImportToolbox->campaignSignup($campaignNID, $drupalUID, 'niche');
     if (!$campaignSignup) {
       // User was not signed up to campaign because they're already signed up.
+      // #3, current_signedup, Existing/Existing
       $payload['email_template'] = 'mb-current-signedup-user-welcome-niche-com-v1-0-0';
     }
 
@@ -259,7 +263,6 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
   public function addWelcomeEmailSettings($user, &$payload) {
 
     $payload['email'] = $user['email'];
-    $payload['email_template'] = 'mb-user-welcome-niche-com-v1-0-0-1';
     $payload['merge_vars'] = [
       'MEMBER_COUNT' => $this->memberCount,
       'FNAME' => $user['first_name']
