@@ -213,7 +213,21 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
         throw new Exception('Failed to create Drupal user: ' . print_r($this->importUser, true));
       }
       $this->addImportUserInfo($drupalUser[0]);
-      $this->mbcUserImportToolbox->sendPasswordResetEmail($drupalUser[0]);
+      $drupalUID = $drupalUser[0]->uid;
+    }
+    else {
+      // Existing Drupal user. Set UID for campaign signup
+      $drupalUID = $existing['drupal-uid'];
+      $payload['email_template'] = 'mb-current-user-welcome-niche-com-v1-0-0';
+    }
+
+    // Campaign signup
+    // Birthday Mail
+    $campaignNID = 2461;
+    $campaignSignup = $this->mbcUserImportToolbox->campaignSignup($campaignNID, $drupalUID, 'niche');
+    if (!$campaignSignup) {
+      // User was not signed up to campaign because they're already signed up.
+      $payload['email_template'] = 'mb-current-signedup-user-welcome-niche-com-v1-0-0';
     }
 
     // Check for existing user account in Mobile Commons
@@ -303,7 +317,11 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
 
     if (isset($user['mobile'])) {
       $payload['mobile'] = $user['mobile'];
-      $payload['mobile_opt_in_path_id'] = 170071;
+      // NicheUsers : Conversation
+      // $payload['mobile_opt_in_path_id'] = 170071;
+
+      // Birthday Mail
+      $payload['mobile_opt_in_path_id'] = 206777;
     }
   }
 

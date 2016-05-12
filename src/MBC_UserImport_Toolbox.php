@@ -44,6 +44,13 @@ class MBC_UserImport_Toolbox
   private $mbToolbox;
 
   /**
+   * Collection of tools related to the Message Broker system cURL functionality.
+   *
+   * @var object $mbToolboxCURL
+   */
+  private $mbToolboxCURL;
+
+  /**
    * Connection to StatHat service for reporting monitoring counters.
    *
    * @var object $statHat
@@ -68,6 +75,8 @@ class MBC_UserImport_Toolbox
     $this->mailChimpObjects = $mbConfig->getProperty('mbcURMailChimp_Objects');
     $this->mobileCommons = $mbConfig->getProperty('mobileCommons');
     $this->mbToolbox = $mbConfig->getProperty('mbToolbox');
+    $this->mbToolboxCURL = $mbConfig->getProperty('mbToolboxCURL');
+    $this->phoenixAPIConfig = $mbConfig->getProperty('ds_drupal_api_config');
     $this->statHat = $mbConfig->getProperty('statHat');
   }
 
@@ -244,6 +253,7 @@ class MBC_UserImport_Toolbox
     $message['email'] = $user->mail;
     $message['merge_vars']['FNAME'] = $firstName;
     $message['merge_vars']['PASSWORD_RESET_LINK'] = $passwordResetURL;
+    $message['merge_vars']['MEMBER_COUNT'] = $this->mbToolbox->getDSMemberCount();
     $message['activity'] = 'user_password-niche';
     $message['email_template'] = 'mb-userImport-niche_password_v1-0-0';
 
@@ -251,7 +261,7 @@ class MBC_UserImport_Toolbox
     $message['log-type'] = 'transactional';
 
     $payload = serialize($message);
-    $this->messageBroker_transactionals->publishMessage($payload, 'user.password.transactional');
+    $this->messageBroker_transactionals->publish($payload, 'user.password.transactional');
     $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Toolbox: sendPasswordResetEmail', 1);
   }
 
@@ -269,6 +279,56 @@ class MBC_UserImport_Toolbox
     unset($names[count($names) - 1]);
     $nameBits['first_name'] = ucwords(implode(' ', $names));
     return $nameBits;
+  }
+
+  /**
+   * Sign up user ID (UID) to campaign.
+   *
+   * https://github.com/DoSomething/dosomething/wiki/API#campaign-signup
+   * https://www.dosomething.org/api/v1/campaigns/[nid]/signup
+   *
+   * @param integer $campaignNID
+   *   The unique node ID from the Drupal site that identifies the target
+   *   campaign to sign the user up to.
+   * @param array $drupalUID
+   *   The user ID (UID) of the Drupal user account to create a campaign
+   *   signup for.
+   * @param string $source
+   *   The name of the import source
+   *
+   * @return bool
+   *   Was the user signed up to the campaign.
+   */
+  public function campaignSignup($campaignNID, $drupalUID, $source) {
+
+    $post = array(
+      'source' => $source . '_mb_import',
+      'uid' => $drupalUID
+    );
+    $curlUrl = $this->phoenixAPIConfig['host'];
+    $port = $this->phoenixAPIConfig['port'];
+    if ($port != 0) {
+      $curlUrl .= ":$port";
+    }
+    $curlUrl .= '/api/v1/campaigns/' . $campaignNID . '/signup';
+    $signUp = $this->mbToolboxCURL->curlPOSTauth($curlUrl, $post);
+
+    if ($signUp[1] != 200) {
+      throw new Exception('Failed to signup user (' . $drupalUID . ') to campaign: ' . $campaignNID);
+    }
+
+    // Results returned for campaign signup
+    // User already signed up
+    if (!(is_array($signUp[0]) && $signUp[0][0] > 0)) {
+      echo 'Drupal UID: ' . $drupalUID . ' may already be signed up for campaign ' . $campaignNID . ' or campaign is not accepting signups.' . $signUp[0][0], PHP_EOL;
+      $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Toolbox: existing campaignSignup', 1);
+      return false;
+    }
+    else {
+      $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Toolbox: campaignSignup', 1);
+      return true;
+    }
+
   }
 
 }
