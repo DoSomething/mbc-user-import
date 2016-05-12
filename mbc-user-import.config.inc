@@ -5,6 +5,7 @@
 
 use DoSomething\MB_Toolbox\MB_Configuration;
 use DoSomething\MB_Toolbox\MB_Toolbox;
+use DoSomething\MB_Toolbox\MB_Toolbox_cURL;
 use DoSomething\StatHat\Client as StatHat;
 use DoSomething\MB_Toolbox\MB_MailChimp;
 use DoSomething\MB_Toolbox\MB_RabbitMQManagementAPI;
@@ -43,7 +44,7 @@ $mbConfig->setProperty('mbRabbitMQManagementAPI', new MB_RabbitMQManagementAPI([
 ]));
 
 // Drupal API
-$mbConfig->setProperty('pheonixAPI_config', [
+$mbConfig->setProperty('ds_drupal_api_config', [
   'host' => getenv("DS_DRUPAL_API_HOST"),
   'port' => getenv('DS_DRUPAL_API_PORT'),
   'username' => getenv("DS_DRUPAL_API_USERNAME"),
@@ -90,3 +91,4 @@ $mbRabbitConfig = $mbConfig->constructRabbitConfig('directDeadLetterExchange', [
 $mbConfig->setProperty('messageBroker_deadLetter', new MessageBroker($rabbitCredentials, $mbRabbitConfig));
 
 $mbConfig->setProperty('mbToolbox', new MB_Toolbox());
+$mbConfig->setProperty('mbToolboxCURL', new MB_Toolbox_cURL());
