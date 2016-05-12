@@ -213,7 +213,6 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
         throw new Exception('Failed to create Drupal user: ' . print_r($this->importUser, true));
       }
       $this->addImportUserInfo($drupalUser[0]);
-      $this->mbcUserImportToolbox->sendPasswordResetEmail($drupalUser[0]);
       $drupalUID = $drupalUser[0]->uid;
     }
     else {
