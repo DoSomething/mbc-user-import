@@ -318,15 +318,15 @@ class MBC_UserImport_Toolbox
     }
 
     // Results returned for campaign signup
-    // User already signed up
-    if (!(is_array($signUp[0]) && $signUp[0][0] > 0)) {
+    // User signed up, indicated by return sid (signup ID)
+    if (is_array($signUp[0]) && $signUp[0][0] > 0) {
+      $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Toolbox: campaignSignup', 1);
+      return true;
+    }
+    else {
       echo 'Drupal UID: ' . $drupalUID . ' may already be signed up for campaign ' . $campaignNID . ' or campaign is not accepting signups.' . $signUp[0][0], PHP_EOL;
       $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Toolbox: existing campaignSignup', 1);
       return false;
-    }
-    else {
-      $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Toolbox: campaignSignup', 1);
-      return true;
     }
 
   }
