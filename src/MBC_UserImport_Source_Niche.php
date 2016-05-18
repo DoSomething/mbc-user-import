@@ -105,63 +105,69 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
         $this->importUser['birthdate_timestamp'] = strtotime($message['birthdate']);
       }
     }
-    if (isset($message['first_name']) && $message['first_name'] != '') {
+    if (!empty($message['first_name'])) {
       $this->importUser['first_name'] = $message['first_name'];
     }
-    if (isset($message['first_name']) && $message['first_name'] != '') {
+    if (!empty($message['first_name'])) {
       $this->importUser['merge_vars']['FNAME'] = $message['first_name'];
     }
-    if (isset($message['last_name']) && $message['last_name'] != '') {
+    if (!empty($message['last_name'])) {
       $this->importUser['last_name'] = $message['last_name'];
     }
-    if (isset($message['last_name']) && $message['last_name'] != '') {
+    if (!empty($message['last_name'])) {
       $this->importUser['merge_vars']['LNAME'] = $message['last_name'];
     }
-    if (isset($message['password']) && $message['password'] != '') {
+    if (!empty($message['password'])) {
       $this->importUser['merge_vars']['PASSWORD'] = $message['password'];
     }
-    if (isset($message['address1']) && $message['address1'] != '') {
+    if (!empty($message['address1'])) {
       $this->importUser['address1'] = $message['address1'];
     }
-    if (isset($message['address2']) && $message['address2'] != '') {
+    if (!empty($message['address2'])) {
       $this->importUser['address2'] = $message['address2'];
     }
-    if (isset($message['city']) && $message['city'] != '') {
+    if (!empty($message['city'])) {
       $this->importUser['city'] = $message['city'];
     }
-    if (isset($message['state']) && $message['state'] != '') {
+    if (!empty($message['state'])) {
       $this->importUser['state'] = $message['state'];
     }
-    if (isset($message['zip']) && $message['zip'] != '') {
+    if (!empty($message['country'])) {
+      $this->importUser['country'] = $message['country'];
+    }
+    else {
+      $this->importUser['country'] = 'US';
+    }
+    if (!empty($message['zip'])) {
       $this->importUser['zip'] = $message['zip'];
       $this->importUser['postal_code'] = $message['zip'];
     }
-    elseif (isset($message['postal_code']) && $message['postal_code'] != '') {
+    elseif (!empty($message['postal_code'])) {
       $this->importUser['zip'] = $message['postal_code'];
       $this->importUser['postal_code'] = $message['postal_code'];
     }
-    if (isset($message['phone']) && $message['phone'] != '') {
+    if (!empty($message['phone'])) {
       $this->importUser['mobile'] = $message['phone'];
     }
     if (isset($message['hs_gradyear']) && $message['hs_gradyear'] != 0) {
       $this->importUser['hs_gradyear'] = $message['hs_gradyear'];
     }
-    if (isset($message['race']) && $message['race'] != '') {
+    if (!empty($message['race'])) {
       $this->importUser['race'] = $message['race'];
     }
-    if (isset($message['religion']) && $message['religion'] != '') {
+    if (!empty($message['religion'])) {
       $this->importUser['religion'] = $message['religion'];
     }
-    if (isset($message['hs_name']) && $message['hs_name'] != '') {
+    if (!empty($message['hs_name'])) {
       $this->importUser['hs_name'] = $message['hs_name'];
     }
-    if (isset($message['college_name']) && $message['college_name'] != '') {
+    if (!empty($message['college_name'])) {
       $this->importUser['college_name'] = $message['college_name'];
     }
-    if (isset($message['major_name']) && $message['major_name'] != '') {
+    if (!empty($message['major_name'])) {
       $this->importUser['major_name'] = $message['major_name'];
     }
-    if (isset($message['degree_type']) && $message['degree_type'] != '') {
+    if (!empty($message['degree_type'])) {
       $this->importUser['degree_type'] = $message['degree_type'];
     }
     if (isset($message['sat_math']) && $message['sat_math'] != 0) {
@@ -179,7 +185,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     if (isset($message['gpa']) && $message['gpa'] != 0) {
       $this->importUser['gpa'] = $message['gpa'];
     }
-    if (isset($message['role']) && $message['role'] != '') {
+    if (!empty($message['role'])) {
       $this->importUser['role'] = $message['role'];
     }
 

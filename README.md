@@ -1,4 +1,4 @@
-### User Import Ststem
+### User Import System
 
 - [Introduction](https://github.com/DoSomething/mbp-user-import/wiki)
 - [Architecture](https://github.com/DoSomething/mbp-user-import/wiki/2.-Architecture)
