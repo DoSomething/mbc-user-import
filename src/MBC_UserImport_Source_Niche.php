@@ -31,13 +31,13 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
    */
   public function canProcess($message) {
     
-   if (empty($message['email'])) {
+    if (empty($message['email'])) {
       echo '- canProcess(), email not set.', PHP_EOL;
       parent::reportErrorPayload();
       return false;
     }
 
-   if (filter_var($message['email'], FILTER_VALIDATE_EMAIL) === false) {
+    if (filter_var($message['email'], FILTER_VALIDATE_EMAIL) === false) {
       echo '- canProcess(), failed FILTER_VALIDATE_EMAIL: ' . $message['email'], PHP_EOL;
       parent::reportErrorPayload();
       throw new Exception('canProcess(), failed FILTER_VALIDATE_EMAIL: ' . $message['email']);
@@ -216,7 +216,13 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       $drupalUser = $this->mbToolbox->createDrupalUser((object) $this->importUser);
       if (!is_object($drupalUser[0])) {
         $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Source_Niche: Failed to create Drupal user', 1);
-        throw new Exception('Failed to create Drupal user: ' . print_r($this->importUser, true));
+        if (isset($drupalUser[0][0])) {
+          $message = $drupalUser[0][0];
+        }
+        else {
+          $message = 'Failed to create Drupal user: ' . print_r($this->importUser, true);
+        }
+        throw new Exception($message);
       }
       $this->addImportUserInfo($drupalUser[0]);
       $drupalUID = $drupalUser[0]->uid;
