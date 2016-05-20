@@ -228,12 +228,14 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       $drupalUID = $drupalUser[0]->uid;
       // #1, user_welcome, New/New
       $payload['email_template'] = 'mb-user-welcome-niche-com-v1-0-0-1';
+      $payload['tags'][] = 'user-welcome-niche';
     }
     else {
       // Existing Drupal user. Set UID for campaign signup
       $drupalUID = $existing['drupal-uid'];
       // #2, current_user, Existing/New
       $payload['email_template'] = 'mb-current-user-welcome-niche-com-v1-0-0';
+      $payload['tags'][] = 'current-user-welcome-niche';
     }
 
     // Campaign signup
@@ -244,6 +246,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       // User was not signed up to campaign because they're already signed up.
       // #3, current_signedup, Existing/Existing
       $payload['email_template'] = 'mb-current-signedup-user-welcome-niche-com-v1-0-0';
+      $payload['tags'][] = 'current-signedup-user-welcome-niche';
     }
 
     // Check for existing user account in Mobile Commons
