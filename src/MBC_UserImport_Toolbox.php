@@ -139,11 +139,14 @@ class MBC_UserImport_Toolbox
   */
   public function checkExistingDrupal($user, &$existingStatus) {
 
-    $drupalUID = $this->mbToolbox->lookupDrupalUser($user['email']);
+    $email = $user['email'];
+    $mobile = isset($user['mobile']) ? $user['mobile'] : null;
+    $drupalUID = $this->mbToolbox->lookupDrupalUser($email, $mobile);
 
     if ($drupalUID != 0) {
       $existingStatus['drupal-uid'] = $drupalUID;
       $existingStatus['drupal-email'] = $user['email'];
+      $existingStatus['drupal-mobile'] = $user['mobile'];
       $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Toolbox: checkExistingDrupal: Existing user', 1);
     }
   }
