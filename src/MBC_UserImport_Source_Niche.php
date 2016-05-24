@@ -226,9 +226,11 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       }
       $this->addImportUserInfo($drupalUser[0]);
       $drupalUID = $drupalUser[0]->uid;
+      $passwordResetURL = $this->mbToolbox->getPasswordResetURL($drupalUID);
       // #1, user_welcome, New/New
       $payload['email_template'] = 'mb-niche-welcome_new-new_v1-0-0';
       $payload['tags'][] = 'user-welcome-niche';
+      $payload['merge_vars']['PASSWORD_RESET_LINK'] = $passwordResetURL;
     }
     else {
       // Existing Drupal user. Set UID for campaign signup
