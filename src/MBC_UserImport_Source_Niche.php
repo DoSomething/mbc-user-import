@@ -271,7 +271,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
   }
 
   /**
-   * addWelcomeEmailSettings(r): Initial settings related to initial welcome messages.
+   * addWelcomeEmailSettings(): Initial settings related to initial welcome messages.
    *
    * @param array $user
    *   User settings
