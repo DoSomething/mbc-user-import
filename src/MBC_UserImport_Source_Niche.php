@@ -11,11 +11,11 @@ use \Exception;
 class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
 {
 
-  const WELCOME_EMAIL_NEW_NEW = 'mb-niche-welcome_new-new_v1-0-0';
-  const WELCOME_EMAIL_EXISTING_NEW = 'mb-niche-welcome_existing-new_v1-0-0';
-  const WELCOME_EMAIL_EXISTING_EXISTING = 'mb-niche-welcome_existing-existing_v1-0-0';
-  const MOBILE_COMMONS_SIGNUP = 206777; // Birthday Mail
-  const PHOENIX_SIGNUP = 2461; // Birthday Mail
+  const WELCOME_EMAIL_NEW_NEW = 'mb-niche-welcome_new-new_v1-1-0';
+  const WELCOME_EMAIL_EXISTING_NEW = 'mb-niche-welcome_existing-new_v1-1-0';
+  const WELCOME_EMAIL_EXISTING_EXISTING = 'mb-niche-welcome_existing-existing_v1-1-0';
+  const MOBILE_COMMONS_SIGNUP = 207563; // Birthday Mail
+  const PHOENIX_SIGNUP = 2590; // Birthday Mail
 
   /**
    * Constructor for MBC_UserImport_Source_Nice - extension of the base source class
