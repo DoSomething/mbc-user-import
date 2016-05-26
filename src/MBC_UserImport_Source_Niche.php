@@ -11,6 +11,12 @@ use \Exception;
 class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
 {
 
+  const WELCOME_EMAIL_NEW_NEW = 'mb-niche-welcome_new-new_v1-1-0';
+  const WELCOME_EMAIL_EXISTING_NEW = 'mb-niche-welcome_existing-new_v1-1-0';
+  const WELCOME_EMAIL_EXISTING_EXISTING = 'mb-niche-welcome_existing-existing_v1-1-0';
+  const MOBILE_COMMONS_SIGNUP = 207601; // Shower Song
+  const PHOENIX_SIGNUP = 3590; // Shower Song
+
   /**
    * Constructor for MBC_UserImport_Source_Nice - extension of the base source class
    * that's specific to Niche.
@@ -228,7 +234,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       $drupalUID = $drupalUser[0]->uid;
       $passwordResetURL = $this->mbToolbox->getPasswordResetURL($drupalUID);
       // #1, user_welcome, New/New
-      $payload['email_template'] = 'mb-niche-welcome_new-new_v1-0-0';
+      $payload['email_template'] = self::WELCOME_EMAIL_NEW_NEW;
       $payload['tags'][] = 'user-welcome-niche';
       $payload['merge_vars']['PASSWORD_RESET_LINK'] = $passwordResetURL;
     }
@@ -236,18 +242,17 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       // Existing Drupal user. Set UID for campaign signup
       $drupalUID = $existing['drupal-uid'];
       // #2, current_user, Existing/New
-      $payload['email_template'] = 'mb-niche-welcome_existing-new_v1-0-0';
+      $payload['email_template'] = self::WELCOME_EMAIL_EXISTING_NEW;
       $payload['tags'][] = 'current-user-welcome-niche';
     }
 
     // Campaign signup
-    // Birthday Mail
-    $campaignNID = 2461;
+    $campaignNID = self::PHOENIX_SIGNUP;
     $campaignSignup = $this->mbcUserImportToolbox->campaignSignup($campaignNID, $drupalUID, 'niche');
     if (!$campaignSignup) {
       // User was not signed up to campaign because they're already signed up.
       // #3, current_signedup, Existing/Existing
-      $payload['email_template'] = 'mb-niche-welcome_existing-existing_v1-0-0';
+      $payload['email_template'] = self::WELCOME_EMAIL_EXISTING_EXISTING;
       $payload['tags'][] = 'current-signedup-user-welcome-niche';
     }
 
@@ -338,11 +343,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
 
     if (isset($user['mobile'])) {
       $payload['mobile'] = $user['mobile'];
-      // NicheUsers : Conversation
-      // $payload['mobile_opt_in_path_id'] = 170071;
-
-      // Birthday Mail
-      $payload['mobile_opt_in_path_id'] = 206777;
+      $payload['mobile_opt_in_path_id'] = self:: MOBILE_COMMONS_SIGNUP;
     }
   }
 
