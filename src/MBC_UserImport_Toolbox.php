@@ -316,10 +316,6 @@ class MBC_UserImport_Toolbox
     $curlUrl .= '/api/v1/campaigns/' . $campaignNID . '/signup';
     $signUp = $this->mbToolboxCURL->curlPOSTauth($curlUrl, $post);
 
-    if ($signUp[1] != 200) {
-      throw new Exception('Failed to signup user (' . $drupalUID . ') to campaign: ' . $campaignNID);
-    }
-
     // Results returned for campaign signup
     // User signed up, indicated by return sid (signup ID)
     if (is_array($signUp[0]) && $signUp[0][0] > 0) {
