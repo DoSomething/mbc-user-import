@@ -239,6 +239,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       // #1, user_welcome, New/New
       $payload['email_template'] = self::WELCOME_EMAIL_NEW_NEW;
       $payload['tags'][] = 'user-welcome-niche';
+      $payload['tags'][] = self::WELCOME_EMAIL_NEW_NEW;
       $payload['merge_vars']['PASSWORD_RESET_LINK'] = $passwordResetURL;
     }
     else {
@@ -247,6 +248,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       // #2, current_user, Existing/New
       $payload['email_template'] = self::WELCOME_EMAIL_EXISTING_NEW;
       $payload['tags'][] = 'current-user-welcome-niche';
+      $payload['tags'][] = self::WELCOME_EMAIL_EXISTING_NEW;
     }
 
     // Campaign signup
@@ -257,6 +259,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       // #3, current_signedup, Existing/Existing
       $payload['email_template'] = self::WELCOME_EMAIL_EXISTING_EXISTING;
       $payload['tags'][] = 'current-signedup-user-welcome-niche';
+      $payload['tags'][] = self::WELCOME_EMAIL_EXISTING_EXISTING;
     }
 
     // Check for existing user account in Mobile Commons
