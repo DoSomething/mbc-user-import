@@ -86,6 +86,12 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
         sleep(self::SLEEP);
         $this->messageBroker->sendNack($this->message['payload']);
       }
+      elseif (strpos($e->getMessage(), 'Connection timed out') !== false) {
+        echo '- Error message: ' . $e->getMessage() . ', retry in ' . self::SLEEP . ' seconds.', PHP_EOL;
+        $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Consumer: Exception: Mobile Commons timeout', 1);
+        sleep(self::SLEEP);
+        $this->messageBroker->sendNack($this->message['payload']);
+      }
       elseif (strpos($e->getMessage(), 'is registered to User') !== false) {
         $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Consumer: Exception: Existing mobile / new email', 1);
         $this->messageBroker->sendAck($this->message['payload']);
