@@ -66,7 +66,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
    *   The values from the message consumed from the queue.
    */
   public function setter($message) {
-    
+
     if (isset($message['source'])) {
       $this->importUser['user_registration_source'] = $message['source'];
     }
@@ -253,7 +253,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
 
     // Campaign signup
     $campaignNID = self::PHOENIX_SIGNUP;
-    $campaignSignup = $this->mbcUserImportToolbox->campaignSignup($campaignNID, $drupalUID, 'niche');
+    $campaignSignup = $this->mbcUserImportToolbox->campaignSignup($campaignNID, $drupalUID, 'niche', false);
     if (!$campaignSignup) {
       // User was not signed up to campaign because they're already signed up.
       // #3, current_signedup, Existing/Existing
