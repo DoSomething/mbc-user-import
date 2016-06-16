@@ -96,6 +96,10 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
         $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Consumer: Exception: Existing mobile / new email', 1);
         $this->messageBroker->sendAck($this->message['payload']);
       }
+      elseif (strpos($e->getMessage(), 'Bad response - HTTP Code:503') !== false) {
+        $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Consumer: Exception: Bad response - 503', 1);
+        $this->messageBroker->sendAck($this->message['payload']);
+      }
       else {
         echo '- Error processing message, send to deadLetterQueue: ' . date('j D M Y G:i:s T'), PHP_EOL;
         echo '- Error message: ' . $e->getMessage(), PHP_EOL;
