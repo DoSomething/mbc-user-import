@@ -51,6 +51,13 @@ $mbConfig->setProperty('ds_drupal_api_config', [
   'password' => getenv('DS_DRUPAL_API_PASSWORD'),
 ]);
 
+// Northstar
+$mbConfig->setProperty('northstar_config', [
+  'host' => getenv("NORTHSTAR_API_HOST"),
+  'id' => getenv("NORTHSTAR_API_ID"),
+  'key' => getenv('NORTHSTAR_API_KEY'),
+]);
+
 // SMS
 $mbConfig->setProperty('mobileCommons', new \MobileCommons([
   'username' => getenv("MOBILE_COMMONS_US_USER"),
