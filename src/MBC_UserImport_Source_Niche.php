@@ -222,19 +222,19 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     // Drupal user
     $this->mbcUserImportToolbox->checkExistingDrupal($this->importUser, $existing);
     if (empty($existing['drupal-uid'])) {
-      $drupalUser = $this->mbToolbox->createDrupalUser((object) $this->importUser);
-      if (!is_object($drupalUser[0])) {
+      $northstarUser = $this->mbToolbox->createNorthstarUser((object) $this->importUser);
+      if (!is_object($northstarUser[0])) {
         $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Source_Niche: Failed to create Drupal user', 1);
-        if (isset($drupalUser[0][0])) {
-          $message = $drupalUser[0][0];
+        if (isset($northstarUser[0][0])) {
+          $message = $northstarUser[0][0];
         }
         else {
           $message = 'Failed to create Drupal user: ' . print_r($this->importUser, true);
         }
         throw new Exception($message);
       }
-      $this->addImportUserInfo($drupalUser[0]);
-      $drupalUID = $drupalUser[0]->uid;
+      $this->addImportUserInfo($northstarUser[0]);
+      $drupalUID = $northstarUser[0]->uid;
       $passwordResetURL = $this->mbToolbox->getPasswordResetURL($drupalUID);
       // #1, user_welcome, New/New
       $payload['email_template'] = self::WELCOME_EMAIL_NEW_NEW;
