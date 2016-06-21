@@ -224,7 +224,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     if (empty($existing['drupal-uid'])) {
       $northstarUser = $this->mbToolbox->createNorthstarUser((object) $this->importUser);
       if (!is_object($northstarUser[0])) {
-        $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Source_Niche: Failed to create Drupal user', 1);
+        $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Source_Niche: Failed to create Northstar user', 1);
         if (isset($northstarUser[0][0])) {
           $message = $northstarUser[0][0];
         }
@@ -233,8 +233,8 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
         }
         throw new Exception($message);
       }
-      $this->addImportUserInfo($northstarUser[0]);
-      $drupalUID = $northstarUser[0]->uid;
+      $this->addImportUserInfo($northstarUser[0]->data);
+      $drupalUID = $northstarUser[0]->data->drupal_id;
       $passwordResetURL = $this->mbToolbox->getPasswordResetURL($drupalUID);
       // #1, user_welcome, New/New
       $payload['email_template'] = self::WELCOME_EMAIL_NEW_NEW;
@@ -368,7 +368,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
    */
   public function addImportUserInfo($drupalUser) {
 
-    $this->importUser['uid'] = $drupalUser->uid;
+    $this->importUser['uid'] = $drupalUser->drupal_id;
   }
 
 }
