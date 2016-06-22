@@ -225,8 +225,8 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       $northstarUser = $this->mbToolbox->createNorthstarUser((object) $this->importUser);
       if (!is_object($northstarUser[0])) {
         $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Source_Niche: Failed to create Northstar user', 1);
-        if (isset($northstarUser[0][0])) {
-          $message = $northstarUser[0][0];
+        if (isset($northstarUser[0]->error)) {
+          $message = $northstarUser[0]->error->message . ': ' . print_r($northstarUser[0]->error->fields, true);
         }
         else {
           $message = 'Failed to create Drupal user: ' . print_r($this->importUser, true);
