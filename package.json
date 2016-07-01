@@ -1,4 +1,7 @@
 {
+  "name": "mbc-user-import",
+  "version": "0.0.1",
+  "description": "Task running for mbc-user-import application to run validation tests in a watchful state.",
   "devDependencies": {
     "gulp": "^3.9.1",
     "gulp-phpunit": "^0.16.0",
