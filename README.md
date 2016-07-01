@@ -42,9 +42,15 @@ mb-logging.
 
 **Production**
 - `$ composer install --no-dev`
+
 **Development**
 - `*composer install --dev`
 
 ### Update
 
 - `$ composer update`
+
+### Test Coverage
+
+**Run all tests**
+- `$ ./vendor/bin/phpunit --verbose --bootstrap vendor/autoload.php tests
