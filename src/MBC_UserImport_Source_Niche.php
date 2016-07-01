@@ -222,24 +222,15 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     // Drupal user
     $this->mbcUserImportToolbox->checkExistingDrupal($this->importUser, $existing);
     if (empty($existing['drupal-uid'])) {
-      $drupalUser = $this->mbToolbox->createDrupalUser((object) $this->importUser);
-      if (!is_object($drupalUser[0])) {
-        $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Source_Niche: Failed to create Drupal user', 1);
-        if (isset($drupalUser[0][0])) {
-          $message = $drupalUser[0][0];
-        }
-        else {
-          $message = 'Failed to create Drupal user: ' . print_r($this->importUser, true);
-        }
-        throw new Exception($message);
-      }
-      $this->addImportUserInfo($drupalUser[0]);
-      $drupalUID = $drupalUser[0]->uid;
+      $northstarUser = $this->mbToolbox->createNorthstarUser((object) $this->importUser);
+
+      $this->addImportUserInfo($northstarUser->data);
+      $drupalUID = $northstarUser->data->drupal_id;
       $passwordResetURL = $this->mbToolbox->getPasswordResetURL($drupalUID);
       // #1, user_welcome, New/New
       $payload['email_template'] = self::WELCOME_EMAIL_NEW_NEW;
-      $payload['tags'][] = 'user-welcome-niche';
-      $payload['tags'][] = self::WELCOME_EMAIL_NEW_NEW;
+      $payload['tags'][0] = 'user-welcome-niche';
+      $payload['tags'][1] = self::WELCOME_EMAIL_NEW_NEW;
       $payload['merge_vars']['PASSWORD_RESET_LINK'] = $passwordResetURL;
     }
     else {
@@ -247,8 +238,8 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       $drupalUID = $existing['drupal-uid'];
       // #2, current_user, Existing/New
       $payload['email_template'] = self::WELCOME_EMAIL_EXISTING_NEW;
-      $payload['tags'][] = 'current-user-welcome-niche';
-      $payload['tags'][] = self::WELCOME_EMAIL_EXISTING_NEW;
+      $payload['tags'][0] = 'current-user-welcome-niche';
+      $payload['tags'][1] = self::WELCOME_EMAIL_EXISTING_NEW;
     }
 
     // Campaign signup
@@ -258,18 +249,16 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       // User was not signed up to campaign because they're already signed up.
       // #3, current_signedup, Existing/Existing
       $payload['email_template'] = self::WELCOME_EMAIL_EXISTING_EXISTING;
-      $payload['tags'][] = 'current-signedup-user-welcome-niche';
-      $payload['tags'][] = self::WELCOME_EMAIL_EXISTING_EXISTING;
+      $payload['tags'][0] = 'current-signedup-user-welcome-niche';
+      $payload['tags'][1] = self::WELCOME_EMAIL_EXISTING_EXISTING;
     }
 
     // Check for existing user account in Mobile Commons
     $this->mbcUserImportToolbox->checkExistingSMS($this->importUser, $existing);
     
-    // Add SMS welcome details to payload - all users should be attempted to be added
-    // to the Birhtday Mail campaign
-    // if (empty($existing['mobile-acquired'])) {
-      $this->addWelcomeSMSSettings($this->importUser, $payload);
-    // }
+    // Add SMS welcome details to payload - all users should be attempted to be added to
+    // MOBILE_COMMONS_SIGNUP opt_id
+    $this->addWelcomeSMSSettings($this->importUser, $payload);
 
     // @todo: transition to using JSON formatted messages when all of the consumers are able to
     // detect the message format and process either seralized or JSON.
@@ -368,7 +357,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
    */
   public function addImportUserInfo($drupalUser) {
 
-    $this->importUser['uid'] = $drupalUser->uid;
+    $this->importUser['uid'] = $drupalUser->drupal_id;
   }
 
 }
