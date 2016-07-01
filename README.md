@@ -54,3 +54,21 @@ mb-logging.
 
 **Run all tests**
 - `$ ./vendor/bin/phpunit --verbose tests`
+or
+- `$ npm test`
+or
+- `gulp test`
+
+### PHP CodeSniffer
+
+- `php ./vendor/bin/phpcs --colors src`
+Listing of all coding volations by file.
+
+- `php ./vendor/bin/phpcbf --colors src`
+Automated processing of files to adjust to meeting coding standards.
+
+### Watch Files
+
+Runs PHPUnit tests and basic PHP Lint in a watchful state.
+
+- `gulp`
