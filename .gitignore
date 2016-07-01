@@ -19,3 +19,4 @@ config.inc
 
 # Ignore Gulp related NPM files
 node_modules
+npm-debug.log
