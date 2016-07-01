@@ -298,15 +298,18 @@ class MBC_UserImport_Toolbox
    *   signup for.
    * @param string $source
    *   The name of the import source
+   * @param bool $transactionals
+   *   A flag to supress sending transaction messages related to the signup.
    *
    * @return bool
    *   Was the user signed up to the campaign.
    */
-  public function campaignSignup($campaignNID, $drupalUID, $source) {
+  public function campaignSignup($campaignNID, $drupalUID, $source, $transactionals = true) {
 
     $post = array(
-      'source' => $source . '_mb_import',
-      'uid' => $drupalUID
+      'source' => $source,
+      'uid' => $drupalUID,
+      'transactionals' => $transactionals
     );
     $curlUrl = $this->phoenixAPIConfig['host'];
     $port = $this->phoenixAPIConfig['port'];
@@ -315,10 +318,6 @@ class MBC_UserImport_Toolbox
     }
     $curlUrl .= '/api/v1/campaigns/' . $campaignNID . '/signup';
     $signUp = $this->mbToolboxCURL->curlPOSTauth($curlUrl, $post);
-
-    if ($signUp[1] != 200) {
-      throw new Exception('Failed to signup user (' . $drupalUID . ') to campaign: ' . $campaignNID);
-    }
 
     // Results returned for campaign signup
     // User signed up, indicated by return sid (signup ID)

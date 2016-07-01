@@ -66,7 +66,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
    *   The values from the message consumed from the queue.
    */
   public function setter($message) {
-    
+
     if (isset($message['source'])) {
       $this->importUser['user_registration_source'] = $message['source'];
     }
@@ -152,7 +152,10 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       $this->importUser['zip'] = $message['postal_code'];
       $this->importUser['postal_code'] = $message['postal_code'];
     }
-    if (!empty($message['phone'])) {
+    // Validate phone number based on the North American Numbering Plan
+    // https://en.wikipedia.org/wiki/North_American_Numbering_Plan
+    $regex = "/^(\d[\s-]?)?[\(\[\s-]{0,2}?\d{3}[\)\]\s-]{0,2}?\d{3}[\s-]?\d{4}$/i";
+    if ((preg_match( $regex, $message['phone']))) {
       $this->importUser['mobile'] = $message['phone'];
     }
     if (isset($message['hs_gradyear']) && $message['hs_gradyear'] != 0) {
@@ -236,6 +239,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       // #1, user_welcome, New/New
       $payload['email_template'] = self::WELCOME_EMAIL_NEW_NEW;
       $payload['tags'][] = 'user-welcome-niche';
+      $payload['tags'][] = self::WELCOME_EMAIL_NEW_NEW;
       $payload['merge_vars']['PASSWORD_RESET_LINK'] = $passwordResetURL;
     }
     else {
@@ -244,16 +248,18 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       // #2, current_user, Existing/New
       $payload['email_template'] = self::WELCOME_EMAIL_EXISTING_NEW;
       $payload['tags'][] = 'current-user-welcome-niche';
+      $payload['tags'][] = self::WELCOME_EMAIL_EXISTING_NEW;
     }
 
     // Campaign signup
     $campaignNID = self::PHOENIX_SIGNUP;
-    $campaignSignup = $this->mbcUserImportToolbox->campaignSignup($campaignNID, $drupalUID, 'niche');
+    $campaignSignup = $this->mbcUserImportToolbox->campaignSignup($campaignNID, $drupalUID, 'niche', false);
     if (!$campaignSignup) {
       // User was not signed up to campaign because they're already signed up.
       // #3, current_signedup, Existing/Existing
       $payload['email_template'] = self::WELCOME_EMAIL_EXISTING_EXISTING;
       $payload['tags'][] = 'current-signedup-user-welcome-niche';
+      $payload['tags'][] = self::WELCOME_EMAIL_EXISTING_EXISTING;
     }
 
     // Check for existing user account in Mobile Commons
