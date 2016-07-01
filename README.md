@@ -53,4 +53,4 @@ mb-logging.
 ### Test Coverage
 
 **Run all tests**
-- `$ ./vendor/bin/phpunit --verbose --bootstrap vendor/autoload.php tests
+- `$ ./vendor/bin/phpunit --verbose tests
