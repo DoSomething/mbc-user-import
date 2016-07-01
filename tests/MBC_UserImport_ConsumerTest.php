@@ -17,6 +17,7 @@ class MBC_UserImport_ConsumerTest extends \PHPUnit_Framework_TestCase
     {
 
         define('CONFIG_PATH',  __DIR__ . '/../messagebroker-config');
+        define('ENVIROMENT', 'test');
         require_once __DIR__ . '/../mbc-user-import.config.inc';
         
         $allowedSources = unserialize(ALLOWED_SOURCES);
