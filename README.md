@@ -53,4 +53,4 @@ mb-logging.
 ### Test Coverage
 
 **Run all tests**
-- `$ ./vendor/bin/phpunit --verbose tests
+- `$ ./vendor/bin/phpunit --verbose tests`
