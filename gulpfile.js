@@ -1,38 +1,35 @@
+'use strict';
 /**
  * Task runner for unit tests
  *
  * How To:
- * 
- * Quick Gulp file to run php-unit tests
- * https://alfrednutile.info/posts/85
  *
- * PHPUnit with gulp 3.5.0
- * https://coderwall.com/p/i3zuwg/phpunit-with-gulp-3-5-0
+ * Using Gulp.js to check your code quality
+ * https://marcofranssen.nl/using-gulp-js-to-check-your-code-quality/
  */
 
+var gulp = require('gulp');
 var phpunit = require('gulp-phpunit');
- 
-var gulp = require('gulp'),
-    notify  = require('gulp-notify'),
-    phpunit = require('gulp-phpunit');
- 
-gulp.task('phpunit', function() {
+var notify  = require('gulp-notify');
+
+
+gulp.task('phpunit', function () {
     var options = {debug: false, notify: true};
-    gulp.src('./tests').pipe(
-        exec('phpunit -c phpunit.xml tests/',
-             function(error, stdout){
-               sys.puts(stdout); 
-               return false;
-             })
-        )
-        .on('error', notify.onError({
-            title: "Failed Tests!",
-            message: "Error(s) occurred during testing..."
-        }));
-});
- 
-gulp.task('watch', function () {
-    gulp.watch('**/*.php', ['phpunit']);
+    gulp.src('phpunit.xml')
+      .pipe(phpunit('vendor/bin/phpunit --verbose tests', options))
+      .on('error', notify.onError({
+        title: "Failed Tests!",
+        message: "Error(s) occurred during testing..."
+      }));
 });
 
-gulp.task('default', ['watch']);
+gulp.task('watch', function () {
+  gulp.watch(['composer.json', 'phpunit.xml', './**/*.php', './**/*.inc', '!vendor/**/*', '!node_modules/**/*'],
+    function (event) {
+        console.log('File ' + event.path + ' was ' + event.type + ', running tasks...');
+    });
+  gulp.watch('composer.json', ['dump-autoload']);
+  gulp.watch(['phpunit.xml', './**/*.php', './**/*.inc', '!vendor/**/*', '!node_modules/**/*'], ['phpunit']);
+});
+
+gulp.task('default', ['phpunit', 'watch']);
