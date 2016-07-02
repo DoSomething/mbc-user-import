@@ -11,7 +11,10 @@
   "license": "MIT",
   "devDependencies": {
     "gulp": "^3.9.1",
+    "gulp-notify": "^2.2.0",
+    "gulp-phpcs": "^1.1.1",
     "gulp-phpunit": "^0.16.0",
+    "gulp-shell": "^0.5.2",
     "phplint": "^1.7.1"
   },
   "scripts": {
