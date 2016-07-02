@@ -10,13 +10,13 @@ class MBC_UserImport_ConsumerTest extends \PHPUnit_Framework_TestCase
 {
 
     /**
-     * @covers            \DoSomething\MBC_UserImport\MBC_UserImport_Consumer::__construct
-     * @uses              \DoSomething\MBC_UserImport\MBC_UserImport_Consumer
+     * @covers \DoSomething\MBC_UserImport\MBC_UserImport_Consumer::__construct
+     * @uses   \DoSomething\MBC_UserImport\MBC_UserImport_Consumer
      */
     public function testAllowedSources()
     {
 
-        define('CONFIG_PATH',  __DIR__ . '/../messagebroker-config');
+        define('CONFIG_PATH', __DIR__ . '/../messagebroker-config');
         define('ENVIROMENT', 'test');
         require_once __DIR__ . '/../mbc-user-import.config.inc';
         

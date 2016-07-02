@@ -144,7 +144,6 @@ class MBC_UserImport_Source_AfterSchool extends MBC_UserImport_BaseSource
         if (isset($message['as_campaign_id'])) {
             $this->importUser['as_campaign_id'] = $message['as_campaign_id'];
         }
-
     }
 
     /**
@@ -173,14 +172,17 @@ class MBC_UserImport_Source_AfterSchool extends MBC_UserImport_BaseSource
         // seralized or JSON.
         $message = serialize($payload);
         $this->messageBroker_transactionals->publish(
-            $message, 'user.registration.transactional'
+            $message,
+            'user.registration.transactional'
         );
         $this->statHat->ezCount(
-            'mbc-user-import: MBC_UserImport_Source_AfterSchool: process', 1
+            'mbc-user-import: MBC_UserImport_Source_AfterSchool: process',
+            1
         );
         $this->statHat->ezCount(
             'mbc-user-import: MBC_UserImport_Source_AfterSchool: CampaignID: ' .
-            $this->importUser['as_campaign_id'], 1
+            $this->importUser['as_campaign_id'],
+            1
         );
 
         // Log existing users
@@ -267,10 +269,10 @@ class MBC_UserImport_Source_AfterSchool extends MBC_UserImport_BaseSource
                 $payload['afterschool_optin'] = $user['optin'];
                 $this->statHat->ezCount(
                     'mbc-user-import: MBC_UserImport_Source_AfterSchool: optin: ' .
-                    $payload['afterschool_optin'], 1
+                    $payload['afterschool_optin'],
+                    1
                 );
             }
         }
     }
-
 }

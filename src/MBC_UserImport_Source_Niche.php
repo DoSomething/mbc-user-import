@@ -260,7 +260,8 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     
         // Check for existing email account in MailChimp
         $this->mbcUserImportToolbox->checkExistingEmail(
-            $this->importUser, $existing
+            $this->importUser,
+            $existing
         );
         if (empty($existing['email'])) {
             $this->addEmailSubscriptionSettings($this->importUser, $payload);
@@ -268,7 +269,8 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     
         // Drupal user
         $this->mbcUserImportToolbox->checkExistingDrupal(
-            $this->importUser, $existing
+            $this->importUser,
+            $existing
         );
         if (empty($existing['drupal-uid'])) {
             $northstarUser
@@ -294,7 +296,10 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
         // Campaign signup
         $campaignNID = self::PHOENIX_SIGNUP;
         $campaignSignup = $this->mbcUserImportToolbox->campaignSignup(
-            $campaignNID, $drupalUID, 'niche', false
+            $campaignNID,
+            $drupalUID,
+            'niche',
+            false
         );
         if (!$campaignSignup) {
             // User was not signed up to campaign because they're already signed up.
@@ -316,10 +321,12 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
         // detect the message format and process either seralized or JSON.
         $message = serialize($payload);
         $this->messageBroker_transactionals->publish(
-            $message, 'user.registration.transactional'
+            $message,
+            'user.registration.transactional'
         );
         $this->statHat->ezCount(
-            'mbc-user-import: MBC_UserImport_Source_Niche: process', 1
+            'mbc-user-import: MBC_UserImport_Source_Niche: process',
+            1
         );
 
         // Log existing users
@@ -422,5 +429,4 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
 
         $this->importUser['uid'] = $drupalUser->drupal_id;
     }
-
 }

@@ -31,16 +31,17 @@ use \Exception;
  * @author   DeeZone <dlee@dosomething.org>
  * @license  MIT: https://en.wikipedia.org/wiki/MIT_License
  * @version  "Release: <package_version>"
- * @link     https://github.com/DoSomething/mbc-user-import
+ * @link     https://github.com/DoSomething/mbc-user-import/blob/master/src
+ *           /MBC_UserImport_Toolbox.php
  */
 class MBC_UserImport_Toolbox
 {
 
     /**
-   * Message Broker object for sending logging messages.
-   *
-   * @var object $mbLogging
-   */
+     * Message Broker object for sending logging messages.
+     *
+     * @var object $mbLogging
+     */
     protected $mbLogging;
 
     /**
@@ -51,38 +52,38 @@ class MBC_UserImport_Toolbox
     protected $mailChimpObjects;
 
     /**
-   * Mobile Commons DoSomething.org US connection.
-   *
-   * @var object $mobileCommons
-   */
+     * Mobile Commons DoSomething.org US connection.
+     *
+     * @var object $mobileCommons
+     */
     protected $moblieCommons;
 
     /**
-   * Collection of tools related to the Message Broker system.
-   *
-   * @var object $mbToolbox
-   */
+     * Collection of tools related to the Message Broker system.
+     *
+     * @var object $mbToolbox
+     */
     protected $mbToolbox;
 
     /**
-   * Collection of tools related to the Message Broker system cURL functionality.
-   *
-   * @var object $mbToolboxCURL
-   */
+     * Collection of tools related to the Message Broker system cURL functionality.
+     *
+     * @var object $mbToolboxCURL
+     */
     protected $mbToolboxCURL;
 
     /**
-   * Connection to StatHat service for reporting monitoring counters.
-   *
-   * @var object $statHat
-   */
+     * Connection to StatHat service for reporting monitoring counters.
+     *
+     * @var object $statHat
+     */
     protected $statHat;
 
     /**
-   * Message Broker connection to RabbitMQ
-   *
-   * @var object
-   */
+     * Message Broker connection to RabbitMQ
+     *
+     * @var object
+     */
     protected $messageBroker_transactionals;
 
     /**
@@ -143,17 +144,18 @@ class MBC_UserImport_Toolbox
                 = $mailchimpStatus['data'][0]['timestamp'];
             $this->statHat->ezCount(
                 'mbc-user-import: MBC_UserImport_Toolbox: ' .
-                'checkExistingEmail: Existing MailChimp account', 1
+                'checkExistingEmail: Existing MailChimp account',
+                1
             );
         } elseif ($mailchimpStatus === false) {
             $existingStatus['email-status'] = 'Mailchimp Error';
             $existingStatus['email'] = $user['email'];
             $this->statHat->ezCount(
                 'mbc-user-import: MBC_UserImport_Toolbox: ' .
-                'checkExistingEmail: MailChimp error', 1
+                'checkExistingEmail: MailChimp error',
+                1
             );
         }
-
     }
   
     /**
@@ -179,7 +181,8 @@ class MBC_UserImport_Toolbox
             $existingStatus['drupal-mobile'] = $user['mobile'];
             $this->statHat->ezCount(
                 'mbc-user-import: MBC_UserImport_Toolbox: ' .
-                'checkExistingDrupal: Existing user', 1
+                'checkExistingDrupal: Existing user',
+                1
             );
         }
     }
@@ -198,8 +201,10 @@ class MBC_UserImport_Toolbox
     public function checkExistingSMS($user, &$existingStatus)
     {
 
-        $mobilecommonsStatus = (array) $this->mobileCommons->profiles_get(
-          [('phone_number' => $user['mobile']]);
+        $mobilecommonsStatus
+            = (array) $this->mobileCommons->profiles_get(
+                ['phone_number' => $user['mobile']]
+            );
         if (!isset($mobilecommonsStatus['error'])) {
             echo($user['mobile'] . ' already a Mobile Commons user.' . PHP_EOL);
             if (isset($mobilecommonsStatus['profile']->status)) {
@@ -207,7 +212,8 @@ class MBC_UserImport_Toolbox
                     = (string)$mobilecommonsStatus['profile']->status;
                 $this->statHat->ezCount(
                     'mbc-user-import: MBC_UserImport_Toolbox: ' .
-                    'checkExistingSMS: ' . $existingStatus['mobile-error'], 1
+                    'checkExistingSMS: ' . $existingStatus['mobile-error'],
+                    1
                 );
                 // opted_out_source
                 $existingStatus['mobile-acquired']
@@ -216,7 +222,8 @@ class MBC_UserImport_Toolbox
                 $existingStatus['mobile-error'] = 'Existing account';
                 $this->statHat->ezCount(
                     'mbc-user-import: MBC_UserImport_Toolbox: ' .
-                    'checkExistingSMS: Existing account', 1
+                    'checkExistingSMS: Existing account',
+                    1
                 );
             }
             $existingStatus['mobile'] = $user['mobile'];
@@ -229,11 +236,11 @@ class MBC_UserImport_Toolbox
                 echo 'Mobile Common Error: ' . $mobileCommonsError, PHP_EOL;
                 $this->statHat->ezCount(
                     'mbc-user-import: MBC_UserImport_Toolbox: ' .
-                    'checkExistingSMS: Invalid phone number', 1
+                    'checkExistingSMS: Invalid phone number',
+                    1
                 );
             }
         }
-
     }
 
     /**
@@ -248,11 +255,10 @@ class MBC_UserImport_Toolbox
     public function logExisting($existing, $importUser)
     {
     
-        if (isset($existing['email']) 
-            || isset($existing['drupal-uid']) 
+        if (isset($existing['email'])
+            || isset($existing['drupal-uid'])
             || isset($existing['mobile'])
         ) {
-
             $existing['origin'] = [
             'name' => $importUser['origin'],
             'processed' => time()
@@ -260,7 +266,8 @@ class MBC_UserImport_Toolbox
             $payload = serialize($existing);
             $this->mbLogging->publishMessage($payload);
             $this->statHat->ezCount(
-                'mbc-user-import: MBC_UserImport_Toolbox: logExisting', 1
+                'mbc-user-import: MBC_UserImport_Toolbox: logExisting',
+                1
             );
         }
     }
@@ -298,7 +305,8 @@ class MBC_UserImport_Toolbox
 
         $drupalUser = $this->mbToolbox->createDrupalUser($user);
         $this->statHat->ezCount(
-            'mbc-user-import: MBC_UserImport_Toolbox: addDrupalUser', 1
+            'mbc-user-import: MBC_UserImport_Toolbox: addDrupalUser',
+            1
         );
         return $drupalUser;
     }
@@ -335,10 +343,12 @@ class MBC_UserImport_Toolbox
 
         $payload = serialize($message);
         $this->messageBroker_transactionals->publish(
-            $payload, 'user.password.transactional'
+            $payload,
+            'user.password.transactional'
         );
         $this->statHat->ezCount(
-            'mbc-user-import: MBC_UserImport_Toolbox: sendPasswordResetEmail', 1
+            'mbc-user-import: MBC_UserImport_Toolbox: sendPasswordResetEmail',
+            1
         );
     }
 
@@ -355,15 +365,18 @@ class MBC_UserImport_Toolbox
      *
      * @return bool Was the user signed up to the campaign.
      */
-    public function campaignSignup($campaignNID, $drupalUID, $source,
+    public function campaignSignup(
+        $campaignNID,
+        $drupalUID,
+        $source,
         $transactionals = true
     ) {
 
-        $post = array(
+        $post = [
         'source' => $source,
         'uid' => $drupalUID,
         'transactionals' => $transactionals
-        );
+        ];
         $curlUrl = $this->phoenixAPIConfig['host'];
         $port = $this->phoenixAPIConfig['port'];
         if ($port != 0) {
@@ -376,7 +389,8 @@ class MBC_UserImport_Toolbox
         // User signed up, indicated by return sid (signup ID)
         if (is_array($signUp[0]) && $signUp[0][0] > 0) {
             $this->statHat->ezCount(
-                'mbc-user-import: MBC_UserImport_Toolbox: campaignSignup', 1
+                'mbc-user-import: MBC_UserImport_Toolbox: campaignSignup',
+                1
             );
             return true;
         } else {
@@ -384,11 +398,10 @@ class MBC_UserImport_Toolbox
               campaign ' . $campaignNID . ' or campaign is not accepting signups.' .
               $signUp[0][0], PHP_EOL;
             $this->statHat->ezCount(
-                'mbc-user-import: MBC_UserImport_Toolbox: existing campaignSignup', 1
+                'mbc-user-import: MBC_UserImport_Toolbox: existing campaignSignup',
+                1
             );
             return false;
         }
-
     }
-
 }

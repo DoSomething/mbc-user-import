@@ -178,5 +178,4 @@ abstract class MBC_UserImport_BaseSource
      * @return array $payload Adjusted based on email and user settings.
      */
     abstract public function addWelcomeSMSSettings($user, &$payload);
-
 }

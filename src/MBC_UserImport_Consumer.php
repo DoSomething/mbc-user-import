@@ -85,50 +85,51 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
         parent::consumeQueue($payload);
 
         try {
-
             if ($this->canProcess()) {
-
                 $this->logConsumption(['email', 'mobile']);
                 $this->setter($this->message);
                 $this->process();
                 $this->messageBroker->sendAck($this->message['payload']);
                 $this->statHat->ezCount(
-                    'mbc-user-import: MBC_UserImport_Consumer: processed', 1
+                    'mbc-user-import: MBC_UserImport_Consumer: processed',
+                    1
                 );
             } else {
                 echo '- failed canProcess(), removing from queue.', PHP_EOL;
                 $this->statHat->ezCount(
-                    'mbc-user-import: MBC_UserImport_Consumer: skipping', 1
+                    'mbc-user-import: MBC_UserImport_Consumer: skipping',
+                    1
                 );
                 $this->messageBroker->sendAck($this->message['payload']);
             }
-
-        }
-        catch(Exception $e) {
-
+        } catch (Exception $e) {
             if (strpos($e->getMessage(), 'Failed to generate password') !== false) {
                 echo '- Error message: ' . $e->getMessage() . ', retry in ' .
                   self::SLEEP . ' seconds.', PHP_EOL;
                 $this->statHat->ezCount(
                     'mbc-user-import: MBC_UserImport_Consumer: Exception: ' .
-                    'Failed to generate password', 1
+                    'Failed to generate password',
+                    1
                 );
                 sleep(self::SLEEP);
                 $this->messageBroker->sendNack($this->message['payload']);
             } elseif (strpos(
-                $e->getMessage(), 'Failed to create Drupal user'
+                $e->getMessage(),
+                'Failed to create Drupal user'
             ) !== false
             ) {
                 echo '- Error message: ' . $e->getMessage() . ', retry in ' .
                   self::SLEEP . ' seconds.', PHP_EOL;
                 $this->statHat->ezCount(
                     'mbc-user-import: MBC_UserImport_Consumer: Exception: ' .
-                    'Failed to create Drupal user', 1
+                    'Failed to create Drupal user',
+                    1
                 );
                 sleep(self::SLEEP);
                 $this->messageBroker->sendNack($this->message['payload']);
             } elseif (strpos(
-                $e->getMessage(), 'Error making curlGETauth request ' .
+                $e->getMessage(),
+                'Error making curlGETauth request ' .
                 'to https://www.dosomething.org/api/v1/users.json?parameters[email]='
             ) !== false
             ) {
@@ -136,7 +137,8 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
                   self::SLEEP . ' seconds.', PHP_EOL;
                 $this->statHat->ezCount(
                     'mbc-user-import: MBC_UserImport_Consumer: Exception: Failed ' .
-                    'to lookup Drupal user, 302 returned', 1
+                    'to lookup Drupal user, 302 returned',
+                    1
                 );
                 sleep(self::SLEEP);
                 $this->messageBroker->sendNack($this->message['payload']);
@@ -145,32 +147,38 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
                   self::SLEEP . ' seconds.', PHP_EOL;
                 $this->statHat->ezCount(
                     'mbc-user-import: MBC_UserImport_Consumer: Exception: Mobile ' .
-                    'Commons timeout', 1
+                    'Commons timeout',
+                    1
                 );
                 sleep(self::SLEEP);
                 $this->messageBroker->sendNack($this->message['payload']);
             } elseif (strpos($e->getMessage(), 'is registered to User') !== false) {
                 $this->statHat->ezCount(
                     'mbc-user-import: MBC_UserImport_Consumer: Exception: ' .
-                    'Existing mobile / new email', 1
+                    'Existing mobile / new email',
+                    1
                 );
                 $this->messageBroker->sendAck($this->message['payload']);
             } elseif (strpos(
-                $e->getMessage(), 'is not a valid phone number'
+                $e->getMessage(),
+                'is not a valid phone number'
             ) !== false
             ) {
                 $this->statHat->ezCount(
                     'mbc-user-import: MBC_UserImport_Consumer: Exception: ' .
-                    'Existing mobile / new email', 1
+                    'Existing mobile / new email',
+                    1
                 );
                 $this->messageBroker->sendAck($this->message['payload']);
             } elseif (strpos(
-                $e->getMessage(), 'Bad response - HTTP Code:503'
+                $e->getMessage(),
+                'Bad response - HTTP Code:503'
             ) !== false
             ) {
                 $this->statHat->ezCount(
                     'mbc-user-import: MBC_UserImport_Consumer: Exception: Bad ' .
-                    'response - 503', 1
+                    'response - 503',
+                    1
                 );
                 $this->messageBroker->sendAck($this->message['payload']);
             } else {
@@ -179,7 +187,8 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
                 echo '- Error message: ' . $e->getMessage(), PHP_EOL;
                 $this->statHat->ezCount(
                     'mbc-user-import: MBC_UserImport_Consumer: Exception: ' .
-                    'deadLetter', 1
+                    'deadLetter',
+                    1
                 );
                 parent::deadLetter(
                     $this->message,
@@ -188,7 +197,6 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
                 );
                 $this->messageBroker->sendAck($this->message['payload']);
             }
-
         }
 
         // @todo: Throttle the number of consumers running. Based on the number of
@@ -287,5 +295,4 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
             echo 'xx Target property not found in message.', PHP_EOL;
         }
     }
-
 }
