@@ -30,7 +30,8 @@ use \Exception;
  * @author   DeeZone <dlee@dosomething.org>
  * @license  MIT: https://en.wikipedia.org/wiki/MIT_License
  * @version  "Release: <package_version>"
- * @link     https://github.com/DoSomething/mbc-user-import
+ * @link     https://github.com/DoSomething/mbc-user-import/blob/master/src
+ *           /MBC_UserImport_Source_Niche.php
  */
 class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
 {
