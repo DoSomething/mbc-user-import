@@ -1,6 +1,10 @@
 <?php
 /**
- * Key methods are required by the Consumer classes.
+ * A consumer application for a user import system. Various source types define
+ * specifics as to how the user data should be injested from CSV files. User data is
+ * distributed to other consumers in the Quicksilver system for further processing
+ * as well as triggering transactional messaging related to welcoming the user to
+ * DoSomething.org.
  *
  * PHP version 5
  *
@@ -19,8 +23,9 @@ use DoSomething\MB_Toolbox\MB_Toolbox;
 use DoSomething\MB_Toolbox\MB_Configuration;
 
 /**
- * MBC_UserAPICampaignActivity.class.in: Used to process the transactionalQueue
- * entries that match the campaign.*.* binding.
+ * Base abstract class for MBC_UserImport source classes to extend from. Extended
+ * classes must follow basic structure for consumer class to be able to process
+ * impost source data and perform logic specific to the source.
  *
  * @category PHP
  * @package  MBC_UserImport
