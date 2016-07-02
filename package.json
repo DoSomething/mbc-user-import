@@ -2,6 +2,13 @@
   "name": "mbc-user-import",
   "version": "0.0.1",
   "description": "Task running for mbc-user-import application to run validation tests in a watchful state.",
+  "engines": {
+    "node": ">=4.4.x"
+  },
+  "repository": "https://github.com/DoSomething/mbc-user-import",
+  "bugs": "https://github.com/DoSomething/mbc-user-import/issues",
+  "author": "Darren Douglas Lee <dlee@dosomething.org>",
+  "license": "MIT",
   "devDependencies": {
     "gulp": "^3.9.1",
     "gulp-phpunit": "^0.16.0",
