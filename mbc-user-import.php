@@ -36,7 +36,7 @@ define('QOS_SIZE', 1);
 require_once __DIR__ . '/vendor/autoload.php';
 
 // Load configuration settings specific to this application
-require_once $_configPath . '/mbc-user-import.config.inc';
+require_once __DIR__ . '/mbc-user-import.config.inc';
 
 // Kick off - block, wait for messages in queue
 echo '------- mbc-user-import START: ' . date('j D M Y G:i:s T') . ' -------', PHP_EOL;
