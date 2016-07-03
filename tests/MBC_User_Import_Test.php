@@ -22,7 +22,7 @@ class MBC_User_Import_Test extends \PHPUnit_Framework_TestCase
     {
         $_enviroment = 'test';
         $_configPath =  __DIR__ . '/../messagebroker-config';
-        require_once $_configPath . '/mbc-user-import.config.inc';
+        require_once __DIR__ . '/../mbc-user-import.config.inc';
 
         $this->_mbConfig = MB_Configuration::getInstance();
     }
