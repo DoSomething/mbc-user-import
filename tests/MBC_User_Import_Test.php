@@ -20,10 +20,9 @@ class MBC_User_Import_Test extends \PHPUnit_Framework_TestCase
      */
     public function setUp()
     {
-
-        define('CONFIG_PATH', __DIR__ . '/../messagebroker-config');
-        define('ENVIROMENT', 'test');
-        require_once __DIR__ . '/../mbc-user-import.config.inc';
+        $_enviroment = 'test';
+        $_configPath =  __DIR__ . '/../messagebroker-config';
+        require_once $_configPath . '/mbc-user-import.config.inc';
 
         $this->_mbConfig = MB_Configuration::getInstance();
     }
@@ -52,7 +51,14 @@ class MBC_User_Import_Test extends \PHPUnit_Framework_TestCase
      */
     public function testMBCUserImportConfigProperties()
     {
+        $statHat = $this->_mbConfig->getProperty('statHat');
+        $this->assertEquals(true, isset($statHat));
 
+        $rabbit_credentials = $this->_mbConfig->getProperty('rabbit_credentials');
+        $this->assertEquals(true, isset($rabbit_credentials));
+
+        $mbRabbitMQManagementAPI = $this->_mbConfig->getProperty('mbRabbitMQManagementAPI');
+        $this->assertEquals(true, isset($mbRabbitMQManagementAPI));
     }
 
     /**
