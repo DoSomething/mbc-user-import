@@ -93,5 +93,28 @@ class MBC_User_Import_Test extends \PHPUnit_Framework_TestCase
     public function testMBCUserImportConfigPropertyTypes()
     {
 
+        $statHat = $this->_mbConfig->getProperty('statHat');
+        $this->assertEquals(true, get_class($statHat) == 'DoSomething\StatHat\Client');
+        $mbRabbitMQManagementAPI = $this->_mbConfig->getProperty('mbRabbitMQManagementAPI');
+        $this->assertEquals(true, get_class($mbRabbitMQManagementAPI) == 'DoSomething\MB_Toolbox\MB_RabbitMQManagementAPI');
+        $mobileCommons = $this->_mbConfig->getProperty('mobileCommons');
+        $this->assertEquals(true, get_class($mobileCommons) == 'MobileCommons');
+        $mbToolbox = $this->_mbConfig->getProperty('mbToolbox');
+        $this->assertEquals(true, get_class($mbToolbox) == 'DoSomething\MB_Toolbox\MB_Toolbox');
+        $mbToolboxCURL = $this->_mbConfig->getProperty('mbToolboxCURL');
+        $this->assertEquals(true, get_class($mbToolboxCURL) == 'DoSomething\MB_Toolbox\MB_Toolbox_cURL');
+        $messageBroker = $this->_mbConfig->getProperty('messageBroker');
+        $this->assertEquals(true, get_class($messageBroker) == 'MessageBroker');
+        $messageBrokerTransactionals = $this->_mbConfig->getProperty('messageBrokerTransactionals');
+        $this->assertEquals(true, get_class($messageBrokerTransactionals) == 'MessageBroker');
+        $messageBrokerLogging = $this->_mbConfig->getProperty('messageBrokerLogging');
+        $this->assertEquals(true, get_class($messageBrokerLogging) == 'MessageBroker');
+        $messageBroker_deadLetter = $this->_mbConfig->getProperty('messageBroker_deadLetter');
+        $this->assertEquals(true, get_class($messageBroker_deadLetter) == 'MessageBroker');
+
+        // Each of the MailChimp accounts by country
+        foreach($this->_mbConfig->getProperty('mbcURMailChimp_Objects') as $country => $mbcURMailChimp_Object) {
+            $this->assertEquals(true, get_class($mbcURMailChimp_Object) == 'DoSomething\MB_Toolbox\MB_MailChimp');
+        }
     }
 }
