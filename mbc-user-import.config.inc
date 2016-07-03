@@ -12,7 +12,7 @@ use DoSomething\MB_Toolbox\MB_RabbitMQManagementAPI;
 
 // Load configuration settings common to the Message Broker system
 // symlinks in the project directory point to the actual location of the files
-require_once CONFIG_PATH . '/mb-secure-config.inc';
+require_once $_configPath . '/mb-secure-config.inc';
 
 define("ALLOWED_SOURCES", serialize([
   'Niche',
@@ -86,7 +86,7 @@ $mbConfig->setProperty('mbcURMailChimp_Objects', $mcObjects);
 $mbConfig->setProperty('mbToolbox', new MB_Toolbox());
 $mbConfig->setProperty('mbToolboxCURL', new MB_Toolbox_cURL());
 
-if (ENVIROMENT != 'test') {
+if ($_enviroment != 'test') {
 
   // Rabbit MQ connection to specific exchanges / queues
   $mbRabbitConfig = $mbConfig->constructRabbitConfig('directUserImport', ['userImportQueue']);

@@ -16,8 +16,16 @@
 use DoSomething\MBC_UserImport\MBC_UserImport_Consumer;
 
 date_default_timezone_set('America/New_York');
-define('CONFIG_PATH', __DIR__ . '/messagebroker-config');
-define('ENVIROMENT', 'production');
+$_configPath =  __DIR__ . '/messagebroker-config';
+
+// Manage $_enviroment setting
+if (isset($_GET['enviroment'])) {
+  $_enviroment = $_GET['enviroment'];
+} elseif (isset($argv[1])) {
+  $_enviroment = $argv[1];
+} else {
+  $_enviroment = 'local';
+}
 
 // The number of messages for the consumer to reserve with each callback
 // See consumeMwessage for further details.
@@ -28,7 +36,7 @@ define('QOS_SIZE', 1);
 require_once __DIR__ . '/vendor/autoload.php';
 
 // Load configuration settings specific to this application
-require_once __DIR__ . '/mbc-user-import.config.inc';
+require_once $_configPath . '/mbc-user-import.config.inc';
 
 // Kick off - block, wait for messages in queue
 echo '------- mbc-user-import START: ' . date('j D M Y G:i:s T') . ' -------', PHP_EOL;
