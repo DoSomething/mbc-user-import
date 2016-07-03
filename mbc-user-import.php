@@ -16,15 +16,15 @@
 use DoSomething\MBC_UserImport\MBC_UserImport_Consumer;
 
 date_default_timezone_set('America/New_York');
-$_configPath =  __DIR__ . '/messagebroker-config';
+define('CONFIG_PATH', __DIR__ . '/messagebroker-config');
 
 // Manage $_enviroment setting
-if (isset($_GET['enviroment'])) {
-  $_enviroment = $_GET['enviroment'];
-} elseif (isset($argv[1])) {
-  $_enviroment = $argv[1];
-} else {
-  $_enviroment = 'local';
+if (isset($_GET['enviroment']) && allowedEnvirment($_GET['enviroment'])) {
+  define('ENVIROMENT', $_GET['enviroment']);
+} elseif (isset($argv[1])&& allowedEnvirment($argv[1])) {
+  define('ENVIROMENT', $argv[1]);
+} elseif (allowedEnvirment('local')) {
+  define('ENVIROMENT', 'local');
 }
 
 // The number of messages for the consumer to reserve with each callback
@@ -43,3 +43,25 @@ echo '------- mbc-user-import START: ' . date('j D M Y G:i:s T') . ' -------', P
 $mb = $mbConfig->getProperty('messageBroker');
 $mb->consumeMessage([new MBC_UserImport_Consumer(), 'consumeUserImportQueue'], QOS_SIZE);
 echo '------- mbc-user-import END: ' . date('j D M Y G:i:s T') . ' -------', PHP_EOL;
+
+/**
+ * Test if enviroment setting is a supported value.
+ *
+ * @param string $setting Requested enviroment setting.
+ *
+ * @return boolean
+ */
+function allowEnviroment($setting) {
+
+  $allowedEnviroments = [
+    'local',
+    'dev',
+    'prod'
+  ];
+
+  if (in_array($setting, $allowedEnviroments)) {
+    return true;
+  }
+
+  return false;
+}
