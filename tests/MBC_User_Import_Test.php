@@ -7,6 +7,9 @@ namespace DoSomething\MBC_UserImport;
 
 use DoSomething\MB_Toolbox\MB_Configuration;
 
+define('CONFIG_PATH', __DIR__ . '/../messagebroker-config');
+define('ENVIROMENT', 'test');
+
 class MBC_User_Import_Test extends \PHPUnit_Framework_TestCase
 {
 
@@ -20,10 +23,7 @@ class MBC_User_Import_Test extends \PHPUnit_Framework_TestCase
      */
     public function setUp()
     {
-        $_enviroment = 'test';
-        $_configPath =  __DIR__ . '/../messagebroker-config';
         require_once __DIR__ . '/../mbc-user-import.config.inc';
-
         $this->_mbConfig = MB_Configuration::getInstance();
     }
 
@@ -52,13 +52,36 @@ class MBC_User_Import_Test extends \PHPUnit_Framework_TestCase
     public function testMBCUserImportConfigProperties()
     {
         $statHat = $this->_mbConfig->getProperty('statHat');
-        $this->assertEquals(true, isset($statHat));
-
+        $this->assertEquals(true, is_object($statHat));
         $rabbit_credentials = $this->_mbConfig->getProperty('rabbit_credentials');
-        $this->assertEquals(true, isset($rabbit_credentials));
-
+        $this->assertEquals(true, is_array($rabbit_credentials));
         $mbRabbitMQManagementAPI = $this->_mbConfig->getProperty('mbRabbitMQManagementAPI');
-        $this->assertEquals(true, isset($mbRabbitMQManagementAPI));
+        $this->assertEquals(true, is_object($mbRabbitMQManagementAPI));
+        $ds_drupal_api_config = $this->_mbConfig->getProperty('ds_drupal_api_config');
+        $this->assertEquals(true, is_array($ds_drupal_api_config));
+        $northstar_config = $this->_mbConfig->getProperty('northstar_config');
+        $this->assertEquals(true, is_array($northstar_config));
+        $mobileCommons = $this->_mbConfig->getProperty('mobileCommons');
+        $this->assertEquals(true, is_object($mobileCommons));
+        $mailchimpAPIkeys = $this->_mbConfig->getProperty('mailchimpAPIkeys');
+        $this->assertEquals(true, is_array($mailchimpAPIkeys));
+        $mbToolbox = $this->_mbConfig->getProperty('mbToolbox');
+        $this->assertEquals(true, is_object($mbToolbox));
+        $mbToolboxCURL = $this->_mbConfig->getProperty('mbToolboxCURL');
+        $this->assertEquals(true, is_object($mbToolboxCURL));
+        $messageBroker = $this->_mbConfig->getProperty('messageBroker');
+        // $this->assertEquals(true, is_object($messageBroker));
+        $messageBrokerTransactionals = $this->_mbConfig->getProperty('messageBrokerTransactionals');
+        // $this->assertEquals(true, is_object($messageBrokerTransactionals));
+        $messageBrokerLogging = $this->_mbConfig->getProperty('messageBrokerLogging');
+        // $this->assertEquals(true, is_object($messageBrokerLogging));
+        $messageBroker_deadLetter = $this->_mbConfig->getProperty('messageBroker_deadLetter');
+        // $this->assertEquals(true, is_object($messageBroker_deadLetter));
+
+        // Each of the MailChimp accounts by country
+        foreach($this->_mbConfig->getProperty('mbcURMailChimp_Objects') as $country => $mbcURMailChimp_Object) {
+            $this->assertEquals(true, is_object($mbcURMailChimp_Object));
+        }
     }
 
     /**
