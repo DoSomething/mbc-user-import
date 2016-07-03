@@ -16,6 +16,7 @@ var phplint = require('phplint').lint;
 var phpunit = require('gulp-phpunit');
 var phpcs   = require('gulp-phpcs');
 var notify  = require('gulp-notify');
+var shell   = require('gulp-shell');
 
 /**
  * phplint: http://www.icosaedro.it/phplint/
