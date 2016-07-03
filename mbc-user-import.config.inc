@@ -21,6 +21,9 @@ define("ALLOWED_SOURCES", serialize([
 
 $mbConfig = MB_Configuration::getInstance();
 
+// General Settings
+$mbConfig->setProperty('generalSettings', []);
+
 // StatHat
 $mbConfig->setProperty('statHat', new StatHat([
   'ez_key' => getenv("STATHAT_EZKEY"),
@@ -28,13 +31,13 @@ $mbConfig->setProperty('statHat', new StatHat([
 ]));
 
 // RabbitMQ
-$mbConfig->setProperty('rabbit_credentials', array(
+$mbConfig->setProperty('rabbit_credentials', [
   'host' =>  getenv("RABBITMQ_HOST"),
   'port' => getenv("RABBITMQ_PORT"),
   'username' => getenv("RABBITMQ_USERNAME"),
   'password' => getenv("RABBITMQ_PASSWORD"),
   'vhost' => getenv("RABBITMQ_VHOST"),
-));
+]);
 $mbConfig->setProperty('mbRabbitMQManagementAPI', new MB_RabbitMQManagementAPI([
   'domain' => getenv("MB_RABBITMQ_MANAGEMENT_API_HOST"),
   'port' => getenv('MB_RABBITMQ_MANAGEMENT_API_PORT'),
