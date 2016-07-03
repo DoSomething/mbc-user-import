@@ -12,7 +12,7 @@ use DoSomething\MB_Toolbox\MB_RabbitMQManagementAPI;
 
 // Load configuration settings common to the Message Broker system
 // symlinks in the project directory point to the actual location of the files
-require_once $_configPath . '/mb-secure-config.inc';
+require_once CONFIG_PATH . '/' . ENVIROMENT . '/mb-secure-config.inc';
 
 define("ALLOWED_SOURCES", serialize([
   'Niche',
@@ -86,19 +86,16 @@ $mbConfig->setProperty('mbcURMailChimp_Objects', $mcObjects);
 $mbConfig->setProperty('mbToolbox', new MB_Toolbox());
 $mbConfig->setProperty('mbToolboxCURL', new MB_Toolbox_cURL());
 
-if ($_enviroment != 'test') {
+// Rabbit MQ connection to specific exchanges / queues
+$mbRabbitConfig = $mbConfig->constructRabbitConfig('directUserImport', ['userImportQueue']);
+$rabbitCredentials = $mbConfig->getProperty('rabbit_credentials');
+$mbConfig->setProperty('messageBroker', new MessageBroker($rabbitCredentials, $mbRabbitConfig));
 
-  // Rabbit MQ connection to specific exchanges / queues
-  $mbRabbitConfig = $mbConfig->constructRabbitConfig('directUserImport', ['userImportQueue']);
-  $rabbitCredentials = $mbConfig->getProperty('rabbit_credentials');
-  $mbConfig->setProperty('messageBroker', new MessageBroker($rabbitCredentials, $mbRabbitConfig));
+$mbRabbitConfig = $mbConfig->constructRabbitConfig('transactionalExchange', ['transactionalQueue', 'userAPIRegistrationQueue', 'userRegistrationQueue', 'mobileCommonsQueue']);
+$mbConfig->setProperty('messageBrokerTransactionals', new MessageBroker($rabbitCredentials, $mbRabbitConfig));
 
-  $mbRabbitConfig = $mbConfig->constructRabbitConfig('transactionalExchange', ['transactionalQueue', 'userAPIRegistrationQueue', 'userRegistrationQueue', 'mobileCommonsQueue']);
-  $mbConfig->setProperty('messageBrokerTransactionals', new MessageBroker($rabbitCredentials, $mbRabbitConfig));
+$mbRabbitConfig = $mbConfig->constructRabbitConfig('directLoggingGateway', ['loggingGatewayQueue']);
+$mbConfig->setProperty('messageBrokerLogging', new MessageBroker($rabbitCredentials, $mbRabbitConfig));
 
-  $mbRabbitConfig = $mbConfig->constructRabbitConfig('directLoggingGateway', ['loggingGatewayQueue']);
-  $mbConfig->setProperty('messageBrokerLogging', new MessageBroker($rabbitCredentials, $mbRabbitConfig));
-
-  $mbRabbitConfig = $mbConfig->constructRabbitConfig('directDeadLetterExchange', ['deadLetterQueue']);
-  $mbConfig->setProperty('messageBroker_deadLetter', new MessageBroker($rabbitCredentials, $mbRabbitConfig));
-}
+$mbRabbitConfig = $mbConfig->constructRabbitConfig('directDeadLetterExchange', ['deadLetterQueue']);
+$mbConfig->setProperty('messageBroker_deadLetter', new MessageBroker($rabbitCredentials, $mbRabbitConfig));

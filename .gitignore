@@ -1,4 +1,5 @@
 # Ignore configuration files that may contain sensitive information.
+/mb-secure-config
 /messagebroker-config
 
 # Ignore composer working files

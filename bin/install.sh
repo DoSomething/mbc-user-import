@@ -4,7 +4,7 @@
 ##
 
 # Assume messagebroker-config repo is one directory up
-cd ../messagebroker-config
+cd ../mb-secure-config
 
 # Gather path from root
 MBCONFIG=`pwd`
