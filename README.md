@@ -67,10 +67,10 @@ or
 
 ### PHP CodeSniffer
 
-- `php ./vendor/bin/phpcs --standard=ruleset.xml --colors -s mbc-user-import.php mbc-user-import.config.inc src bin tests`
+- `php ./vendor/bin/phpcs --standard=./ruleset.xml --colors -s mbc-user-import.php mbc-user-import.config.inc src bin tests`
 Listing of all coding volations by file.
 
-- `php ./vendor/bin/phpcbf --standard=ruleset.xml --colors mbc-user-import.php mbc-user-import.config.inc src bin tests`
+- `php ./vendor/bin/phpcbf --standard=./ruleset.xml --colors mbc-user-import.php mbc-user-import.config.inc src bin tests`
 Automated processing of files to adjust to meeting coding standards.
 
 **References**:
