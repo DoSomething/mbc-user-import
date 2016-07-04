@@ -234,13 +234,16 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
      *
      * @param array $message The payload of the message being processed.
      *
-     * @return null
+     * @return array $this->user Used for test coverage.
      */
-    protected function setter($message)
+    public function setter($message)
     {
 
         unset($message['original']);
         $this->user = $message;
+
+        // For test coverage
+        return $this->user;
     }
 
     /**
@@ -252,7 +255,7 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
      *
      * @return string $sourceClass The name of the class to process the imported user values.
      */
-    protected function process($params)
+    public function process($params)
     {
 
         $sourceClass = __NAMESPACE__ . '\MBC_UserImport_Source_' . $params['source'];
@@ -262,6 +265,7 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
             $userImportProcessor->setter($params['user']);
             $userImportProcessor->process();
         }
+
         return $sourceClass;
     }
 
