@@ -56,7 +56,7 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
      *
      * @var array $_allowedSources
      */
-    private $_allowedSources;
+    private $allowedSources;
 
     /**
      * Settings common to consumer of user import data.
@@ -65,7 +65,7 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
     {
 
         parent::__construct();
-        $this->_allowedSources = unserialize(ALLOWED_SOURCES);
+        $this->allowedSources = unserialize(ALLOWED_SOURCES);
     }
 
     /**
@@ -225,7 +225,7 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
             throw new Exception('Source not defined');
         }
 
-        if (!(in_array($this->message['source'], $this->_allowedSources))) {
+        if (!(in_array($this->message['source'], $this->allowedSources))) {
             echo '- canProcess(), unsupported source: ' . $this->message['source'],
               PHP_EOL;
             throw new Exception('Unsupported source: '. $this->message['source']);
