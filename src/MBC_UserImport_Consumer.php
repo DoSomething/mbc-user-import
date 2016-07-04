@@ -78,17 +78,20 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
     public function consumeUserImportQueue($payload)
     {
 
-        echo '------ mbc-user-import - ' .
-          'MBC_UserImport_Consumer->consumeUserImportQueue() - ' .
+        echo '------ mbc-user-import - MBC_UserImport_Consumer->consumeUserImportQueue() - ' .
           date('j D M Y G:i:s T') . ' START ------', PHP_EOL . PHP_EOL;
 
         parent::consumeQueue($payload);
 
         try {
-            if ($this->canProcess()) {
+            if ($this->canProcess($this->message)) {
                 $this->logConsumption(['email', 'mobile']);
                 $this->setter($this->message);
-                $this->process();
+                $processParams = [
+                    'user'   => $this->user,
+                    'source' => $this->source
+                ];
+                $this->process($processParams);
                 $this->messageBroker->sendAck($this->message['payload']);
                 $this->statHat->ezCount(
                     'mbc-user-import: MBC_UserImport_Consumer: processed',
@@ -107,8 +110,7 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
                 echo '- Error message: ' . $e->getMessage() . ', retry in ' .
                   self::SLEEP . ' seconds.', PHP_EOL;
                 $this->statHat->ezCount(
-                    'mbc-user-import: MBC_UserImport_Consumer: Exception: ' .
-                    'Failed to generate password',
+                    'mbc-user-import: MBC_UserImport_Consumer: Exception: Failed to generate password',
                     1
                 );
                 sleep(self::SLEEP);
@@ -121,8 +123,7 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
                 echo '- Error message: ' . $e->getMessage() . ', retry in ' .
                   self::SLEEP . ' seconds.', PHP_EOL;
                 $this->statHat->ezCount(
-                    'mbc-user-import: MBC_UserImport_Consumer: Exception: ' .
-                    'Failed to create Drupal user',
+                    'mbc-user-import: MBC_UserImport_Consumer: Exception: Failed to create Drupal user',
                     1
                 );
                 sleep(self::SLEEP);
@@ -146,16 +147,14 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
                 echo '- Error message: ' . $e->getMessage() . ', retry in ' .
                   self::SLEEP . ' seconds.', PHP_EOL;
                 $this->statHat->ezCount(
-                    'mbc-user-import: MBC_UserImport_Consumer: Exception: Mobile ' .
-                    'Commons timeout',
+                    'mbc-user-import: MBC_UserImport_Consumer: Exception: Mobile Commons timeout',
                     1
                 );
                 sleep(self::SLEEP);
                 $this->messageBroker->sendNack($this->message['payload']);
             } elseif (strpos($e->getMessage(), 'is registered to User') !== false) {
                 $this->statHat->ezCount(
-                    'mbc-user-import: MBC_UserImport_Consumer: Exception: ' .
-                    'Existing mobile / new email',
+                    'mbc-user-import: MBC_UserImport_Consumer: Exception: Existing mobile / new email',
                     1
                 );
                 $this->messageBroker->sendAck($this->message['payload']);
@@ -165,8 +164,7 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
             ) !== false
             ) {
                 $this->statHat->ezCount(
-                    'mbc-user-import: MBC_UserImport_Consumer: Exception: ' .
-                    'Existing mobile / new email',
+                    'mbc-user-import: MBC_UserImport_Consumer: Exception: Existing mobile / new email',
                     1
                 );
                 $this->messageBroker->sendAck($this->message['payload']);
@@ -176,8 +174,7 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
             ) !== false
             ) {
                 $this->statHat->ezCount(
-                    'mbc-user-import: MBC_UserImport_Consumer: Exception: Bad ' .
-                    'response - 503',
+                    'mbc-user-import: MBC_UserImport_Consumer: Exception: Bad response - 503',
                     1
                 );
                 $this->messageBroker->sendAck($this->message['payload']);
@@ -186,8 +183,7 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
                   date('j D M Y G:i:s T'), PHP_EOL;
                 echo '- Error message: ' . $e->getMessage(), PHP_EOL;
                 $this->statHat->ezCount(
-                    'mbc-user-import: MBC_UserImport_Consumer: Exception: ' .
-                    'deadLetter',
+                    'mbc-user-import: MBC_UserImport_Consumer: Exception: deadLetter',
                     1
                 );
                 parent::deadLetter(
@@ -203,8 +199,7 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
         // messages waiting to be processed start / stop consumers. Make "reactive"!
         // $queueStatus = parent::queueStatus('userImportQueue');
 
-        echo '------ mbc-user-import - ' .
-          'MBC_UserImport_Consumer->consumeUserImportQueue() - ' .
+        echo '------ mbc-user-import - MBC_UserImport_Consumer->consumeUserImportQueue() - ' .
           date('j D M Y G:i:s T') . ' END ------', PHP_EOL . PHP_EOL;
 
     }
@@ -217,18 +212,18 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
      *
      * @return boolean
      */
-    protected function canProcess()
+    public function canProcess($message)
     {
 
-        if (empty($this->message['source'])) {
+        if (empty($message['source'])) {
             echo '- canProcess(), source not defined.', PHP_EOL;
             throw new Exception('Source not defined');
         }
 
-        if (!(in_array($this->message['source'], $this->allowedSources))) {
-            echo '- canProcess(), unsupported source: ' . $this->message['source'],
+        if (!(in_array($message['source'], $this->allowedSources))) {
+            echo '- canProcess(), unsupported source: ' . $message['source'],
               PHP_EOL;
-            throw new Exception('Unsupported source: '. $this->message['source']);
+            throw new Exception('Unsupported source: '. $message['source']);
         }
 
         return true;
@@ -252,19 +247,22 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
      * Process user import data based on values prepared in setter(). Processing
      * based on Source class selected by data source value.
      *
-     * @return null
+     * @param array $params Generic parameter for passing in all values used by method to perform logic that
+     *                      results in processing.
+     *
+     * @return string $sourceClass The name of the class to process the imported user values.
      */
-    protected function process()
+    protected function process($params)
     {
 
-        $sourceClass
-            = __NAMESPACE__ . '\MBC_UserImport_Source_' . $this->user['source'];
+        $sourceClass = __NAMESPACE__ . '\MBC_UserImport_Source_' . $params['source'];
         $userImportProcessor = new $sourceClass();
 
-        if ($userImportProcessor->canProcess($this->user)) {
-            $userImportProcessor->setter($this->user);
+        if ($userImportProcessor->canProcess($params['user'])) {
+            $userImportProcessor->setter($params['user']);
             $userImportProcessor->process();
         }
+        return $sourceClass;
     }
 
     /**
