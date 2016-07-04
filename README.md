@@ -54,17 +54,19 @@ mb-logging.
 
 **Run all tests**
 - `$ ./vendor/bin/phpunit --verbose tests`
+
 or
 - `$ npm test`
+
 or
-- `gulp test`
+- `$ gulp test`
 
 ### PHP CodeSniffer
 
-- `php ./vendor/bin/phpcs --colors src`
+- `php ./vendor/bin/phpcs --standard=ruleset.xml --colors -s mbc-user-import.php mbc-user-import.config.inc src bin tests`
 Listing of all coding volations by file.
 
-- `php ./vendor/bin/phpcbf --colors src`
+- `php ./vendor/bin/phpcbf --standard=ruleset.xml --colors mbc-user-import.php mbc-user-import.config.inc src bin tests`
 Automated processing of files to adjust to meeting coding standards.
 
 ### Watch Files
