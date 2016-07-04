@@ -20,11 +20,11 @@ define('CONFIG_PATH', __DIR__ . '/messagebroker-config');
 
 // Manage $_enviroment setting
 if (isset($_GET['enviroment']) && allowedEnvirment($_GET['enviroment'])) {
-  define('ENVIROMENT', $_GET['enviroment']);
+    define('ENVIROMENT', $_GET['enviroment']);
 } elseif (isset($argv[1])&& allowedEnvirment($argv[1])) {
-  define('ENVIROMENT', $argv[1]);
+    define('ENVIROMENT', $argv[1]);
 } elseif (allowedEnvirment('local')) {
-  define('ENVIROMENT', 'local');
+    define('ENVIROMENT', 'local');
 }
 
 // The number of messages for the consumer to reserve with each callback
@@ -51,17 +51,18 @@ echo '------- mbc-user-import END: ' . date('j D M Y G:i:s T') . ' -------', PHP
  *
  * @return boolean
  */
-function allowEnviroment($setting) {
+function allowEnviroment($setting)
+{
 
-  $allowedEnviroments = [
-    'local',
-    'dev',
-    'prod'
-  ];
+    $allowedEnviroments = [
+        'local',
+        'dev',
+        'prod'
+    ];
 
-  if (in_array($setting, $allowedEnviroments)) {
-    return true;
-  }
+    if (in_array($setting, $allowedEnviroments)) {
+        return true;
+    }
 
-  return false;
+    return false;
 }
