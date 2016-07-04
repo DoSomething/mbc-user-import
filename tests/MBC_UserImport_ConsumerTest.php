@@ -18,20 +18,21 @@ class MBC_UserImport_ConsumerTest extends \PHPUnit_Framework_TestCase
     {
         require_once __DIR__ . '/../mbc-user-import.config.inc';
         $this->mbcUserImportConsumer = new MBC_UserImport_Consumer();
+        $this->allowedSources = unserialize(ALLOWED_SOURCES);
     }
 
     /**
-     * .
+     * Ensure allow sources can process.
      *
      * @covers \DoSomething\MBC_UserImport\MBC_UserImport_Consumer::canProcess
      * @uses   \DoSomething\MBC_UserImport\MBC_UserImport_Consumer
      */
     public function testCanProcess()
     {
+        $message['source'] = 'Niche';
+        $this->assertEquals(true, $this->mbcUserImportConsumer->canProcess($message));
 
-        $this->_allowedSources = unserialize(ALLOWED_SOURCES);
-        $this->message['source'] = 'Niche';
-
-        // $this->assertEquals(true, $this->mbcUserImportConsumer->canProcess());
+        $message['source'] = 'AfterSchool';
+        $this->assertEquals(true, $this->mbcUserImportConsumer->canProcess($message));
     }
 }
