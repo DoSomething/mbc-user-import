@@ -70,7 +70,7 @@ class MBC_User_ImportTest extends \PHPUnit_Framework_TestCase
         $mbToolboxCURL = $this->mbConfig->getProperty('mbToolboxCURL');
         $this->assertEquals(true, is_object($mbToolboxCURL));
         $messageBroker = $this->mbConfig->getProperty('messageBroker');
-        $this->assertEquals(true, is_object($messageBroker));
+        $this->assertEquals(true, is_object($messageBroker), '*!* Check that RabbitMQ server is running. *!*');
         $messageBrokerTransactionals = $this->mbConfig->getProperty('messageBrokerTransactionals');
         $this->assertEquals(true, is_object($messageBrokerTransactionals));
         $messageBrokerLogging = $this->mbConfig->getProperty('messageBrokerLogging');
