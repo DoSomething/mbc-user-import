@@ -53,7 +53,7 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
     /**
      * Supported source values
      *
-     * @var array $_allowedSources
+     * @var array $allowedSources
      */
     private $allowedSources;
 
