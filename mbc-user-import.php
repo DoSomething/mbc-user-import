@@ -19,11 +19,11 @@ date_default_timezone_set('America/New_York');
 define('CONFIG_PATH', __DIR__ . '/messagebroker-config');
 
 // Manage $_enviroment setting
-if (isset($_GET['enviroment']) && allowedEnvirment($_GET['enviroment'])) {
+if (isset($_GET['enviroment']) && allowedEnviroment($_GET['enviroment'])) {
     define('ENVIROMENT', $_GET['enviroment']);
-} elseif (isset($argv[1])&& allowedEnvirment($argv[1])) {
+} elseif (isset($argv[1])&& allowedEnviroment($argv[1])) {
     define('ENVIROMENT', $argv[1]);
-} elseif (allowedEnvirment('local')) {
+} elseif (allowedEnviroment('local')) {
     define('ENVIROMENT', 'local');
 }
 
@@ -51,7 +51,7 @@ echo '------- mbc-user-import END: ' . date('j D M Y G:i:s T') . ' -------', PHP
  *
  * @return boolean
  */
-function allowEnviroment($setting)
+function allowedEnviroment($setting)
 {
 
     $allowedEnviroments = [
