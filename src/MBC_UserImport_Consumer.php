@@ -87,7 +87,7 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
                 $this->setter($this->message);
                 $processParams = [
                     'user'   => $this->user,
-                    'source' => $this->source
+                    'source' => $this->user['source']
                 ];
                 $this->process($processParams);
                 $this->messageBroker->sendAck($this->message['payload']);
