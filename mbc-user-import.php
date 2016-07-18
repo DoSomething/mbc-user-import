@@ -18,17 +18,18 @@ use DoSomething\MBC_UserImport\MBC_UserImport_Consumer;
 date_default_timezone_set('America/New_York');
 define('CONFIG_PATH', __DIR__ . '/messagebroker-config');
 
-// Manage $_enviroment setting
-if (isset($_GET['enviroment']) && allowedEnviroment($_GET['enviroment'])) {
-    define('ENVIROMENT', $_GET['enviroment']);
+// Manage enviroment setting
+if (isset($_GET['environment']) && allowedEnviroment($_GET['environment'])) {
+    define('ENVIRONMENT', $_GET['environment']);
 } elseif (isset($argv[1])&& allowedEnviroment($argv[1])) {
-    define('ENVIROMENT', $argv[1]);
+    define('ENVIRONMENT', $argv[1]);
+} elseif ($env = loadConfig()) {
+    echo 'environment.php exists, ENVIRONMENT defined as: ' . ENVIRONMENT, PHP_EOL;
 } elseif (allowedEnviroment('local')) {
-    define('ENVIROMENT', 'local');
+    define('ENVIRONMENT', 'local');
 }
 
 // The number of messages for the consumer to reserve with each callback
-// See consumeMwessage for further details.
 // Necessary for parallel processing when more than one consumer is running on the same queue.
 define('QOS_SIZE', 1);
 
@@ -65,4 +66,20 @@ function allowedEnviroment($setting)
     }
 
     return false;
+}
+
+/**
+ * Gather configuration settings for current application enviroment.
+ *
+ * @return boolean
+ */
+function loadConfig() {
+
+    // Check that environment config file exists
+    if (!file_exists (enviroment.php)) {
+        return false;
+    }
+    include('./environment.php');
+
+    return true;
 }
