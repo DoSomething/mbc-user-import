@@ -33,7 +33,7 @@ use \Exception;
  * @link     https://github.com/DoSomething/mbc-user-import/blob/master/src
  *           /MBC_UserImport_Source_AfterSchool.php
  */
-class MBC_UserImport_Source_MobileappAndroid extends MBC_UserImport_BaseSource
+class MBC_UserImport_Source_MobileappIos extends MBC_UserImport_BaseSource
 {
     
     /**
@@ -60,32 +60,21 @@ class MBC_UserImport_Source_MobileappAndroid extends MBC_UserImport_BaseSource
      */
     public function canProcess($message)
     {
-    
-        if (empty($message['mobile'])) {
-             echo '- canProcess(), mobile not set.', PHP_EOL;
-             parent::reportErrorPayload();
-             throw new Exception('canProcess(), mobile number not set.');
+
+        if (empty($message['email'])) {
+            echo '- canProcess(), email not set.', PHP_EOL;
+            parent::reportErrorPayload();
+            return false;
         }
 
-        // Validate phone number based on the North American Numbering Plan
-        // https://en.wikipedia.org/wiki/North_American_Numbering_Plan
-        $regex
-            = "/^(\d[\s-]?)?[\(\[\s-]{0,2}?\d{3}[\)\]\s-]{0,2}?\d{3}[\s-]?\d{4}$/i";
-        if (!(preg_match($regex, $message['mobile']))) {
-            echo '** canProcess(): Invalid phone number based on North American ' .
-              'Numbering Plan standard: ' .  $message['mobile'], PHP_EOL;
-            throw new Exception(
-                'canProcess(), Invalid phone number based on ' .
-                'North American Numbering Plan standard.'
-            );
+        if (filter_var($message['email'], FILTER_VALIDATE_EMAIL) === false) {
+            echo '- canProcess(), failed FILTER_VALIDATE_EMAIL: ' . $message['email'], PHP_EOL;
+            parent::reportErrorPayload();
+            throw new Exception('canProcess(), failed FILTER_VALIDATE_EMAIL: ' . $message['email']);
         }
 
-        if (isset($message['mobile']) && empty($message['mobile_opt_in_path_id'])) {
-            echo 'mobile_opt_in_path_id not set when mobile is set.', PHP_EOL;
-            throw new Exception(
-                'canProcess(), mobile_opt_in_path_id not set when ' .
-                'mobile is set.'
-            );
+        if (isset($message['email']) && empty($message['mailchimp_list_id'])) {
+            throw new Exception('mailchimp_list_id not set when email is set.');
         }
 
         return true;
@@ -101,27 +90,42 @@ class MBC_UserImport_Source_MobileappAndroid extends MBC_UserImport_BaseSource
      */
     public function setter($message)
     {
-    
-        $this->importUser['email'] = $message['email'];
+
+        $this->importUser['email'] = filter_var($message['email'], FILTER_VALIDATE_EMAIL);
         $this->importUser['mailchimp_list_id'] = $message['mailchimp_list_id'];
-        
+        $this->importUser['application_id'] = $message['application_id'];
+        $this->importUser['id'] = $message['id'];
+        $this->importUser['uid'] = $message['drupal_uid'];
+        $this->importUser['transactionals'] = 0;
+
         if (isset($message['source'])) {
-            $this->importUser['user_registration_source'] = $message['source'];
+            $this->importUser['source'] = $message['source'];
         } else {
-            $this->importUser['user_registration_source'] = 'MobileApp-IOS';
+            $this->importUser['source'] = 'mobileapp_ios';
         }
+        $this->importUser['activity'] = $message['activity'];
         if (isset($message['activity_timestamp'])) {
             $this->importUser['activity_timestamp'] = $message['activity_timestamp'];
         }
-        
+
         if (isset($message['mobile'])) {
             $this->importUser['mobile'] = $message['mobile'];
         }
 
         if (isset($message['first_name'])) {
             $this->importUser['first_name'] = $message['first_name'];
+            $this->importUser['merge_vars']['FNAME'] = $message['first_name'];
         }
-        
+        if (isset($message['birthdate'])) {
+            $birthdate = date_create($message['birthdate']);
+            $this->importUser['birthdate_timestamp'] = date_timestamp_get($birthdate);
+        }
+        if (isset($message['user_country'])) {
+            $this->importUser['user_country'] = $message['user_country'];
+        }
+        if (isset($message['user_language'])) {
+            $this->importUser['user_language'] = $message['user_language'];
+        }
     }
 
     /**
@@ -132,14 +136,10 @@ class MBC_UserImport_Source_MobileappAndroid extends MBC_UserImport_BaseSource
     public function process()
     {
 
-        $payload = $this->addCommonPayload($this->importUser);
-        $existing['log-type'] = 'user-import-mobileapp-ios';
-        $existing['source'] = $payload['source'];
-
         // @todo: transition to using JSON formatted messages when all of the
         // consumers are able to detect the message format and process either
         // seralized or JSON.
-        $message = serialize($payload);
+        $message = serialize($this->importUser);
         $this->messageBroker_transactionals->publish(
             $message,
             'user.registration.mobile'
@@ -151,21 +151,17 @@ class MBC_UserImport_Source_MobileappAndroid extends MBC_UserImport_BaseSource
     }
 
     /**
+     * NOT USED as Mobile Application as Source
      * Add common settings to message payload based on After School user imports
      * requirments.
      *
-     * @param array $user Current user data values.
+     * @param array $userSettings Current user data values.
      *
      * @return array $payload Update payload values formatted for distribution to
      * consumers in the Message Broker system.
      */
-    public function addCommonPayload($user)
+    public function addCommonPayload($userSettings)
     {
-
-        $payload['activity'] = 'user_welcome-mobileapp-ios';
-        $payload['source'] = 'mobileapp-ios';
-
-        return $payload;
     }
 
     /**
@@ -191,7 +187,6 @@ class MBC_UserImport_Source_MobileappAndroid extends MBC_UserImport_BaseSource
      */
     public function addEmailSubscriptionSettings($user, &$payload)
     {
-
     }
 
     /**
