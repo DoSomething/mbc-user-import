@@ -215,8 +215,7 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
             throw new Exception('Source not defined');
         }
 
-        $source = $this->normalizeSource($message['source']);
-        if (!(in_array($source, $this->allowedSources))) {
+        if (!(in_array($message['source'], $this->allowedSources))) {
             echo '- canProcess(), unsupported source: ' . $message['source'],
             PHP_EOL;
             throw new Exception('Unsupported source: '. $message['source']);
@@ -253,8 +252,8 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
      */
     public function process($params)
     {
-
-        $sourceClass = __NAMESPACE__ . '\MBC_UserImport_Source_' . $params['source'];
+        $source = $this->normalizeSource($params['source']);
+        $sourceClass = __NAMESPACE__ . '\MBC_UserImport_Source_' . $source;
         $userImportProcessor = new $sourceClass();
         if (isset($params['user']) && $userImportProcessor->canProcess($params['user'])) {
             $userImportProcessor->setter($params['user']);
