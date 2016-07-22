@@ -198,6 +198,7 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
         echo '------ mbc-user-import - MBC_UserImport_Consumer->consumeUserImportQueue() - ' .
             date('j D M Y G:i:s T') . ' END ------', PHP_EOL . PHP_EOL;
     }
+
     /**
      * Determine if message can / should be processed. Conditions based on minimum
      * message content requirements.
@@ -213,6 +214,7 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
             echo '- canProcess(), source not defined.', PHP_EOL;
             throw new Exception('Source not defined');
         }
+
         if (!(in_array($message['source'], $this->allowedSources))) {
             echo '- canProcess(), unsupported source: ' . $message['source'],
             PHP_EOL;
@@ -221,6 +223,7 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
 
         return true;
     }
+
     /**
      * Sets values for processing based on contents of message from consumed queue.
      *
@@ -237,6 +240,7 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
         // For test coverage
         return $this->user;
     }
+
     /**
      * Process user import data based on values prepared in setter(). Processing
      * based on Source class selected by data source value.
@@ -248,8 +252,8 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
      */
     public function process($params)
     {
-
-        $sourceClass = __NAMESPACE__ . '\MBC_UserImport_Source_' . $params['source'];
+        $source = $this->normalizeSource($params['source']);
+        $sourceClass = __NAMESPACE__ . '\MBC_UserImport_Source_' . $source;
         $userImportProcessor = new $sourceClass();
         if (isset($params['user']) && $userImportProcessor->canProcess($params['user'])) {
             $userImportProcessor->setter($params['user']);
@@ -258,6 +262,26 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
 
         return $sourceClass;
     }
+
+    /**
+     * Process source value to normalized value that can be used as part of class name.
+     *
+     * @param string $source Current source value.
+     *
+     * @return string
+     */
+    private function normalizeSource($source) {
+
+        $sourceNames = explode('_', $source);
+        $classWords = [];
+        foreach($sourceNames as $name) {
+            $classWords[] = ucfirst($name);
+        }
+        $source = implode('', $classWords);
+
+        return $source;
+    }
+
     /**
      * Extended to log the status of processing a specific message
      * elements - email and mobile.

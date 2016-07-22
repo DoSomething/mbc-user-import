@@ -19,13 +19,13 @@ date_default_timezone_set('America/New_York');
 define('CONFIG_PATH', __DIR__ . '/messagebroker-config');
 
 // Manage enviroment setting
-if (isset($_GET['environment']) && allowedEnviroment($_GET['environment'])) {
+if (isset($_GET['environment']) && allowedEnvironment($_GET['environment'])) {
     define('ENVIRONMENT', $_GET['environment']);
-} elseif (isset($argv[1])&& allowedEnviroment($argv[1])) {
+} elseif (isset($argv[1])&& allowedEnvironment($argv[1])) {
     define('ENVIRONMENT', $argv[1]);
 } elseif ($env = loadConfig()) {
     echo 'environment.php exists, ENVIRONMENT defined as: ' . ENVIRONMENT, PHP_EOL;
-} elseif (allowedEnviroment('local')) {
+} elseif (allowedEnvironment('local')) {
     define('ENVIRONMENT', 'local');
 }
 
@@ -46,22 +46,22 @@ $mb->consumeMessage([new MBC_UserImport_Consumer(), 'consumeUserImportQueue'], Q
 echo '------- mbc-user-import END: ' . date('j D M Y G:i:s T') . ' -------', PHP_EOL;
 
 /**
- * Test if enviroment setting is a supported value.
+ * Test if environment setting is a supported value.
  *
- * @param string $setting Requested enviroment setting.
+ * @param string $setting Requested environment setting.
  *
  * @return boolean
  */
-function allowedEnviroment($setting)
+function allowedEnvironment($setting)
 {
 
-    $allowedEnviroments = [
+    $allowedEnvironments = [
         'local',
         'dev',
         'prod'
     ];
 
-    if (in_array($setting, $allowedEnviroments)) {
+    if (in_array($setting, $allowedEnvironments)) {
         return true;
     }
 
@@ -69,14 +69,14 @@ function allowedEnviroment($setting)
 }
 
 /**
- * Gather configuration settings for current application enviroment.
+ * Gather configuration settings for current application environment.
  *
  * @return boolean
  */
 function loadConfig() {
 
     // Check that environment config file exists
-    if (!file_exists (enviroment.php)) {
+    if (!file_exists (environment.php)) {
         return false;
     }
     include('./environment.php');
