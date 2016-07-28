@@ -1,10 +1,10 @@
 <?php
 /**
  * A consumer application for a user import system. Various source types define
- * specifics as to how the user data should be injested from CSV files. User data is
- * distributed to other consumers in the Quicksilver system for further processing
- * as well as triggering transactional messaging related to welcoming the user to
- * DoSomething.org.
+ * specifics as to how the user data should be injested from various sources including
+ * CSV files or services. User data is distributed to other consumers in the Quicksilver
+ * system for further processing as well as triggering transactional messaging related to
+ * welcoming the user to DoSomething.org.
  *
  * PHP version 5
  *
@@ -44,7 +44,7 @@ class MBC_UserImport_Source_MobileappAndroid extends MBC_UserImport_BaseSource
     {
         
         parent::__construct();
-        $this->sourceName = 'MobileApp_IOS';
+        $this->sourceName = 'MobileApp_Andriod';
         $this->mbcUserImportToolbox = new MBC_UserImport_Toolbox();
     }
 
@@ -151,7 +151,7 @@ class MBC_UserImport_Source_MobileappAndroid extends MBC_UserImport_BaseSource
     }
 
 /**
- * NOT USED as Mobile Application as Source
+ * NOT USED as Mobile Application - Andriod as Source
  * Add common settings to message payload based on After School user imports
  * requirments.
  *
@@ -160,12 +160,12 @@ class MBC_UserImport_Source_MobileappAndroid extends MBC_UserImport_BaseSource
  * @return array $payload Update payload values formatted for distribution to
  * consumers in the Message Broker system.
  */
-public function addCommonPayload($userSettings)
-{
-}
+    public function addCommonPayload($userSettings)
+    {
+    }
 
 /**
- * NOT USED as Mobile Application as Source
+ * NOT USED as Mobile Application - Andriod as Source
  * Settings specific to welcome email messages
  *
  * @param array $user    Setting specific to the user being imported.
@@ -173,11 +173,12 @@ public function addCommonPayload($userSettings)
  *
  * @return array &$payload Adjust based on email and user settings.
  */
-public function addWelcomeEmailSettings($user, &$payload)
-{
-}
+    public function addWelcomeEmailSettings($user, &$payload)
+    {
+    }
 
 /**
+ * NOT USED as Mobile Application - Andriod as Source
  * Settings specific to email subscriptions (MailChimp lists).
  *
  * @param array $user    Setting specific to the user being imported.
@@ -185,13 +186,12 @@ public function addWelcomeEmailSettings($user, &$payload)
  *
  * @return array &$payload Adjusted based on email and user settings.
  */
-public function addEmailSubscriptionSettings($user, &$payload)
-{
-    
-}
+    public function addEmailSubscriptionSettings($user, &$payload)
+    {
+    }
 
 /**
- * NOT USED as Mobile Application as Source
+ * NOT USED as Mobile Application - Andriod as Source
  * Add settings to message payload that are specific to SMS.
  *
  * @param array $user    Settings specific to the user data being imported.
@@ -199,7 +199,7 @@ public function addEmailSubscriptionSettings($user, &$payload)
  *
  * @return array &$payload Values formatted for submission to SMS API.
  */
-public function addWelcomeSMSSettings($user, &$payload)
-{
-}
+    public function addWelcomeSMSSettings($user, &$payload)
+    {
+    }
 }

@@ -73,10 +73,11 @@ function allowedEnvironment($setting)
  *
  * @return boolean
  */
-function loadConfig() {
+function loadConfig()
+{
 
     // Check that environment config file exists
-    if (!file_exists (environment.php)) {
+    if (!file_exists(environment.php)) {
         return false;
     }
     include('./environment.php');

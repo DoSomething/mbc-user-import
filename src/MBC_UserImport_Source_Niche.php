@@ -1,10 +1,10 @@
 <?php
 /**
  * A consumer application for a user import system. Various source types define
- * specifics as to how the user data should be injested from CSV files. User data is
- * distributed to other consumers in the Quicksilver system for further processing
- * as well as triggering transactional messaging related to welcoming the user to
- * DoSomething.org.
+ * specifics as to how the user data should be injested from various sources including
+ * CSV files or services. User data is distributed to other consumers in the Quicksilver
+ * system for further processing as well as triggering transactional messaging related to
+ * welcoming the user to DoSomething.org.
  *
  * PHP version 5
  *
@@ -38,8 +38,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
 
     const WELCOME_EMAIL_NEW_NEW = 'mb-niche-welcome_new-new_v1-1-1';
     const WELCOME_EMAIL_EXISTING_NEW = 'mb-niche-welcome_existing-new_v1-1-0';
-    const WELCOME_EMAIL_EXISTING_EXISTING
-        = 'mb-niche-welcome_existing-existing_v1-1-0';
+    const WELCOME_EMAIL_EXISTING_EXISTING = 'mb-niche-welcome_existing-existing_v1-1-0';
     const MOBILE_COMMONS_SIGNUP = 207601; // Shower Song
     const PHOENIX_SIGNUP = 3590; // Shower Song
 
@@ -239,7 +238,6 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
         if (!empty($message['role'])) {
             $this->importUser['role'] = $message['role'];
         }
-
     }
 
     /**
@@ -414,7 +412,6 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
      */
     public function sendPasswordResetEmail()
     {
-
     }
 
     /**

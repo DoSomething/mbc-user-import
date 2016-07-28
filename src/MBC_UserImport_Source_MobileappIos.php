@@ -1,10 +1,10 @@
 <?php
 /**
  * A consumer application for a user import system. Various source types define
- * specifics as to how the user data should be injested from CSV files. User data is
- * distributed to other consumers in the Quicksilver system for further processing
- * as well as triggering transactional messaging related to welcoming the user to
- * DoSomething.org.
+ * specifics as to how the user data should be injested from various sources including
+ * CSV files or services. User data is distributed to other consumers in the Quicksilver
+ * system for further processing as well as triggering transactional messaging related to
+ * welcoming the user to DoSomething.org.
  *
  * PHP version 5
  *
@@ -44,7 +44,7 @@ class MBC_UserImport_Source_MobileappIos extends MBC_UserImport_BaseSource
     {
         
         parent::__construct();
-        $this->sourceName = 'MobileApp_Android';
+        $this->sourceName = 'MobileApp_IOS';
         $this->mbcUserImportToolbox = new MBC_UserImport_Toolbox();
     }
 

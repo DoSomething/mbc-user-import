@@ -1,0 +1,14 @@
+####Getting Started
+
+- ./vendor/bin/phpunit --version
+- ./vendor/bin/phpunit - ./vendor/bin/phpunit --verbose tests
+- ./vendor/bin/phpunit --verbose --bootstrap vendor/autoload.php tests
+  - uses settings in phpunit.xml (https://phpunit.de/manual/current/en/organizing-tests.html#organizing-tests.xml-configuration)
+
+- phpunit [options] <directory>
+- Put tests in `/tests`
+- Name test files `*Test.php`
+
+####Links
+- https://jtreminio.com/2013/03/unit-testing-tutorial-introduction-to-phpunit/
+

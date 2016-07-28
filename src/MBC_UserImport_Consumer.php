@@ -105,21 +105,15 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
             }
         } catch (Exception $e) {
             if (strpos($e->getMessage(), 'Failed to generate password') !== false) {
-                echo '- Error message: ' . $e->getMessage() . ', retry in ' .
-                    self::SLEEP . ' seconds.', PHP_EOL;
+                echo '- Error message: ' . $e->getMessage() . ', retry in ' . self::SLEEP . ' seconds.', PHP_EOL;
                 $this->statHat->ezCount(
                     'mbc-user-import: MBC_UserImport_Consumer: Exception: Failed to generate password',
                     1
                 );
                 sleep(self::SLEEP);
                 $this->messageBroker->sendNack($this->message['payload']);
-            } elseif (strpos(
-                $e->getMessage(),
-                'Failed to create Drupal user'
-            ) !== false
-            ) {
-                echo '- Error message: ' . $e->getMessage() . ', retry in ' .
-                    self::SLEEP . ' seconds.', PHP_EOL;
+            } elseif (strpos($e->getMessage(), 'Failed to create Drupal user') !== false) {
+                echo '- Error message: ' . $e->getMessage() . ', retry in ' . self::SLEEP . ' seconds.', PHP_EOL;
                 $this->statHat->ezCount(
                     'mbc-user-import: MBC_UserImport_Consumer: Exception: Failed to create Drupal user',
                     1
@@ -141,8 +135,7 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
                 sleep(self::SLEEP);
                 $this->messageBroker->sendNack($this->message['payload']);
             } elseif (strpos($e->getMessage(), 'Connection timed out') !== false) {
-                echo '- Error message: ' . $e->getMessage() . ', retry in ' .
-                    self::SLEEP . ' seconds.', PHP_EOL;
+                echo '- Error message: ' . $e->getMessage() . ', retry in ' . self::SLEEP . ' seconds.', PHP_EOL;
                 $this->statHat->ezCount(
                     'mbc-user-import: MBC_UserImport_Consumer: Exception: Mobile Commons timeout',
                     1
@@ -155,29 +148,20 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
                     1
                 );
                 $this->messageBroker->sendAck($this->message['payload']);
-            } elseif (strpos(
-                $e->getMessage(),
-                'is not a valid phone number'
-            ) !== false
-            ) {
+            } elseif (strpos($e->getMessage(), 'is not a valid phone number') !== false) {
                 $this->statHat->ezCount(
                     'mbc-user-import: MBC_UserImport_Consumer: Exception: Existing mobile / new email',
                     1
                 );
                 $this->messageBroker->sendAck($this->message['payload']);
-            } elseif (strpos(
-                $e->getMessage(),
-                'Bad response - HTTP Code:503'
-            ) !== false
-            ) {
+            } elseif (strpos($e->getMessage(), 'Bad response - HTTP Code:503') !== false) {
                 $this->statHat->ezCount(
                     'mbc-user-import: MBC_UserImport_Consumer: Exception: Bad response - 503',
                     1
                 );
                 $this->messageBroker->sendAck($this->message['payload']);
             } else {
-                echo '- Error processing message, send to deadLetterQueue: ' .
-                    date('j D M Y G:i:s T'), PHP_EOL;
+                echo '- Error processing message, send to deadLetterQueue: ' . date('j D M Y G:i:s T'), PHP_EOL;
                 echo '- Error message: ' . $e->getMessage(), PHP_EOL;
                 $this->statHat->ezCount(
                     'mbc-user-import: MBC_UserImport_Consumer: Exception: deadLetter',
@@ -216,8 +200,7 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
         }
 
         if (!(in_array($message['source'], $this->allowedSources))) {
-            echo '- canProcess(), unsupported source: ' . $message['source'],
-            PHP_EOL;
+            echo '- canProcess(), unsupported source: ' . $message['source'], PHP_EOL;
             throw new Exception('Unsupported source: '. $message['source']);
         }
 
@@ -270,11 +253,12 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
      *
      * @return string
      */
-    private function normalizeSource($source) {
+    private function normalizeSource($source)
+    {
 
         $sourceNames = explode('_', $source);
         $classWords = [];
-        foreach($sourceNames as $name) {
+        foreach ($sourceNames as $name) {
             $classWords[] = ucfirst($name);
         }
         $source = implode('', $classWords);
