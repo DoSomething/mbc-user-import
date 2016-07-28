@@ -42,7 +42,7 @@ require_once __DIR__ . '/mbc-user-import.config.inc';
 // Kick off - block, wait for messages in queue
 echo '------- mbc-user-import START: ' . date('j D M Y G:i:s T') . ' -------', PHP_EOL;
 $mb = $mbConfig->getProperty('messageBroker');
-$mb->consumeMessage([new MBC_UserImport_Consumer(), 'consumeUserImportQueue'], QOS_SIZE);
+$mb->consume([new MBC_UserImport_Consumer(), 'consumeUserImportQueue'], QOS_SIZE);
 echo '------- mbc-user-import END: ' . date('j D M Y G:i:s T') . ' -------', PHP_EOL;
 
 /**
