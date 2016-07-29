@@ -4,6 +4,9 @@
  */
 namespace DoSomething\MBC_UserImport;
 
+use DoSomething\MessageBroker\MessageBroker;
+use DoSomething\MB_Toolbox\MB_Configuration;
+
 class MBC_UserImport_ConsumerTest extends \PHPUnit_Framework_TestCase
 {
 

@@ -5,10 +5,8 @@
  */
 namespace DoSomething\MBC_UserImport;
 
+use DoSomething\MessageBroker\MessageBroker;
 use DoSomething\MB_Toolbox\MB_Configuration;
-
-define('ENVIROMENT', 'local');
-define('CONFIG_PATH', __DIR__ . '/../messagebroker-config');
 
 class MBC_User_ImportTest extends \PHPUnit_Framework_TestCase
 {
@@ -108,13 +106,13 @@ class MBC_User_ImportTest extends \PHPUnit_Framework_TestCase
         $mbToolboxCURL = $this->mbConfig->getProperty('mbToolboxCURL');
         $this->assertEquals(true, get_class($mbToolboxCURL) == 'DoSomething\MB_Toolbox\MB_Toolbox_cURL');
         $messageBroker = $this->mbConfig->getProperty('messageBroker');
-        $this->assertEquals(true, get_class($messageBroker) == 'MessageBroker');
+        $this->assertEquals(true, get_class($messageBroker) == 'DoSomething\MessageBroker\MessageBroker');
         $messageBrokerTransactionals = $this->mbConfig->getProperty('messageBrokerTransactionals');
-        $this->assertEquals(true, get_class($messageBrokerTransactionals) == 'MessageBroker');
+        $this->assertEquals(true, get_class($messageBrokerTransactionals) == 'DoSomething\MessageBroker\MessageBroker');
         $messageBrokerLogging = $this->mbConfig->getProperty('messageBrokerLogging');
-        $this->assertEquals(true, get_class($messageBrokerLogging) == 'MessageBroker');
+        $this->assertEquals(true, get_class($messageBrokerLogging) == 'DoSomething\MessageBroker\MessageBroker');
         $messageBroker_deadLetter = $this->mbConfig->getProperty('messageBroker_deadLetter');
-        $this->assertEquals(true, get_class($messageBroker_deadLetter) == 'MessageBroker');
+        $this->assertEquals(true, get_class($messageBroker_deadLetter) == 'DoSomething\MessageBroker\MessageBroker');
 
         // Each of the MailChimp accounts by country
         foreach ($this->mbConfig->getProperty('mbcURMailChimp_Objects') as $country => $mbcURMailChimp_Object) {

@@ -5,6 +5,12 @@
 
 namespace DoSomething\MBC_UserImport;
 
+use DoSomething\MessageBroker\MessageBroker;
+use DoSomething\MB_Toolbox\MB_Configuration;
+
+define('ENVIRONMENT', 'local');
+define('CONFIG_PATH', __DIR__ . '/../messagebroker-config');
+
 /**
  * Class ExceptionTest
  *

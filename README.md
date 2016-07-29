@@ -54,6 +54,14 @@ mb-logging.
 
 - `$ composer update`
 
+###Gulp Support
+Use a path directly to gulp `./node_modules/.bin/gulp` or add an alias to your system config (`.bash_profile`) as `alias gulp='./node_modules/.bin/gulp'`
+
+See `gulpfile.js` for configuration and combinations of tasks.
+
+####Linting
+- `gulp lint`
+
 ### Test Coverage
 
 **Run all tests**
