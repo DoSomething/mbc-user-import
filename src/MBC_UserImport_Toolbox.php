@@ -255,16 +255,13 @@ class MBC_UserImport_Toolbox
     public function logExisting($existing, $importUser)
     {
     
-        if (isset($existing['email'])
-            || isset($existing['drupal-uid'])
-            || isset($existing['mobile'])
-        ) {
+        if (isset($existing['email']) || isset($existing['drupal-uid']) || isset($existing['mobile'])) {
             $existing['origin'] = [
             'name' => $importUser['origin'],
             'processed' => time()
             ];
             $payload = serialize($existing);
-            $this->mbLogging->publishMessage($payload);
+            $this->mbLogging->publish($payload);
             $this->statHat->ezCount(
                 'mbc-user-import: MBC_UserImport_Toolbox: logExisting',
                 1

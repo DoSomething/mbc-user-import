@@ -28,9 +28,10 @@ through email and Slack.
 ## mbc-user-import
 
 A consumer for the userImport queue that will be used to import
-user accounts via inpoort SCV files. Detection of the source is within
-the message payloads. Based on the user data and the source activities
-are processed:
+user accounts via inpoort SCV files or byrequests to Northstar. Detection 
+of the source is within the message payloads. Based on the user data and 
+the source activities cobinations of the following are processed by sending 
+messages to other consumers responsible for each task:
 
 - Drupal user creation
 - Mobile Commons submission
@@ -62,7 +63,7 @@ See `gulpfile.js` for configuration and combinations of tasks.
 ####Linting
 - `gulp lint`
 
-### Test Coverage
+### Test Coverage (PHP Unit)
 
 **Run all tests**
 - `$ ./vendor/bin/phpunit --verbose tests`
@@ -73,7 +74,7 @@ or
 or
 - `$ gulp test`
 
-### PHP CodeSniffer
+### PHP CodeSniffer (Lint)
 
 - `php ./vendor/bin/phpcs --standard=./ruleset.xml --colors -s mbc-user-import.php mbc-user-import.config.inc src bin tests`
 Listing of all coding volations by file.
