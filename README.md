@@ -94,3 +94,11 @@ Annotated ruleset.xml
 Runs PHPUnit tests and basic PHP Lint in a watchful state.
 
 - `gulp`
+
+###From Command Line
+
+**mbp-user-import.php**
+
+`$ php mbc-user-import.php <enviroment>`
+
+- Enviroment: <test | dev | prod>
