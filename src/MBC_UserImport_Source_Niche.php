@@ -15,7 +15,7 @@
  * @version  GIT: <git_id>
  * @link     https://github.com/DoSomething/mbc-user-import
  */
- 
+
 namespace DoSomething\MBC_UserImport;
 
 use DoSomething\MBC_UserImport\MBC_UserImport_BaseSource;
@@ -65,7 +65,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
      */
     public function canProcess($message)
     {
-    
+
         if (empty($message['email'])) {
             echo '- canProcess(), email not set.', PHP_EOL;
             parent::reportErrorPayload();
@@ -255,7 +255,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
 
         // Add welcome email details to payload
         $this->addWelcomeEmailSettings($this->importUser, $payload);
-    
+
         // Check for existing email account in MailChimp
         $this->mbcUserImportToolbox->checkExistingEmail(
             $this->importUser,
@@ -264,15 +264,17 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
         if (empty($existing['email'])) {
             $this->addEmailSubscriptionSettings($this->importUser, $payload);
         }
-    
+
         // Drupal user
         $this->mbcUserImportToolbox->checkExistingDrupal(
             $this->importUser,
             $existing
         );
         if (empty($existing['drupal-uid'])) {
-            $northstarUser
-                = $this->mbToolbox->createNorthstarUser((object) $this->importUser);
+            $importUser = (object) $this->importUser;
+            // Set user registration source.
+            $importUser->source = 'niche';
+            $northstarUser = $this->mbToolbox->createNorthstarUser($importUser);
 
             $this->addImportUserInfo($northstarUser->data);
             $drupalUID = $northstarUser->data->drupal_id;
@@ -309,7 +311,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
 
         // Check for existing user account in Mobile Commons
         $this->mbcUserImportToolbox->checkExistingSMS($this->importUser, $existing);
-    
+
         // Add SMS welcome details to payload - all users should be attempted to be
         // added to MOBILE_COMMONS_SIGNUP opt_id
         $this->addWelcomeSMSSettings($this->importUser, $payload);
