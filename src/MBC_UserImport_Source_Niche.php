@@ -36,17 +36,17 @@ use \Exception;
 class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
 {
     // Mandrill email templates.
-    const WELCOME_EMAIL_NEW_NEW = 'mb-niche-welcome_new-new_v1-2-0';
-    const WELCOME_EMAIL_EXISTING_NEW = 'mb-niche-welcome_existing-new_v1-2-0';
-    const WELCOME_EMAIL_EXISTING_EXISTING = 'mb-niche-welcome_existing-existing_v1-2-0';
+    const WELCOME_EMAIL_NEW_NEW = 'mb-niche-welcome_new-new_v1-2-1';
+    const WELCOME_EMAIL_EXISTING_NEW = 'mb-niche-welcome_existing-new_v1-2-1';
+    const WELCOME_EMAIL_EXISTING_EXISTING = 'mb-niche-welcome_existing-existing_v1-2-1';
 
-    // Game-WinningDrive2016
-    // https://secure.mcommons.com/campaigns/146599/opt_in_paths/213831
-    const MOBILE_COMMONS_SIGNUP = 213831;
+    // ElephantTuskForce_Sep_2016
+    // https://secure.mcommons.com/campaigns/147573/opt_in_paths/215113
+    const MOBILE_COMMONS_SIGNUP = 215113;
 
-    // Game-Winning Drive
-    // https://www.dosomething.org/us/campaigns/game-winning-drive
-    const PHOENIX_SIGNUP = 5651;
+    // Elephant Tusk Force
+    // https://www.dosomething.org/us/campaigns/elephant-tusk-force
+    const PHOENIX_SIGNUP = 5411;
 
     /**
      * Constructor for MBC_UserImport_Source_Nice - extension of the base source
