@@ -36,17 +36,16 @@ use \Exception;
 class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
 {
     // Mandrill email templates.
-    const WELCOME_EMAIL_NEW_NEW = 'mb-niche-welcome_new-new_v1-4-0';
-    const WELCOME_EMAIL_EXISTING_NEW = 'mb-niche-welcome_existing-new_v1-4-0';
-    const WELCOME_EMAIL_EXISTING_EXISTING = 'mb-niche-welcome_existing-existing_v1-4-0';
+    const WELCOME_EMAIL_NEW_NEW = 'mb-niche-welcome_new-new_v1-5-0';
+    const WELCOME_EMAIL_EXISTING_NEW = 'mb-niche-welcome_existing-new_v1-5-0';
+    const WELCOME_EMAIL_EXISTING_EXISTING = 'mb-niche-welcome_existing-existing_v1-5-0';
 
-    // InnovationInspiration2016
-    // https://secure.mcommons.com/campaigns/148639/opt_in_paths/216832
-    const MOBILE_COMMONS_SIGNUP = 216832;
+    // Off.
+    const MOBILE_COMMONS_SIGNUP = false;
 
     // Innovation Inspiration
-    // https://www.dosomething.org/us/campaigns/innovation-inspiration
-    const PHOENIX_SIGNUP = 7192;
+    // https://www.dosomething.org/us/campaigns/lose-your-v-card
+    const PHOENIX_SIGNUP = 7059;
 
     /**
      * Constructor for MBC_UserImport_Source_Nice - extension of the base source
@@ -407,9 +406,9 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     public function addWelcomeSMSSettings($user, &$payload)
     {
 
-        if (isset($user['mobile'])) {
+        if (isset($user['mobile']) && self::MOBILE_COMMONS_SIGNUP !== false) {
             $payload['mobile'] = $user['mobile'];
-            $payload['mobile_opt_in_path_id'] = self:: MOBILE_COMMONS_SIGNUP;
+            $payload['mobile_opt_in_path_id'] = self::MOBILE_COMMONS_SIGNUP;
         }
     }
 
