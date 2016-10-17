@@ -20,13 +20,13 @@ define('CONFIG_PATH', __DIR__ . '/messagebroker-config');
 
 // Manage enviroment setting
 if (isset($_GET['environment']) && allowedEnvironment($_GET['environment'])) {
-    define('ENVIRONMENT', $_GET['environment']);
+  define('ENVIRONMENT', $_GET['environment']);
 } elseif (isset($argv[1])&& allowedEnvironment($argv[1])) {
-    define('ENVIRONMENT', $argv[1]);
+  define('ENVIRONMENT', $argv[1]);
 } elseif ($env = loadConfig()) {
-    echo 'environment.php exists, ENVIRONMENT defined as: ' . ENVIRONMENT, PHP_EOL;
+  echo 'environment.php exists, ENVIRONMENT defined as: ' . ENVIRONMENT, PHP_EOL;
 } elseif (allowedEnvironment('local')) {
-    define('ENVIRONMENT', 'local');
+  define('ENVIRONMENT', 'local');
 }
 
 // The number of messages for the consumer to reserve with each callback
@@ -52,20 +52,18 @@ echo '------- mbc-user-import END: ' . date('j D M Y G:i:s T') . ' -------', PHP
  *
  * @return boolean
  */
-function allowedEnvironment($setting)
-{
+function allowedEnvironment($setting) {
+  $allowedEnvironments = [
+    'local',
+    'dev',
+    'prod',
+  ];
 
-    $allowedEnvironments = [
-        'local',
-        'dev',
-        'prod'
-    ];
+  if (in_array($setting, $allowedEnvironments)) {
+    return true;
+  }
 
-    if (in_array($setting, $allowedEnvironments)) {
-        return true;
-    }
-
-    return false;
+  return false;
 }
 
 /**
@@ -73,14 +71,12 @@ function allowedEnvironment($setting)
  *
  * @return boolean
  */
-function loadConfig()
-{
+function loadConfig() {
+  // Check that environment config file exists
+  if (!file_exists('environment.php')) {
+    return false;
+  }
+  include('./environment.php');
 
-    // Check that environment config file exists
-    if (!file_exists(environment.php)) {
-        return false;
-    }
-    include('./environment.php');
-
-    return true;
+  return true;
 }
