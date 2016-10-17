@@ -201,6 +201,10 @@ class MBC_UserImport_Toolbox
   public function checkExistingSMS($user, &$existingStatus)
   {
 
+    if (empty($user['mobile'])) {
+      echo 'Phone number isn\'t set.' . PHP_EOL;
+      return false;
+    }
     $mobilecommonsStatus
       = (array) $this->mobileCommons->profiles_get(
         ['phone_number' => $user['mobile']]
