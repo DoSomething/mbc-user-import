@@ -197,12 +197,13 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       $this->importUser['zip'] = $message['postal_code'];
       $this->importUser['postal_code'] = $message['postal_code'];
     }
-    // Validate phone number based on the North American Numbering Plan
-    // https://en.wikipedia.org/wiki/North_American_Numbering_Plan
-    $regex
-      = "/^(\d[\s-]?)?[\(\[\s-]{0,2}?\d{3}[\)\]\s-]{0,2}?\d{3}[\s-]?\d{4}$/i";
-    if ((preg_match($regex, $message['phone']))) {
-      $this->importUser['mobile'] = $message['phone'];
+    if (!empty($message['phone'])) {
+      // Validate phone number based on the North American Numbering Plan
+      // https://en.wikipedia.org/wiki/North_American_Numbering_Plan
+      $pattern = "/^(\d[\s-]?)?[\(\[\s-]{0,2}?\d{3}[\)\]\s-]{0,2}?\d{3}[\s-]?\d{4}$/i";
+      if ((preg_match($pattern, $message['phone']))) {
+        $this->importUser['mobile'] = $message['phone'];
+      }
     }
     if (isset($message['hs_gradyear']) && $message['hs_gradyear'] != 0) {
       $this->importUser['hs_gradyear'] = $message['hs_gradyear'];
