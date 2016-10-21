@@ -395,9 +395,9 @@ class MBC_UserImport_Toolbox
       );
       return true;
     } else {
-      echo 'Drupal UID: ' . $drupalUID . ' may already be signed up for
-        campaign ' . $campaignNID . ' or campaign is not accepting signups.' .
-        $signUp[0][0], PHP_EOL;
+      echo 'Drupal UID: ' . $drupalUID . ' may already be signed up for '
+        . 'campaign ' . $campaignNID . ' or campaign is not accepting signups.'
+        . $signUp[0][0] . PHP_EOL;
       $this->statHat->ezCount(
         'mbc-user-import: MBC_UserImport_Toolbox: existing campaignSignup',
         1

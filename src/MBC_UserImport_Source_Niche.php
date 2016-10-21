@@ -280,10 +280,29 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       $importUser = (object) $this->importUser;
       // Set user registration source.
       $importUser->source = 'niche';
+
+      // Lookup user on Northstar.
+      $northstarUser = $this->mbToolbox->lookupNorthstarUser($importUser);
+      if ($northstarUser && !empty($northstarUser->drupal_id)) {
+        // User is missing from phoenix, but present on Northstar:.
+        // Sync credentials:
+        $importUser->email = $northstarUser->email;
+        $importUser->mobile = $northstarUser->mobile;
+      }
+
+      // Trigger user creation on Northstar, will force-create user
+      // user on Phoenix.
       $northstarUser = $this->mbToolbox->createNorthstarUser($importUser);
 
-      $this->addImportUserInfo($northstarUser->data);
-      $drupalUID = $northstarUser->data->drupal_id;
+      if (empty($northstarUser->drupal_id)) {
+        throw new Exception(
+          'MBC_UserImport_Source_Niche->process() - No Drupal Id provided by Northstar.'
+          . ' Response: ' . var_export($northstarUser, true)
+        );
+      }
+
+      $this->addImportUserInfo($northstarUser);
+      $drupalUID = $northstarUser->drupal_id;
       $passwordResetURL = $this->mbToolbox->getPasswordResetURL($drupalUID);
       // #1, user_welcome, New/New
       $payload['email_template'] = self::WELCOME_EMAIL_NEW_NEW;
