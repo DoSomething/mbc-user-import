@@ -284,7 +284,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       // Lookup user on Northstar.
       $northstarUser = $this->mbToolbox->lookupNorthstarUser($importUser);
       if ($northstarUser && !empty($northstarUser->drupal_id)) {
-        // User is missing from phoenix, but present on Northstar:.
+        // User is missing from phoenix, but present on Northstar.
         // Sync credentials:
         $importUser->email = $northstarUser->email;
         $importUser->mobile = $northstarUser->mobile;
