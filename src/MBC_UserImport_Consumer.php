@@ -167,11 +167,9 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
           'mbc-user-import: MBC_UserImport_Consumer: Exception: deadLetter',
           1
         );
-        parent::deadLetter(
-          $this->message,
-          'MBC_UserImport_Consumer->consumeUserImportQueue(): ',
-          $e->getMessage()
-        );
+
+        $msg = 'MBC_UserImport_Consumer->consumeUserImportQueue(): ';
+        parent::deadLetter($this->message, $msg, $e);
         $this->messageBroker->sendAck($this->message['payload']);
       }
     }
