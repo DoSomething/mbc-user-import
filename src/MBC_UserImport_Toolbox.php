@@ -364,7 +364,7 @@ class MBC_UserImport_Toolbox
    * @param string  $source         The name of the import source
    * @param bool    $transactionals Supress sending transaction messages.
    *
-   * @return bool Was the user signed up to the campaign.
+   * @return bool|int Was the user signed up to the campaign or signup id
    */
   public function campaignSignup(
     $campaignNID,
@@ -393,7 +393,7 @@ class MBC_UserImport_Toolbox
         'mbc-user-import: MBC_UserImport_Toolbox: campaignSignup',
         1
       );
-      return true;
+      return $signUp[0][0];
     } else {
       echo 'Drupal UID: ' . $drupalUID . ' may already be signed up for '
         . 'campaign ' . $campaignNID . ' or campaign is not accepting signups.'
