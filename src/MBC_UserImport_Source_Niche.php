@@ -326,12 +326,16 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       'niche',
       false
     );
+
     if (!$campaignSignup) {
       // User was not signed up to campaign because they're already signed up.
       // #3, current_signedup, Existing/Existing
       $payload['email_template'] = self::WELCOME_EMAIL_EXISTING_EXISTING;
       $payload['tags'][0] = 'current-signedup-user-welcome-niche';
       $payload['tags'][1] = self::WELCOME_EMAIL_EXISTING_EXISTING;
+    } else {
+      $payload['event_id'] = $campaignNID;
+      $payload['signup_id'] = $campaignSignup;
     }
 
     // Check for existing user account in Mobile Commons
@@ -429,6 +433,8 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     if (isset($user['mobile']) && self::MOBILE_COMMONS_SIGNUP !== false) {
       $payload['mobile'] = $user['mobile'];
       $payload['mobile_opt_in_path_id'] = self::MOBILE_COMMONS_SIGNUP;
+    } elseif (isset($user['mobile'])) {
+      $payload['mobile'] = $user['mobile'];
     }
   }
 
