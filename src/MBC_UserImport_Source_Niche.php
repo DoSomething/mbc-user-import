@@ -60,6 +60,13 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
   }
 
   /**
+   * Northstar-compatible user
+   *
+   * @var array
+   */
+  private $user;
+
+  /**
    * Test if message can be processed by consumer.
    *
    * @param array $message The message contents to test if it can be processed.
@@ -108,141 +115,66 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
    */
   public function setter($message)
   {
+    // Required minimum.
+    $this->user = [
+      'email'  => $message['email'],
+      'source' => 'Niche',
+    ];
 
-    if (isset($message['source'])) {
-      $this->importUser['user_registration_source'] = $message['source'];
-    } else {
-      $this->importUser['user_registration_source'] = 'Niche';
-    }
-    if (isset($message['source_file'])) {
-      $this->importUser['origin'] = $message['source_file'];
-    }
-    if (isset($message['activity_timestamp'])) {
-      $this->importUser['activity_timestamp'] = $message['activity_timestamp'];
-    }
-
-    if (isset($message['email'])) {
-      $this->importUser['email'] = $message['email'];
-    }
-    if (isset($message['mailchimp_list_id'])) {
-      $this->importUser['mailchimp_list_id'] = $message['mailchimp_list_id'];
-    }
-
-    if (isset($message['name']) && !isset($message['first_name'])) {
-      $nameBits = $this->mbcUserImportToolbox->nameBits($message['name']);
-      $this->importUser['first_name'] = $nameBits['first_name'];
-      $this->importUser['last_name'] = $nameBits['last_name'];
-    }
-
-    $firstName = isset($message['first_name']) && $message['first_name'] != ''
-      ? $message['first_name'] : 'DS';
-    $this->importUser['password']
-      = str_replace(' ', '', $firstName) . '-Doer' . rand(1, 1000);
-
-    // Optional fields
-    if ($message['birthdate'] > time()) {
-      echo '- WARNING: Invalid birthdate: ' . $message['birthdate'] .
-        ' -> date(): ' . date('r', $message['birthdate']), PHP_EOL;
-    } else {
-      if (isset($message['birthdate']) && is_int($message['birthdate'])) {
-        $this->importUser['birthdate_timestamp'] = $message['birthdate'];
-      } elseif (isset($message['birthdate'])
-        && ctype_digit($message['birthdate'])
-      ) {
-        $this->importUser['birthdate_timestamp']
-          = (int) $message['birthdate'];
-      } elseif (isset($message['birthdate'])
-        && is_string($message['birthdate'])
-      ) {
-        $this->importUser['birthdate_timestamp']
-          = strtotime($message['birthdate']);
-      }
-    }
-    if (!empty($message['first_name'])) {
-      $this->importUser['first_name'] = $message['first_name'];
-    }
-    if (!empty($message['first_name'])) {
-      $this->importUser['merge_vars']['FNAME'] = $message['first_name'];
-    }
-    if (!empty($message['last_name'])) {
-      $this->importUser['last_name'] = $message['last_name'];
-    }
-    if (!empty($message['last_name'])) {
-      $this->importUser['merge_vars']['LNAME'] = $message['last_name'];
-    }
-    if (!empty($message['password'])) {
-      $this->importUser['merge_vars']['PASSWORD'] = $message['password'];
-    }
-    if (!empty($message['address1'])) {
-      $this->importUser['address1'] = $message['address1'];
-    }
-    if (!empty($message['address2'])) {
-      $this->importUser['address2'] = $message['address2'];
-    }
-    if (!empty($message['city'])) {
-      $this->importUser['city'] = $message['city'];
-    }
-    if (!empty($message['state'])) {
-      $this->importUser['state'] = $message['state'];
-    }
-    if (!empty($message['country'])) {
-      $this->importUser['country'] = $message['country'];
-    } else {
-      $this->importUser['country'] = 'US';
-    }
-    if (!empty($message['zip'])) {
-      $this->importUser['zip'] = $message['zip'];
-      $this->importUser['postal_code'] = $message['zip'];
-    } elseif (!empty($message['postal_code'])) {
-      $this->importUser['zip'] = $message['postal_code'];
-      $this->importUser['postal_code'] = $message['postal_code'];
-    }
+    // Mobile.
     if (!empty($message['phone'])) {
       // Validate phone number based on the North American Numbering Plan
       // https://en.wikipedia.org/wiki/North_American_Numbering_Plan
       $pattern = "/^(\d[\s-]?)?[\(\[\s-]{0,2}?\d{3}[\)\]\s-]{0,2}?\d{3}[\s-]?\d{4}$/i";
-      if ((preg_match($pattern, $message['phone']))) {
-        $this->importUser['mobile'] = $message['phone'];
+      if (preg_match($pattern, $message['phone']) !== false) {
+        $this->user['mobile'] = $message['phone'];
       }
     }
-    if (isset($message['hs_gradyear']) && $message['hs_gradyear'] != 0) {
-      $this->importUser['hs_gradyear'] = $message['hs_gradyear'];
+
+    // Birthday.
+    if (!empty($message['birthday'])) {
+      if (is_int($message['birthdate']) || ctype_digit($message['birthdate'])) {
+        $this->user['birthdate'] = (int) $message['birthdate'];
+      } else {
+        $this->user['birthdate'] = strtotime($message['birthdate']);
+      }
     }
-    if (!empty($message['race'])) {
-      $this->importUser['race'] = $message['race'];
+
+    // First name.
+    if (!empty($message['first_name'])) {
+      $this->user['first_name'] = $message['first_name'];
     }
-    if (!empty($message['religion'])) {
-      $this->importUser['religion'] = $message['religion'];
+
+    // Last name.
+    if (!empty($message['last_name'])) {
+      $this->user['last_name'] = $message['last_name'];
     }
-    if (!empty($message['hs_name'])) {
-      $this->importUser['hs_name'] = $message['hs_name'];
+
+    // Address.
+    if (!empty($message['address1'])) {
+      $this->user['addr_street1'] = $message['address1'];
     }
-    if (!empty($message['college_name'])) {
-      $this->importUser['college_name'] = $message['college_name'];
+    if (!empty($message['address2'])) {
+      $this->user['addr_street2'] = $message['address2'];
     }
-    if (!empty($message['major_name'])) {
-      $this->importUser['major_name'] = $message['major_name'];
+    if (!empty($message['city'])) {
+      $this->user['addr_city'] = $message['city'];
     }
-    if (!empty($message['degree_type'])) {
-      $this->importUser['degree_type'] = $message['degree_type'];
+    if (!empty($message['state'])) {
+      $this->user['addr_state'] = $message['state'];
     }
-    if (isset($message['sat_math']) && $message['sat_math'] != 0) {
-      $this->importUser['sat_math'] = $message['sat_math'];
+    if (!empty($message['zip'])) {
+      $this->user['addr_zip'] = $message['zip'];
+    } elseif (!empty($message['postal_code'])) {
+      $this->user['addr_zip'] = $message['postal_code'];
     }
-    if (isset($message['sat_verbal']) && $message['sat_verbal'] != 0) {
-      $this->importUser['sat_verbal'] = $message['sat_verbal'];
-    }
-    if (isset($message['sat_writing']) && $message['sat_writing'] != 0) {
-      $this->importUser['sat_writing'] = $message['sat_writing'];
-    }
-    if (isset($message['act_math']) && $message['act_math'] != 0) {
-      $this->importUser['act_math'] = $message['act_math'];
-    }
-    if (isset($message['gpa']) && $message['gpa'] != 0) {
-      $this->importUser['gpa'] = $message['gpa'];
-    }
-    if (!empty($message['role'])) {
-      $this->importUser['role'] = $message['role'];
+
+    // Country.
+    if (!empty($message['country'])) {
+      $this->user['country'] = $message['country'];
+    } else {
+      // Assume users are from the US.
+      $this->user['country'] = 'US';
     }
   }
 
@@ -341,10 +273,6 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     // Check for existing user account in Mobile Commons
     $this->mbcUserImportToolbox->checkExistingSMS($this->importUser, $existing);
 
-    // Add SMS welcome details to payload - all users should be attempted to be
-    // added to MOBILE_COMMONS_SIGNUP opt_id
-    $this->addWelcomeSMSSettings($this->importUser, $payload);
-
     // @todo: transition to using JSON formatted messages when all of the
     // consumers are able to
     // detect the message format and process either seralized or JSON.
@@ -420,23 +348,9 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
   }
 
   /**
-   * Settings related to SMS services.
-   *
-   * @param array $user    User settings
-   * @param array $payload Settings for submission to service.
-   *
-   * @return array $payload Settings for submission to service.
+   * Bad OOP is bad OOP
    */
-  public function addWelcomeSMSSettings($user, &$payload)
-  {
-
-    if (isset($user['mobile']) && self::MOBILE_COMMONS_SIGNUP !== false) {
-      $payload['mobile'] = $user['mobile'];
-      $payload['mobile_opt_in_path_id'] = self::MOBILE_COMMONS_SIGNUP;
-    } elseif (isset($user['mobile'])) {
-      $payload['mobile'] = $user['mobile'];
-    }
-  }
+  public function addWelcomeSMSSettings($user, &$payload) {}
 
   /**
    * Details about sending password reset email.
