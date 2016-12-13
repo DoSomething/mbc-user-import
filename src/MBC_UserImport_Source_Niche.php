@@ -187,107 +187,107 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
   public function process()
   {
 
-    $payload = $this->addCommonPayload($this->importUser);
-    $existing['log-type'] = 'user-import-niche';
-    $existing['source'] = $payload['source'];
+    // $payload = $this->addCommonPayload($this->importUser);
+    // $existing['log-type'] = 'user-import-niche';
+    // $existing['source'] = $payload['source'];
 
-    // Add welcome email details to payload
-    $this->addWelcomeEmailSettings($this->importUser, $payload);
+    // // Add welcome email details to payload
+    // $this->addWelcomeEmailSettings($this->importUser, $payload);
 
-    // Check for existing email account in MailChimp
-    $subscribed = $this->mbcUserImportToolbox->checkExistingEmail(
-      $this->importUser,
-      $existing
-    );
-    if (!$subscribed) {
-      $this->addEmailSubscriptionSettings($this->importUser, $payload);
-    }
+    // // Check for existing email account in MailChimp
+    // $subscribed = $this->mbcUserImportToolbox->checkExistingEmail(
+    //   $this->importUser,
+    //   $existing
+    // );
+    // if (!$subscribed) {
+    //   $this->addEmailSubscriptionSettings($this->importUser, $payload);
+    // }
 
-    // Drupal user
-    $this->mbcUserImportToolbox->checkExistingDrupal(
-      $this->importUser,
-      $existing
-    );
-    if (empty($existing['drupal-uid'])) {
-      $importUser = (object) $this->importUser;
-      // Set user registration source.
-      $importUser->source = 'niche';
+    // // Drupal user
+    // $this->mbcUserImportToolbox->checkExistingDrupal(
+    //   $this->importUser,
+    //   $existing
+    // );
+    // if (empty($existing['drupal-uid'])) {
+    //   $importUser = (object) $this->importUser;
+    //   // Set user registration source.
+    //   $importUser->source = 'niche';
 
-      // Lookup user on Northstar.
-      $northstarUser = $this->mbToolbox->lookupNorthstarUser($importUser);
-      if ($northstarUser && !empty($northstarUser->drupal_id)) {
-        // User is missing from phoenix, but present on Northstar.
-        // Sync credentials:
-        $importUser->email = $northstarUser->email;
-        $importUser->mobile = $northstarUser->mobile;
-      }
+    //   // Lookup user on Northstar.
+    //   $northstarUser = $this->mbToolbox->lookupNorthstarUser($importUser);
+    //   if ($northstarUser && !empty($northstarUser->drupal_id)) {
+    //     // User is missing from phoenix, but present on Northstar.
+    //     // Sync credentials:
+    //     $importUser->email = $northstarUser->email;
+    //     $importUser->mobile = $northstarUser->mobile;
+    //   }
 
-      // Trigger user creation on Northstar, will force-create user
-      // user on Phoenix.
-      $northstarUser = $this->mbToolbox->createNorthstarUser($importUser);
+    //   // Trigger user creation on Northstar, will force-create user
+    //   // user on Phoenix.
+    //   $northstarUser = $this->mbToolbox->createNorthstarUser($importUser);
 
-      if (empty($northstarUser->drupal_id)) {
-        throw new Exception(
-          'MBC_UserImport_Source_Niche->process() - No Drupal Id provided by Northstar.'
-          . ' Response: ' . var_export($northstarUser, true)
-        );
-      }
+    //   if (empty($northstarUser->drupal_id)) {
+    //     throw new Exception(
+    //       'MBC_UserImport_Source_Niche->process() - No Drupal Id provided by Northstar.'
+    //       . ' Response: ' . var_export($northstarUser, true)
+    //     );
+    //   }
 
-      $this->addImportUserInfo($northstarUser);
-      $drupalUID = $northstarUser->drupal_id;
-      $passwordResetURL = $this->mbToolbox->getPasswordResetURL($drupalUID);
-      // #1, user_welcome, New/New
-      $payload['email_template'] = self::WELCOME_EMAIL_NEW_NEW;
-      $payload['tags'][0] = 'user-welcome-niche';
-      $payload['tags'][1] = self::WELCOME_EMAIL_NEW_NEW;
-      $payload['merge_vars']['PASSWORD_RESET_LINK'] = $passwordResetURL;
-    } else {
-      // Existing Drupal user. Set UID for campaign signup
-      $drupalUID = $existing['drupal-uid'];
-      // #2, current_user, Existing/New
-      $payload['email_template'] = self::WELCOME_EMAIL_EXISTING_NEW;
-      $payload['tags'][0] = 'current-user-welcome-niche';
-      $payload['tags'][1] = self::WELCOME_EMAIL_EXISTING_NEW;
-    }
+    //   $this->addImportUserInfo($northstarUser);
+    //   $drupalUID = $northstarUser->drupal_id;
+    //   $passwordResetURL = $this->mbToolbox->getPasswordResetURL($drupalUID);
+    //   // #1, user_welcome, New/New
+    //   $payload['email_template'] = self::WELCOME_EMAIL_NEW_NEW;
+    //   $payload['tags'][0] = 'user-welcome-niche';
+    //   $payload['tags'][1] = self::WELCOME_EMAIL_NEW_NEW;
+    //   $payload['merge_vars']['PASSWORD_RESET_LINK'] = $passwordResetURL;
+    // } else {
+    //   // Existing Drupal user. Set UID for campaign signup
+    //   $drupalUID = $existing['drupal-uid'];
+    //   // #2, current_user, Existing/New
+    //   $payload['email_template'] = self::WELCOME_EMAIL_EXISTING_NEW;
+    //   $payload['tags'][0] = 'current-user-welcome-niche';
+    //   $payload['tags'][1] = self::WELCOME_EMAIL_EXISTING_NEW;
+    // }
 
-    // Campaign signup
-    $campaignNID = self::PHOENIX_SIGNUP;
-    $campaignSignup = $this->mbcUserImportToolbox->campaignSignup(
-      $campaignNID,
-      $drupalUID,
-      'niche',
-      false
-    );
+    // // Campaign signup
+    // $campaignNID = self::PHOENIX_SIGNUP;
+    // $campaignSignup = $this->mbcUserImportToolbox->campaignSignup(
+    //   $campaignNID,
+    //   $drupalUID,
+    //   'niche',
+    //   false
+    // );
 
-    if (!$campaignSignup) {
-      // User was not signed up to campaign because they're already signed up.
-      // #3, current_signedup, Existing/Existing
-      $payload['email_template'] = self::WELCOME_EMAIL_EXISTING_EXISTING;
-      $payload['tags'][0] = 'current-signedup-user-welcome-niche';
-      $payload['tags'][1] = self::WELCOME_EMAIL_EXISTING_EXISTING;
-    } else {
-      $payload['event_id'] = $campaignNID;
-      $payload['signup_id'] = $campaignSignup;
-    }
+    // if (!$campaignSignup) {
+    //   // User was not signed up to campaign because they're already signed up.
+    //   // #3, current_signedup, Existing/Existing
+    //   $payload['email_template'] = self::WELCOME_EMAIL_EXISTING_EXISTING;
+    //   $payload['tags'][0] = 'current-signedup-user-welcome-niche';
+    //   $payload['tags'][1] = self::WELCOME_EMAIL_EXISTING_EXISTING;
+    // } else {
+    //   $payload['event_id'] = $campaignNID;
+    //   $payload['signup_id'] = $campaignSignup;
+    // }
 
-    // Check for existing user account in Mobile Commons
-    $this->mbcUserImportToolbox->checkExistingSMS($this->importUser, $existing);
+    // // Check for existing user account in Mobile Commons
+    // $this->mbcUserImportToolbox->checkExistingSMS($this->importUser, $existing);
 
-    // @todo: transition to using JSON formatted messages when all of the
-    // consumers are able to
-    // detect the message format and process either seralized or JSON.
-    $message = serialize($payload);
-    $this->messageBroker_transactionals->publish(
-      $message,
-      'user.registration.transactional'
-    );
-    $this->statHat->ezCount(
-      'mbc-user-import: MBC_UserImport_Source_Niche: process',
-      1
-    );
+    // // @todo: transition to using JSON formatted messages when all of the
+    // // consumers are able to
+    // // detect the message format and process either seralized or JSON.
+    // $message = serialize($payload);
+    // $this->messageBroker_transactionals->publish(
+    //   $message,
+    //   'user.registration.transactional'
+    // );
+    // $this->statHat->ezCount(
+    //   'mbc-user-import: MBC_UserImport_Source_Niche: process',
+    //   1
+    // );
 
-    // Log existing users
-    $this->mbcUserImportToolbox->logExisting($existing, $this->importUser);
+    // // Log existing users
+    // $this->mbcUserImportToolbox->logExisting($existing, $this->importUser);
   }
 
   /**
