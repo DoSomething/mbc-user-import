@@ -11,6 +11,7 @@ use DoSomething\MB_Toolbox\MB_Toolbox;
 use DoSomething\MB_Toolbox\MB_Toolbox_cURL;
 use DoSomething\StatHat\Client as StatHat;
 use DoSomething\MB_Toolbox\MB_RabbitMQManagementAPI;
+use DoSomething\Gateway\Northstar;
 
 // Load configuration settings common to the Message Broker system
 // symlinks in the project directory point to the actual location of the files
@@ -99,3 +100,25 @@ $mbConfig->setProperty('messageBrokerLogging', new MessageBroker($rabbitCredenti
 
 $mbRabbitConfig = $mbConfig->constructRabbitConfig('directDeadLetterExchange', ['deadLetterQueue']);
 $mbConfig->setProperty('messageBroker_deadLetter', new MessageBroker($rabbitCredentials, $mbRabbitConfig));
+
+
+$northstar = new Northstar([
+    'grant' => 'client_credentials', // Default OAuth grant to use: either 'authorization_code' or 'client_credentials'
+    'url' => 'https://northstar.dosomething.org', // the environment you want to connect to
+    // 'bridge' => \YourApp\OAuthBridge::class, // class which handles saving/retrieving tokens
+
+    // Then, configure client ID, client secret, and scopes per grant.
+    'client_credentials' => [
+        'client_id' => 'example',
+        'client_secret' => 'xxxxxxxxxxxxx',
+        'scope' => ['user'],
+    ],
+    'authorization_code' => [
+        'client_id' => 'example',
+        'client_secret' => 'xxxxxxxxxxxxx',
+        'scope' => ['user'],
+        'redirect_uri' => 'login',
+    ],
+]);
+$user = $northstar->getUser('email', 'test@dosomething.org');
+var_dump($user); die();
