@@ -111,13 +111,7 @@ $northstar = new Northstar([
     'client_credentials' => [
         'client_id' => 'example',
         'client_secret' => 'xxxxxxxxxxxxx',
-        'scope' => ['user'],
-    ],
-    'authorization_code' => [
-        'client_id' => 'example',
-        'client_secret' => 'xxxxxxxxxxxxx',
-        'scope' => ['user'],
-        'redirect_uri' => 'login',
+        'scope' => ['user', 'admin'],
     ],
 ]);
 $user = $northstar->getUser('email', 'test@dosomething.org');
