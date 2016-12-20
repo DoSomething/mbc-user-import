@@ -263,11 +263,11 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     $this->addWelcomeEmailSettings($this->importUser, $payload);
 
     // Check for existing email account in MailChimp
-    $this->mbcUserImportToolbox->checkExistingEmail(
+    $subscribed = $this->mbcUserImportToolbox->checkExistingEmail(
       $this->importUser,
       $existing
     );
-    if (empty($existing['email'])) {
+    if (!$subscribed) {
       $this->addEmailSubscriptionSettings($this->importUser, $payload);
     }
 

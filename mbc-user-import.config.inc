@@ -3,12 +3,13 @@
  * Message Broker configuration settings for mbc-user-import
  */
 
+use \Mailchimp\MailchimpLists;
+
 use DoSomething\MessageBroker\MessageBroker;
 use DoSomething\MB_Toolbox\MB_Configuration;
 use DoSomething\MB_Toolbox\MB_Toolbox;
 use DoSomething\MB_Toolbox\MB_Toolbox_cURL;
 use DoSomething\StatHat\Client as StatHat;
-use DoSomething\MB_Toolbox\MB_MailChimp;
 use DoSomething\MB_Toolbox\MB_RabbitMQManagementAPI;
 
 // Load configuration settings common to the Message Broker system
@@ -72,25 +73,7 @@ $mbConfig->setProperty('mobileCommons', new \MobileCommons([
 ]));
 
 // MailChimp
-$mbConfig->setProperty(
-  'mailchimpAPIkeys',
-  [
-    'country' => [
-      'global' => getenv("MAILCHIMP_APIKEY"),
-      'us'     => getenv("MAILCHIMP_APIKEY"),
-      'gb'     => getenv("MAILCHIMP_UK_APIKEY"),
-      'uk'     => getenv("MAILCHIMP_UK_APIKEY"),
-      'mx'     => getenv("MAILCHIMP_MX_APIKEY"),
-      'br'     => getenv("MAILCHIMP_BR_APIKEY"),
-    ]
-  ]
-);
-$mailchimpAPIKeys = $mbConfig->getProperty('mailchimpAPIkeys');
-$mcObjects = [];
-foreach ($mailchimpAPIKeys['country'] as $country => $key) {
-  $mcObjects[$country] = new MB_MailChimp($key);
-}
-$mbConfig->setProperty('mbcURMailChimp_Objects', $mcObjects);
+$mbConfig->setProperty('mailchimpLists', new MailchimpLists(getenv("MAILCHIMP_APIKEY")));
 
 $mbConfig->setProperty('mbToolbox', new MB_Toolbox());
 $mbConfig->setProperty('mbToolboxCURL', new MB_Toolbox_cURL());
