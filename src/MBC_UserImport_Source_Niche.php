@@ -36,16 +36,16 @@ use \Exception;
 class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
 {
   // Mandrill email templates.
-  const WELCOME_EMAIL_NEW_NEW = 'mb-niche-welcome_new-new_v1-8-0';
-  const WELCOME_EMAIL_EXISTING_NEW = 'mb-niche-welcome_existing-new_v1-8-0';
-  const WELCOME_EMAIL_EXISTING_EXISTING = 'mb-niche-welcome_existing-existing_v1-8-0';
+  const WELCOME_EMAIL_NEW_NEW = 'mb-niche-welcome_new-new_v1-9-0';
+  const WELCOME_EMAIL_EXISTING_NEW = 'mb-niche-welcome_existing-new_v1-9-0';
+  const WELCOME_EMAIL_EXISTING_EXISTING = 'mb-niche-welcome_existing-existing_v1-9-0';
 
   // Off.
   const MOBILE_COMMONS_SIGNUP = false;
 
-  // Don't Be a Sucker
-  // https://www.dosomething.org/us/campaigns/dont-be-sucker
-  const PHOENIX_SIGNUP = 46;
+  // New Year, New US
+  // https://www.dosomething.org/us/campaigns/new-year-new-us
+  const PHOENIX_SIGNUP = 3616;
 
   /**
    * Constructor for MBC_UserImport_Source_Nice - extension of the base source
