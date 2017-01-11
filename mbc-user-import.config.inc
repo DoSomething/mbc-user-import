@@ -13,6 +13,9 @@ use DoSomething\StatHat\Client as StatHat;
 use DoSomething\MB_Toolbox\MB_RabbitMQManagementAPI;
 use DoSomething\Gateway\Northstar;
 
+use DoSomething\MBC_UserImport\MBC_UserImport_Northstar_OAuthBridge;
+
+
 // Load configuration settings common to the Message Broker system
 // symlinks in the project directory point to the actual location of the files
 require_once CONFIG_PATH . '/mb-secure-config/' . ENVIRONMENT . '/mb-secure-config.inc';
@@ -59,13 +62,6 @@ $mbConfig->setProperty('ds_drupal_api_config', [
   'password' => getenv('DS_DRUPAL_API_PASSWORD'),
 ]);
 
-// Northstar
-$mbConfig->setProperty('northstar_config', [
-  'host' => getenv("NORTHSTAR_API_HOST"),
-  'id' => getenv("NORTHSTAR_API_ID"),
-  'key' => getenv('NORTHSTAR_API_KEY'),
-]);
-
 // SMS
 $mbConfig->setProperty('mobileCommons', new \MobileCommons([
   'username' => getenv("MOBILE_COMMONS_US_USER"),
@@ -104,15 +100,23 @@ $mbConfig->setProperty('messageBroker_deadLetter', new MessageBroker($rabbitCred
 
 $northstar = new Northstar([
     'grant' => 'client_credentials', // Default OAuth grant to use: either 'authorization_code' or 'client_credentials'
-    'url' => 'https://northstar.dosomething.org', // the environment you want to connect to
-    // 'bridge' => \YourApp\OAuthBridge::class, // class which handles saving/retrieving tokens
+    'url' => getenv("NORTHSTAR_API_HOST"), // the environment you want to connect to
+    'bridge' => MBC_UserImport_Northstar_OAuthBridge::class, // class which handles saving/retrieving tokens
 
     // Then, configure client ID, client secret, and scopes per grant.
     'client_credentials' => [
-        'client_id' => 'example',
-        'client_secret' => 'xxxxxxxxxxxxx',
+        'client_id' => getenv("NORTHSTAR_API_ID"),
+        'client_secret' => getenv('NORTHSTAR_API_KEY'),
         'scope' => ['user', 'admin'],
     ],
 ]);
+
+// Northstar
+// $mbConfig->setProperty('northstar_config', [
+//   'host' => getenv("NORTHSTAR_API_HOST"),
+//   'id' => getenv("NORTHSTAR_API_ID"),
+//   'key' => getenv('NORTHSTAR_API_KEY'),
+// ]);
+
 $user = $northstar->getUser('email', 'test@dosomething.org');
 var_dump($user); die();
