@@ -48,23 +48,22 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
   const PHOENIX_SIGNUP = 3616;
 
   /**
-   * Constructor for MBC_UserImport_Source_Nice - extension of the base source
-   * class that's specific to Niche.
-   */
-  public function __construct()
-  {
-
-    parent::__construct();
-    $this->sourceName = 'Niche';
-    $this->mbcUserImportToolbox = new MBC_UserImport_Toolbox();
-  }
-
-  /**
    * Northstar-compatible user
    *
    * @var array
    */
   private $user;
+
+  /**
+   * Constructor for MBC_UserImport_Source_Nice - extension of the base source
+   * class that's specific to Niche.
+   */
+  public function __construct()
+  {
+    parent::__construct();
+    $this->sourceName = 'Niche';
+    $this->mbcUserImportToolbox = new MBC_UserImport_Toolbox();
+  }
 
   /**
    * Test if message can be processed by consumer.
@@ -186,6 +185,10 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
    */
   public function process()
   {
+
+    $user = $this->northstar->getUser('email', 'test@dosomething.org');
+    var_dump($user); die();
+
 
     // $payload = $this->addCommonPayload($this->importUser);
     // $existing['log-type'] = 'user-import-niche';

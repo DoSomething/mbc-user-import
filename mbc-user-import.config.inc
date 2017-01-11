@@ -75,6 +75,21 @@ $mbConfig->setProperty('mailchimpLists', new MailchimpLists(getenv("MAILCHIMP_AP
 $mbConfig->setProperty('mbToolbox', new MB_Toolbox());
 $mbConfig->setProperty('mbToolboxCURL', new MB_Toolbox_cURL());
 
+// Northstar
+$northstar = new Northstar([
+    'grant' => 'client_credentials', // Default OAuth grant to use: either 'authorization_code' or 'client_credentials'
+    'url' => getenv("NORTHSTAR_API_HOST"), // the environment you want to connect to
+    'bridge' => MBC_UserImport_Northstar_OAuthBridge::class, // class which handles saving/retrieving tokens
+
+    // Then, configure client ID, client secret, and scopes per grant.
+    'client_credentials' => [
+        'client_id' => getenv("NORTHSTAR_API_ID"),
+        'client_secret' => getenv('NORTHSTAR_API_KEY'),
+        'scope' => ['user', 'admin'],
+    ],
+]);
+$mbConfig->setProperty('northstar', $northstar);
+
 // Rabbit MQ connection to specific exchanges / queues
 $mbRabbitConfig = $mbConfig->constructRabbitConfig('directUserImport', ['userImportQueue']);
 $rabbitCredentials = $mbConfig->getProperty('rabbit_credentials');
@@ -96,27 +111,3 @@ $mbConfig->setProperty('messageBrokerLogging', new MessageBroker($rabbitCredenti
 
 $mbRabbitConfig = $mbConfig->constructRabbitConfig('directDeadLetterExchange', ['deadLetterQueue']);
 $mbConfig->setProperty('messageBroker_deadLetter', new MessageBroker($rabbitCredentials, $mbRabbitConfig));
-
-
-$northstar = new Northstar([
-    'grant' => 'client_credentials', // Default OAuth grant to use: either 'authorization_code' or 'client_credentials'
-    'url' => getenv("NORTHSTAR_API_HOST"), // the environment you want to connect to
-    'bridge' => MBC_UserImport_Northstar_OAuthBridge::class, // class which handles saving/retrieving tokens
-
-    // Then, configure client ID, client secret, and scopes per grant.
-    'client_credentials' => [
-        'client_id' => getenv("NORTHSTAR_API_ID"),
-        'client_secret' => getenv('NORTHSTAR_API_KEY'),
-        'scope' => ['user', 'admin'],
-    ],
-]);
-
-// Northstar
-// $mbConfig->setProperty('northstar_config', [
-//   'host' => getenv("NORTHSTAR_API_HOST"),
-//   'id' => getenv("NORTHSTAR_API_ID"),
-//   'key' => getenv('NORTHSTAR_API_KEY'),
-// ]);
-
-$user = $northstar->getUser('email', 'test@dosomething.org');
-var_dump($user); die();
