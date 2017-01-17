@@ -185,9 +185,21 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
    */
   public function process()
   {
+    // Shortcuts.
+    $northstar = &$this->northstar;
+    $input = &$this->user;
 
-    $user = $this->northstar->getUser('email', 'test@dosomething.org');
-    var_dump($user); die();
+    // Lookup on Northstar by email.
+    $identity = $northstar->getUser('email', $input['email']);
+
+    // User not found by email, attempt to lookup by mobile:
+    if (empty($identity) && !empty($input['email'])) {
+      $identity = $northstar->getUser('mobile', $input['email']);
+    }
+
+    
+
+    var_dump($user, $identity); die();
 
 
     // $payload = $this->addCommonPayload($this->importUser);
