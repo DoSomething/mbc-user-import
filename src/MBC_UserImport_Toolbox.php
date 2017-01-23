@@ -138,16 +138,16 @@ class MBC_UserImport_Toolbox
       );
     } catch (MailchimpAPIException $e) {
       if ($e->getCode() !== 404) {
+        $payload['email-status'] = 'Mailchimp Error';
+        $payload['email'] = $user['email'];
+        $this->statHat->ezCount(
+          'mbc-user-import: MBC_UserImport_Toolbox: ' .
+          'checkExistingEmail: MailChimp error',
+          1
+        );
         throw $e;
       }
       // Not found = new record.
-      $payload['email-status'] = 'Mailchimp Error';
-      $payload['email'] = $user['email'];
-      $this->statHat->ezCount(
-        'mbc-user-import: MBC_UserImport_Toolbox: ' .
-        'checkExistingEmail: MailChimp error',
-        1
-      );
       return false;
     }
 
