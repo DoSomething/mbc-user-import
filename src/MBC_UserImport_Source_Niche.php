@@ -228,10 +228,10 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       $identity = $northstar->updateUser($identity->id, $params);
     } elseif ($identityByEmail->id !== $identityByMobile->id) {
       // --- Existing users: different identities loaded by mobile and phone ---
-
-      // Check if both identities loaded are the same.
-      // if 
-
+      // We presume that user account with mobile number generaly have
+      // email address as well. For this reason we decided to use
+      // identity loaded by mobile rather than by email.
+      $identity = &$identityByMobile;
     } elseif ($identityByEmail->id === $identityByMobile->id) {
       // --- Existing user: same identity loaded both by mobile and phone ---
       $identity = &$identityByEmail;
