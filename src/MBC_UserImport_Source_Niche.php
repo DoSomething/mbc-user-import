@@ -280,6 +280,23 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       );
     }
 
+    // Something went very wrong.
+    if (empty($identity)) {
+      throw new Exception(
+        'This will only execute when user identity logic is broken.'
+      );
+    }
+
+    // Something went very wrong.
+    if (empty($identity->drupal_id)) {
+      throw new Exception(
+        'MBC_UserImport_Source_Niche->process() - '
+        . 'Northstar user identity has no drupal_id record.'
+        . ' User input: ' . json_encode($input)
+        . ', Northstar id: ' . $identity->id
+      );
+    }
+
     var_dump($identity->id); die();
 
 

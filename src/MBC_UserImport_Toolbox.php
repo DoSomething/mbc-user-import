@@ -392,6 +392,7 @@ class MBC_UserImport_Toolbox
     }
     $curlUrl .= '/api/v1/campaigns/' . $campaignNID . '/signup';
     $signUp = $this->mbToolboxCURL->curlPOSTauth($curlUrl, $post);
+    var_dump($signUp); die();
 
     // Results returned for campaign signup
     // User signed up, indicated by return sid (signup ID)
