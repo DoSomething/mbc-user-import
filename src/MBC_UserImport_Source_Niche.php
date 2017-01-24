@@ -203,43 +203,86 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
 
     // Process all possible cases and merge data based on identity load results:
     if (empty($identityByEmail) && empty($identityByMobile)) {
-      // --- New user ---
+      // ****** New user ******
       $userIsNew = true;
       $userIsNewToCampaign = true;
 
       // Create Norhtstar and Phoenix accounts.
-      $params = $this->user;
-      $identity = $northstar->createUser($params);
+      $this->log(
+        'User not found, creating new user on Northstar: %s',
+        json_encode($input)
+      );
+      $identity = $northstar->createUser($input);
     } elseif (!empty($identityByEmail) && empty($identityByMobile)) {
-      // --- Existing user: only email record exists ---
+      // ****** Existing user: only email record exists ******
       $identity = &$identityByEmail;
+      $this->log(
+        'User identified by email %s as %s',
+        $input['email'],
+        $identity->id
+      );
 
       // Save mobile number to record loaded by email.
       if (!empty($input['mobile'])) {
+        $this->log(
+          'Updating user %s mobile phone from "%s" to "%s"',
+          $identity->id,
+          ($identity->mobile ?: "NULL"),
+          $input['mobile']
+        );
+
         $params = ['mobile' => $input['mobile']];
         $identity = $northstar->updateUser($identity->id, $params);
       }
     } elseif (!empty($identityByMobile) && empty($identityByEmail)) {
-      // --- Existing user: only mobile record exists ---
+      // ****** Existing user: only mobile record exists ******
       $identity = &$identityByMobile;
+      $this->log(
+        'User identified by mobile %s as %s',
+        $input['mobile'],
+        $identity->id
+      );
 
       // Save email to record loaded by mobile.
+      $this->log(
+        'Updating user %s email from "%s" to "%s"',
+        $identity->id,
+        ($identity->email ?: "NULL"),
+        $input['email']
+      );
       $params = ['email' => $input['email']];
       $identity = $northstar->updateUser($identity->id, $params);
     } elseif ($identityByEmail->id !== $identityByMobile->id) {
-      // --- Existing users: different identities loaded by mobile and phone ---
+      // ****** Existing users: loaded both by mobile and phone ******
       // We presume that user account with mobile number generaly have
       // email address as well. For this reason we decided to use
       // identity loaded by mobile rather than by email.
       $identity = &$identityByMobile;
+
+      $this->log(
+        'User identified by email %s as %s and by mobile %s as %s.'
+          . ' Selecting mobile identity.',
+        $input['mobile'],
+        $identityByMobile->id,
+        $input['email'],
+        $identityByEmail->id
+      );
+
     } elseif ($identityByEmail->id === $identityByMobile->id) {
-      // --- Existing user: same identity loaded both by mobile and phone ---
+      // ****** Existing user: same identity loaded both by mobile and phone ******
       $identity = &$identityByEmail;
-    } else {
+    }
+
+    // Something went very wrong.
+    if (empty($identity)) {
       throw new Exception(
         'This will only execute when user identity logic is broken.'
       );
     }
+
+    var_dump($identity->id); die();
+
+
 
 
     print 'User is new: ';
@@ -249,7 +292,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
 
     var_dump($input, $identity); die();
 
-
+  
     // $payload = $this->addCommonPayload($this->importUser);
     // $existing['log-type'] = 'user-import-niche';
     // $existing['source'] = $payload['source'];
