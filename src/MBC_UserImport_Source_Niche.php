@@ -40,12 +40,16 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
   const WELCOME_EMAIL_EXISTING_NEW = 'mb-niche-welcome_existing-new_v1-9-0';
   const WELCOME_EMAIL_EXISTING_EXISTING = 'mb-niche-welcome_existing-existing_v1-9-0';
 
+  // Import source name.
+  const SOURCE_NAME = 'niche';
+
   // Off.
   const MOBILE_COMMONS_SIGNUP = false;
 
   // New Year, New US
   // https://www.dosomething.org/us/campaigns/new-year-new-us
-  const PHOENIX_SIGNUP = 3616;
+  // const PHOENIX_SIGNUP = 3616;
+  const PHOENIX_SIGNUP = 1173;
 
   /**
    * Northstar-compatible user
@@ -61,7 +65,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
   public function __construct()
   {
     parent::__construct();
-    $this->sourceName = 'Niche';
+    $this->sourceName = self::SOURCE_NAME;
     $this->mbcUserImportToolbox = new MBC_UserImport_Toolbox();
   }
 
@@ -114,10 +118,11 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
    */
   public function setter($message)
   {
+
     // Required minimum.
     $this->user = [
       'email'  => $message['email'],
-      'source' => 'niche',
+      'source' => self::SOURCE_NAME,
     ];
 
     // Mobile.
@@ -287,14 +292,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       );
     }
 
-    // Something went very wrong.
-    if (empty($identity)) {
-      throw new Exception(
-        'This will only execute when user identity logic is broken.'
-      );
-    }
-
-    // Something went very wrong.
+    // Northstar record has no phoenix id on it.
     if (empty($identity->drupal_id)) {
       throw new Exception(
         'MBC_UserImport_Source_Niche->process() - '
@@ -304,8 +302,67 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       );
     }
 
-    var_dump($identity->id); die();
+    // Signup user to promo campaign if they already hasn't been subscrubed.
+    $signup = $this->mbcUserImportToolbox->campaignSignup(
+      self::PHOENIX_SIGNUP,
+      $identity->drupal_id,
+      self::SOURCE_NAME
+    );
 
+    if ($signup === true) {
+      // User has already been subscribed.
+      self::log(
+        'User %s (phoenix %s) has already been subscribed to %s',
+        $identity->id,
+        $identity->drupal_id,
+        self::PHOENIX_SIGNUP
+      );
+    } else {
+      // New signup has been created.
+      $userIsNewToCampaign = true;
+      self::log(
+        'New signup %s to %s created for %s (phoenix %s).',
+        $signup,
+        self::PHOENIX_SIGNUP,
+        $identity->id,
+        $identity->drupal_id
+      );
+    }
+
+    // Build new payload to delegate further processing to common flow.
+    $payload = $this->mbcUserImportToolbox->addCommonPayload();
+    $payload['activity'] = 'user_welcome-niche';
+    $payload['source'] = self::SOURCE_NAME;
+    $payload['email'] = $identity->email;
+    $payload['tags'][] = 'user_welcome-niche';
+    $payload['merge_vars'] = [
+      'MEMBER_COUNT' => $this->memberCount,
+      'FNAME' => $identity->first_name,
+    ];
+
+    if ($userIsNew) {
+      // New user, new subscription.
+      $payload['email_template'] = self::WELCOME_EMAIL_NEW_NEW;
+      // Todo: get password link.
+      $payload['merge_vars']['PASSWORD_RESET_LINK'] = $passwordResetURL;
+    } else {
+      if ($userIsNewToCampaign) {
+        // Existing user, new subscription.
+        $payload['email_template'] = self::WELCOME_EMAIL_EXISTING_NEW;
+
+        // Add new signup data.
+        $payload['event_id'] = self::PHOENIX_SIGNUP;
+        $payload['signup_id'] = $signup;
+      } else {
+        // Existing user, existing subscription.
+        $payload['email_template'] = self::WELCOME_EMAIL_EXISTING_EXISTING;
+      }
+    }
+    $payload['tags'][] = $payload['email_template'];
+
+
+
+    var_dump($payload); die();
 
 
 
@@ -421,43 +478,14 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
   }
 
   /**
-   * Initial settings related to initial welcome messages.
-   *
-   * @param array $user    User settings.
-   * @param array $payload Service values specific to the user.
-   *
-   * @return array $payload Service values specific to the user.
+   * Bad OOP is bad OOP
    */
-  public function addWelcomeEmailSettings($user, &$payload)
-  {
-
-    $payload['email'] = $user['email'];
-    $payload['merge_vars'] = [
-      'MEMBER_COUNT' => $this->memberCount,
-      'FNAME' => $user['first_name']
-    ];
-    $payload['tags'] = [
-      0 => 'user_welcome-niche',
-    ];
-  }
+  public function addWelcomeEmailSettings($user, &$payload) {}
 
   /**
-   * Payload values common to all message for submission to all services and
-   * exchanges.
-   *
-   * @param array $user Values related to the user being processed.
-   *
-   * @return array $payload Values for message distribution.
+   * Bad OOP is bad OOP
    */
-  public function addCommonPayload($user)
-  {
-
-    $payload = $this->mbcUserImportToolbox->addCommonPayload($user);
-    $payload['activity'] = 'user_welcome-niche';
-    $payload['source'] = 'niche';
-
-    return $payload;
-  }
+  public function addCommonPayload() {}
 
   /**
    * Settings related to email services.

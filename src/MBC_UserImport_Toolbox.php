@@ -287,10 +287,11 @@ class MBC_UserImport_Toolbox
    *
    * @return array $payload Common settings for message payload.
    */
-  public function addCommonPayload($user)
+  public function addCommonPayload($user = [])
   {
 
-    $payload['activity_timestamp'] = $user['activity_timestamp'];
+    $time = !empty($user['activity_timestamp']) ? $user['activity_timestamp'] : time();
+    $payload['activity_timestamp'] = $time;
     $payload['log-type'] = 'transactional';
     $payload['subscribed'] = 1;
     $payload['application_id'] = 'MUI';
@@ -371,47 +372,40 @@ class MBC_UserImport_Toolbox
    * @param string  $source         The name of the import source
    * @param bool    $transactionals Supress sending transaction messages.
    *
-   * @return bool|int Was the user signed up to the campaign or signup id
+   * @return bool|int Signup id or true on existing subscription
    */
-  public function campaignSignup(
-    $campaignNID,
-    $drupalUID,
-    $source,
-    $transactionals = true
-  ) {
-
+  public function campaignSignup($id, $userId, $source, $transactionals = false) {
     $post = [
-    'source' => $source,
-    'uid' => $drupalUID,
-    'transactionals' => $transactionals
+      'source' => $source,
+      'uid' => $userId,
+      'transactionals' => false,
     ];
     $curlUrl = $this->phoenixAPIConfig['host'];
-    $port = $this->phoenixAPIConfig['port'];
-    if ($port != 0) {
-      $curlUrl .= ":$port";
+    if (!empty($this->phoenixAPIConfig['port'])) {
+      $curlUrl .= ":" . $this->phoenixAPIConfig['port'];
     }
-    $curlUrl .= '/api/v1/campaigns/' . $campaignNID . '/signup';
-    $signUp = $this->mbToolboxCURL->curlPOSTauth($curlUrl, $post);
-    var_dump($signUp); die();
+    $curlUrl .= '/api/v1/campaigns/' . $id . '/signup';
 
-    // Results returned for campaign signup
-    // User signed up, indicated by return sid (signup ID)
-    if (is_array($signUp[0]) && $signUp[0][0] > 0) {
-      $this->statHat->ezCount(
-        'mbc-user-import: MBC_UserImport_Toolbox: campaignSignup',
-        1
-      );
-      return $signUp[0][0];
+    // Execute the request.
+    list($response, $code) = $this->mbToolboxCURL->curlPOSTauth($curlUrl, $post);
+    $result = isset($response[0]) ? $response[0] : 'Unknown';
+
+    if ($code != 200) {
+      $error = "Can't signup user " .  $userId . " to " . $id . ": " . $result;
+      throw new Exception($error);
+    }
+
+    if (is_numeric($result)) {
+      // New signup: signup id will be returned.
+      $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Toolbox: campaignSignup');
+      return $result;
+    } elseif ($result === false) {
+      // User has already been subscribed.
+      $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Toolbox: existing campaignSignup');
+      return true;
     } else {
-      echo 'Drupal UID: ' . $drupalUID . ' may already be signed up for '
-        . 'campaign ' . $campaignNID . ' or campaign is not accepting signups.'
-        . $signUp[0][0] . PHP_EOL;
-      $this->statHat->ezCount(
-        'mbc-user-import: MBC_UserImport_Toolbox: existing campaignSignup',
-        1
-      );
-      return false;
+      $error = "Can't parse signup response: user " .  $userId . " to " . $id;
+      throw new Exception($error);
     }
   }
-
 }
