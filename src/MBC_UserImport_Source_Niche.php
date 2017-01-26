@@ -43,8 +43,8 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
   // Import source name.
   const SOURCE_NAME = 'niche';
 
-  // Off.
-  const MOBILE_COMMONS_SIGNUP = false;
+  // Mailchimp List Id..
+  const MAILCHIMP_LIST_ID = 'f2fab1dfd4';
 
   // New Year, New US
   // https://www.dosomething.org/us/campaigns/new-year-new-us
@@ -265,8 +265,8 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       $identity = &$identityByMobile;
 
       self::log(
-        'User identified by email %s as %s and by mobile %s as %s.'
-          . ' Selecting mobile identity.',
+        'User identified by email %s as %s and by mobile %s as %s'
+          . ' Selecting mobile identity',
         $input['mobile'],
         $identityByMobile->id,
         $input['email'],
@@ -278,7 +278,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       $identity = &$identityByEmail;
 
       self::log(
-        'User identified by mobile %s and email %s: %s.',
+        'User identified by mobile %s and email %s: %s',
         $input['mobile'],
         $input['email'],
         $identity->id
@@ -288,7 +288,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     // Something went very wrong.
     if (empty($identity)) {
       throw new Exception(
-        'This will only execute when user identity logic is broken.'
+        'This will only execute when user identity logic is broken'
       );
     }
 
@@ -321,7 +321,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       // New signup has been created.
       $userIsNewToCampaign = true;
       self::log(
-        'New signup %s to %s created for %s (phoenix %s).',
+        'New signup %s to %s created for %s (phoenix %s)',
         $signup,
         self::PHOENIX_SIGNUP,
         $identity->id,
@@ -361,9 +361,29 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
         $payload['tags'][] = 'niche-existing-existing';
       }
     }
-
     $payload['tags'][] = $payload['email_template'];
 
+    // Subscribe user to MailChimp if necessery.
+    $mailchimpStatus = $this->mbcUserImportToolbox->getMailchimpStatus(
+      $identity->email,
+      self::MAILCHIMP_LIST_ID
+    );
+    var_dump($mailchimpStatus); die();
+
+
+
+    // Publish the payload.
+    $this->messageBroker_transactionals->publish(
+      serialize($payload),
+      'user.registration.transactional'
+    );
+    self::log('Publishing payload: %s', json_encode($payload));
+    $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Source_Niche: process');
+
+    // Log existing user for statistics.
+    if (!$userIsNew) {
+
+    }
 
 
     var_dump($payload); die();
@@ -482,16 +502,6 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
   }
 
   /**
-   * Bad OOP is bad OOP
-   */
-  public function addWelcomeEmailSettings($user, &$payload) {}
-
-  /**
-   * Bad OOP is bad OOP
-   */
-  public function addCommonPayload() {}
-
-  /**
    * Settings related to email services.
    *
    * @param array $user    User settings
@@ -509,30 +519,8 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     }
   }
 
-  /**
-   * Bad OOP is bad OOP
-   */
+  /** Bad OOP is bad OOP */
+  public function addWelcomeEmailSettings($user, &$payload) {}
+  public function addCommonPayload() {}
   public function addWelcomeSMSSettings($user, &$payload) {}
-
-  /**
-   * Details about sending password reset email.
-   *
-   * @return null
-   */
-  public function sendPasswordResetEmail()
-  {
-  }
-
-  /**
-   * Details about the Drulal user created for the user import.
-   *
-   * @param object $drupalUser The user object created by Drupal API.
-   *
-   * @return null
-   */
-  public function addImportUserInfo($drupalUser)
-  {
-
-    $this->importUser['uid'] = $drupalUser->drupal_id;
-  }
 }

@@ -124,45 +124,36 @@ class MBC_UserImport_Toolbox
 
   /**
    * Check for the existence of email (Mailchimp) account.
-   *
-   * @param array $user           Settings of user account to check against.
-   * @param array $payload        Payload to be extended with Mailchimp metadata.
    */
-  public function checkExistingEmail($user, &$payload)
+  public function getMailchimpStatus($email, $listId)
   {
-
+    $result = [];
     try {
-      $memberInfo = $this->mailchimpLists->getMemberInfo(
-        $user['mailchimp_list_id'],
-        $user['email']
-      );
+      $memberInfo = $this->mailchimpLists->getMemberInfo($listId, $email);
     } catch (MailchimpAPIException $e) {
-      if ($e->getCode() !== 404) {
-        $payload['email-status'] = 'Mailchimp Error';
-        $payload['email'] = $user['email'];
-        $this->statHat->ezCount(
-          'mbc-user-import: MBC_UserImport_Toolbox: ' .
-          'checkExistingEmail: MailChimp error',
-          1
-        );
-        throw $e;
+      if ($e->getCode() === 404) {
+        // Not found = new record.
+        return false;
       }
-      // Not found = new record.
-      return false;
+
+      // Unknown error, exit.
+      $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Toolbox: ' .
+        'checkExistingEmail: MailChimp error');
+      throw $e;
     }
 
     // Found.
     echo $user['email'] . ' is already subscribed to US Mailchimp list.' . PHP_EOL;
 
-    $payload['email-status'] = 'Existing account';
-    $payload['email'] = $user['email'];
-    $payload['email-acquired'] = date("Y-m-d H:i:s", strtotime($memberInfo->last_changed));
+    $result['email-status'] = 'Existing account';
+    $result['email'] = $user['email'];
+    $result['email-acquired'] = date("Y-m-d H:i:s", strtotime($memberInfo->last_changed));
     $this->statHat->ezCount(
       'mbc-user-import: MBC_UserImport_Toolbox: ' .
       'checkExistingEmail: Existing MailChimp account',
       1
     );
-    return true;
+    return $result;
   }
 
   /**
