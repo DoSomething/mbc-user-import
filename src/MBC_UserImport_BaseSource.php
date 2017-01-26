@@ -194,10 +194,12 @@ abstract class MBC_UserImport_BaseSource
   /**
    * Log
    */
-  protected function log()
+  static function log()
   {
+    $args = func_get_args();
+    $message = array_shift($args);
     echo '** ';
-    echo call_user_func_array('sprintf', func_get_args());
+    echo vsprintf($message, $args);
     echo PHP_EOL;
   }
 }

@@ -208,7 +208,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       $userIsNewToCampaign = true;
 
       // Create Norhtstar and Phoenix accounts.
-      $this->log(
+      self::log(
         'User not found, creating new user on Northstar: %s',
         json_encode($input)
       );
@@ -216,7 +216,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     } elseif (!empty($identityByEmail) && empty($identityByMobile)) {
       // ****** Existing user: only email record exists ******
       $identity = &$identityByEmail;
-      $this->log(
+      self::log(
         'User identified by email %s as %s',
         $input['email'],
         $identity->id
@@ -224,7 +224,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
 
       // Save mobile number to record loaded by email.
       if (!empty($input['mobile'])) {
-        $this->log(
+        self::log(
           'Updating user %s mobile phone from "%s" to "%s"',
           $identity->id,
           ($identity->mobile ?: "NULL"),
@@ -237,14 +237,14 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     } elseif (!empty($identityByMobile) && empty($identityByEmail)) {
       // ****** Existing user: only mobile record exists ******
       $identity = &$identityByMobile;
-      $this->log(
+      self::log(
         'User identified by mobile %s as %s',
         $input['mobile'],
         $identity->id
       );
 
       // Save email to record loaded by mobile.
-      $this->log(
+      self::log(
         'Updating user %s email from "%s" to "%s"',
         $identity->id,
         ($identity->email ?: "NULL"),
@@ -259,7 +259,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       // identity loaded by mobile rather than by email.
       $identity = &$identityByMobile;
 
-      $this->log(
+      self::log(
         'User identified by email %s as %s and by mobile %s as %s.'
           . ' Selecting mobile identity.',
         $input['mobile'],
@@ -271,6 +271,13 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     } elseif ($identityByEmail->id === $identityByMobile->id) {
       // ****** Existing user: same identity loaded both by mobile and phone ******
       $identity = &$identityByEmail;
+
+      self::log(
+        'User identified by mobile %s and email %s: %s.',
+        $input['mobile'],
+        $input['email'],
+        $identity->id
+      );
     }
 
     // Something went very wrong.
