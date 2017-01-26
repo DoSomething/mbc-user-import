@@ -334,30 +334,34 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     $payload['activity'] = 'user_welcome-niche';
     $payload['source'] = self::SOURCE_NAME;
     $payload['email'] = $identity->email;
-    $payload['tags'][] = 'user_welcome-niche';
+    $payload['tags'][] = self::SOURCE_NAME;
     $payload['merge_vars'] = [
       'MEMBER_COUNT' => $this->memberCount,
       'FNAME' => $identity->first_name,
     ];
 
     if ($userIsNew) {
-      // New user, new subscription.
+      // ****** New user, new subscription ******
       $payload['email_template'] = self::WELCOME_EMAIL_NEW_NEW;
+      $payload['tags'][] = 'niche-new-new';
       // Todo: get password link.
       $payload['merge_vars']['PASSWORD_RESET_LINK'] = $passwordResetURL;
     } else {
       if ($userIsNewToCampaign) {
-        // Existing user, new subscription.
+        // ****** Existing user, new subscription ******
         $payload['email_template'] = self::WELCOME_EMAIL_EXISTING_NEW;
+        $payload['tags'][] = 'niche-existing-new';
 
         // Add new signup data.
         $payload['event_id'] = self::PHOENIX_SIGNUP;
         $payload['signup_id'] = $signup;
       } else {
-        // Existing user, existing subscription.
+        // ****** Existing user, existing subscription ******
         $payload['email_template'] = self::WELCOME_EMAIL_EXISTING_EXISTING;
+        $payload['tags'][] = 'niche-existing-existing';
       }
     }
+
     $payload['tags'][] = $payload['email_template'];
 
 
