@@ -127,6 +127,10 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       'source' => self::SOURCE_NAME,
     ];
 
+    if (!empty($message['source_file'])) {
+      $this->user['source_detail'] = $message['source_file'];
+    }
+
     // Mobile.
     if (!empty($message['phone'])) {
       // Validate phone number based on the North American Numbering Plan
@@ -378,7 +382,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
         $identity->email,
         self::MAILCHIMP_LIST_ID
       );
-    } elseif (!$mailchimpStatus['subscription-status']) {
+    } elseif (!$mailchimpStatus['email-subscription-status']) {
       // User has unsubscribed.
       $payload['mailchimp_list_id'] = self::MAILCHIMP_LIST_ID;
       self::log(
@@ -406,116 +410,47 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     self::log('Publishing payload: %s', json_encode($payload));
     $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Source_Niche: process');
 
-    // Log existing user for statistics.
-    if (!$userIsNew) {
+    // Determine user's membership.
+    // User is considered DoSomething member when ONE of the following is true:
+    // 1. User has a profile on Northstar [ OR ]
+    $membership = !$userIsNew;
 
+    // 2. User is our MailChimp subscriber [ OR ]
+    $membership |= !$mailchimpStatus;
+
+    // 3. User is our MobileCommons subscriber
+    // This MobileCommons request is super ugly.
+    // Keeping it for compatibility with AfterShool.
+    $mocoStatus = [];
+    $this->mbcUserImportToolbox->checkExistingDrupal($input, $mocoStatus);
+    $membership |= !$mailchimpStatus;
+
+    // If user is our member, we'll log that.
+    if ($membership) {
+      $payloadLog = [];
+      $payloadLog['log-type'] = 'user-import-niche';
+      $payloadLog['source'] = self::SOURCE_NAME;
+      if ($mailchimpStatus) {
+        $payloadLog = array_merge($payloadLog, $mailchimpStatus);
+      }
+      if ($mocoStatus) {
+        $payloadLog = array_merge($payloadLog, $mocoStatus);
+      }
+      // Legacy.
+      if (!$userIsNew) {
+        $payloadLog['drupal-uid'] = $identity->drupal_id;
+        $payloadLog['drupal-email'] = $identity->email;
+        $payloadLog['drupal-mobile'] = $identity->mobile;
+      }
+
+      // Legacy. Second argument is just silly.
+      $origin = !empty($input['source_detail']) ? $input['source_detail'] : 'undetermined';
+      self::log(
+        'User identified as DoSomething member, logging: %s',
+        json_encode($payloadLog)
+      );
+      $this->mbcUserImportToolbox->logExisting($payloadLog, ['origin' => $origin]);
     }
-
-
-    var_dump($payload); die();
-    var_dump($input, $identity, $payload); die();
-
-    // $payload = $this->addCommonPayload($this->importUser);
-    // $existing['log-type'] = 'user-import-niche';
-    // $existing['source'] = $payload['source'];
-
-    // // Add welcome email details to payload
-    // $this->addWelcomeEmailSettings($this->importUser, $payload);
-
-    // // Check for existing email account in MailChimp
-    // $subscribed = $this->mbcUserImportToolbox->checkExistingEmail(
-    //   $this->importUser,
-    //   $existing
-    // );
-    // if (!$subscribed) {
-    //   $this->addEmailSubscriptionSettings($this->importUser, $payload);
-    // }
-
-    // // Drupal user
-    // $this->mbcUserImportToolbox->checkExistingDrupal(
-    //   $this->importUser,
-    //   $existing
-    // );
-    // if (empty($existing['drupal-uid'])) {
-    //   $importUser = (object) $this->importUser;
-    //   // Set user registration source.
-    //   $importUser->source = 'niche';
-
-    //   // Lookup user on Northstar.
-    //   $northstarUser = $this->mbToolbox->lookupNorthstarUser($importUser);
-    //   if ($northstarUser && !empty($northstarUser->drupal_id)) {
-    //     // User is missing from phoenix, but present on Northstar.
-    //     // Sync credentials:
-    //     $importUser->email = $northstarUser->email;
-    //     $importUser->mobile = $northstarUser->mobile;
-    //   }
-
-    //   // Trigger user creation on Northstar, will force-create user
-    //   // user on Phoenix.
-    //   $northstarUser = $this->mbToolbox->createNorthstarUser($importUser);
-
-    //   if (empty($northstarUser->drupal_id)) {
-    //     throw new Exception(
-    //       'MBC_UserImport_Source_Niche->process() - No Drupal Id provided by Northstar.'
-    //       . ' Response: ' . var_export($northstarUser, true)
-    //     );
-    //   }
-
-    //   $this->addImportUserInfo($northstarUser);
-    //   $drupalUID = $northstarUser->drupal_id;
-    //   $fbirthdateResetURL = $this->mbToolbox->getPasswordResetURL($drupalUID);
-    //   // #1, user_welcome, New/New
-    //   $payload['email_template'] = self::WELCOME_EMAIL_NEW_NEW;
-    //   $payload['tags'][0] = 'user-welcome-niche';
-    //   $payload['tags'][1] = self::WELCOME_EMAIL_NEW_NEW;
-    //   $payload['merge_vars']['PASSWORD_RESET_LINK'] = $passwordResetURL;
-    // } else {
-    //   // Existing Drupal user. Set UID for campaign signup
-    //   $drupalUID = $existing['drupal-uid'];
-    //   // #2, current_user, Existing/New
-    //   $payload['email_template'] = self::WELCOME_EMAIL_EXISTING_NEW;
-    //   $payload['tags'][0] = 'current-user-welcome-niche';
-    //   $payload['tags'][1] = self::WELCOME_EMAIL_EXISTING_NEW;
-    // }
-
-    // // Campaign signup
-    // $campaignNID = self::PHOENIX_SIGNUP;
-    // $campaignSignup = $this->mbcUserImportToolbox->campaignSignup(
-    //   $campaignNID,
-    //   $drupalUID,
-    //   'niche',
-    //   false
-    // );
-
-    // if (!$campaignSignup) {
-    //   // User was not signed up to campaign because they're already signed up.
-    //   // #3, current_signedup, Existing/Existing
-    //   $payload['email_template'] = self::WELCOME_EMAIL_EXISTING_EXISTING;
-    //   $payload['tags'][0] = 'current-signedup-user-welcome-niche';
-    //   $payload['tags'][1] = self::WELCOME_EMAIL_EXISTING_EXISTING;
-    // } else {
-    //   $payload['event_id'] = $campaignNID;
-    //   $payload['signup_id'] = $campaignSignup;
-    // }
-
-    // // Check for existing user account in Mobile Commons
-    // $this->mbcUserImportToolbox->checkExistingSMS($this->importUser, $existing);
-
-    // // @todo: transition to using JSON formatted messages when all of the
-    // // consumers are able to
-    // // detect the message format and process either seralized or JSON.
-    // $message = serialize($payload);
-    // $this->messageBroker_transactionals->publish(
-    //   $message,
-    //   'user.registration.transactional'
-    // );
-    // $this->statHat->ezCount(
-    //   'mbc-user-import: MBC_UserImport_Source_Niche: process',
-    //   1
-    // );
-
-    // // Log existing users
-    // $this->mbcUserImportToolbox->logExisting($existing, $this->importUser);
   }
 
   /** Bad OOP is bad OOP */

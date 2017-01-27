@@ -142,7 +142,7 @@ class MBC_UserImport_Toolbox
       throw $e;
     }
 
-    $result['subscription-status'] = $memberInfo->status !== 'unsubscribed';
+    $result['email-subscription-status'] = $memberInfo->status !== 'unsubscribed';
     $result['email-status'] = 'Existing account';
     $result['email'] = $email;
     $result['email-acquired'] = date("Y-m-d H:i:s", strtotime($memberInfo->last_changed));
