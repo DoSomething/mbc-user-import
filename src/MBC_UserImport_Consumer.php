@@ -90,7 +90,7 @@ class MBC_UserImport_Consumer extends MB_Toolbox_BaseConsumer
           'source' => $this->user['source']
         ];
         $this->process($processParams);
-        // $this->messageBroker->sendAck($this->message['payload']);
+        $this->messageBroker->sendAck($this->message['payload']);
         $this->statHat->ezCount(
           'mbc-user-import: MBC_UserImport_Consumer: processed',
           1

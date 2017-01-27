@@ -350,8 +350,12 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       // ****** New user, new subscription ******
       $payload['email_template'] = self::WELCOME_EMAIL_NEW_NEW;
       $payload['tags'][] = 'niche-new-new';
-      // ToDo: get password link.
-      $payload['merge_vars']['PASSWORD_RESET_LINK'] = $passwordResetURL;
+      // Generate new reset password link.
+      $passwordResult = $northstar->post('v2/resets', ['id' => $identity->id]);
+      if (empty($passwordResult['url'])) {
+        throw new Exception("Can't get password reset for " . $identity->id);
+      }
+      $payload['merge_vars']['PASSWORD_RESET_LINK'] = $passwordResult['url'];
     } else {
       if ($userIsNewToCampaign) {
         // ****** Existing user, new subscription ******
