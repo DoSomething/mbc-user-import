@@ -142,11 +142,9 @@ class MBC_UserImport_Toolbox
       throw $e;
     }
 
-    // Found.
-    echo $user['email'] . ' is already subscribed to US Mailchimp list.' . PHP_EOL;
-
+    $result['subscription-status'] = $memberInfo->status !== 'unsubscribed';
     $result['email-status'] = 'Existing account';
-    $result['email'] = $user['email'];
+    $result['email'] = $email;
     $result['email-acquired'] = date("Y-m-d H:i:s", strtotime($memberInfo->last_changed));
     $this->statHat->ezCount(
       'mbc-user-import: MBC_UserImport_Toolbox: ' .

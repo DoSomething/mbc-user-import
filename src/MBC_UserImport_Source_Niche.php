@@ -43,7 +43,9 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
   // Import source name.
   const SOURCE_NAME = 'niche';
 
-  // Mailchimp List Id..
+  // Mailchimp List Id:
+  // Do Something Members
+  // https://us4.admin.mailchimp.com/lists/members/?id=71893
   const MAILCHIMP_LIST_ID = 'f2fab1dfd4';
 
   // New Year, New US
@@ -212,7 +214,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       $userIsNew = true;
       $userIsNewToCampaign = true;
 
-      // Create Norhtstar and Phoenix accounts.
+      // Create Northstar and Phoenix accounts.
       self::log(
         'User not found, creating new user on Northstar: %s',
         json_encode($input)
@@ -259,7 +261,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       $identity = $northstar->updateUser($identity->id, $params);
     } elseif ($identityByEmail->id !== $identityByMobile->id) {
       // ****** Existing users: loaded both by mobile and phone ******
-      // We presume that user account with mobile number generaly have
+      // We presume that user account with mobile number generally have
       // email address as well. For this reason we decided to use
       // identity loaded by mobile rather than by email.
       $identity = &$identityByMobile;
@@ -302,7 +304,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       );
     }
 
-    // Signup user to promo campaign if they already hasn't been subscrubed.
+    // Signup user to promo campaign if they already hasn't been subscribed.
     $signup = $this->mbcUserImportToolbox->campaignSignup(
       self::PHOENIX_SIGNUP,
       $identity->drupal_id,
@@ -312,7 +314,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     if ($signup === true) {
       // User has already been subscribed.
       self::log(
-        'User %s (phoenix %s) has already been subscribed to %s',
+        'User %s (phoenix %s) has already been subscribed to campaign %s',
         $identity->id,
         $identity->drupal_id,
         self::PHOENIX_SIGNUP
@@ -344,7 +346,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       // ****** New user, new subscription ******
       $payload['email_template'] = self::WELCOME_EMAIL_NEW_NEW;
       $payload['tags'][] = 'niche-new-new';
-      // Todo: get password link.
+      // ToDo: get password link.
       $payload['merge_vars']['PASSWORD_RESET_LINK'] = $passwordResetURL;
     } else {
       if ($userIsNewToCampaign) {
@@ -363,14 +365,38 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     }
     $payload['tags'][] = $payload['email_template'];
 
-    // Subscribe user to MailChimp if necessery.
+    // Determine user's MailChimp subscription status, resubscribe if necessary.
     $mailchimpStatus = $this->mbcUserImportToolbox->getMailchimpStatus(
       $identity->email,
       self::MAILCHIMP_LIST_ID
     );
-    var_dump($mailchimpStatus); die();
-
-
+    if (!$mailchimpStatus) {
+      // User has no account on MailChimp with us.
+      $payload['mailchimp_list_id'] = self::MAILCHIMP_LIST_ID;
+      self::log(
+        'Will subscribe email %s to MailChimp list id %s',
+        $identity->email,
+        self::MAILCHIMP_LIST_ID
+      );
+    } elseif (!$mailchimpStatus['subscription-status']) {
+      // User has unsubscribed.
+      $payload['mailchimp_list_id'] = self::MAILCHIMP_LIST_ID;
+      self::log(
+        'User %s has unsubscribed from MailChimp list id %s'
+        . ', will attempt to resubscribe them',
+        $identity->email,
+        self::MAILCHIMP_LIST_ID,
+        $mailchimpStatus['email-acquired']
+      );
+    } else {
+      // User is an active Mailchimp subscriber.
+      self::log(
+        'User %s is an active subscriber of MailChimp list id %s since %s',
+        $identity->email,
+        self::MAILCHIMP_LIST_ID,
+        $mailchimpStatus['email-acquired']
+      );
+    }
 
     // Publish the payload.
     $this->messageBroker_transactionals->publish(
@@ -387,17 +413,8 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
 
 
     var_dump($payload); die();
+    var_dump($input, $identity, $payload); die();
 
-
-
-    print 'User is new: ';
-    var_dump($userIsNew);
-    print 'User is not subscribed to campaign: ';
-    var_dump($userIsNewToCampaign);
-
-    var_dump($input, $identity); die();
-
-  
     // $payload = $this->addCommonPayload($this->importUser);
     // $existing['log-type'] = 'user-import-niche';
     // $existing['source'] = $payload['source'];
@@ -501,25 +518,8 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     // $this->mbcUserImportToolbox->logExisting($existing, $this->importUser);
   }
 
-  /**
-   * Settings related to email services.
-   *
-   * @param array $user    User settings
-   * @param array $payload Settings for submission to service.
-   *
-   * @return array $payload Settings for submission to service.
-   */
-  public function addEmailSubscriptionSettings($user, &$payload)
-  {
-
-    if (isset($user['mailchimp_list_id'])) {
-      $payload['mailchimp_list_id'] = $user['mailchimp_list_id'];
-    } else {
-      $payload['mailchimp_list_id'] = 'f2fab1dfd4';
-    }
-  }
-
   /** Bad OOP is bad OOP */
+  public function addEmailSubscriptionSettings($user, &$payload) {}
   public function addWelcomeEmailSettings($user, &$payload) {}
   public function addCommonPayload() {}
   public function addWelcomeSMSSettings($user, &$payload) {}
