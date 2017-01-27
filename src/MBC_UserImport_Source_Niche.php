@@ -422,7 +422,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     // This MobileCommons request is super ugly.
     // Keeping it for compatibility with AfterShool.
     $mocoStatus = [];
-    $this->mbcUserImportToolbox->checkExistingDrupal($input, $mocoStatus);
+    $this->mbcUserImportToolbox->getMobileCommonsStatus($input, $mocoStatus);
     $membership |= !$mailchimpStatus;
 
     // If user is our member, we'll log that.

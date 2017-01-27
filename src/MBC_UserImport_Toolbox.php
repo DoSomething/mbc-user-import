@@ -138,7 +138,7 @@ class MBC_UserImport_Toolbox
 
       // Unknown error, exit.
       $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Toolbox: ' .
-        'checkExistingEmail: MailChimp error');
+        'getMailchimpStatus: MailChimp error');
       throw $e;
     }
 
@@ -148,39 +148,10 @@ class MBC_UserImport_Toolbox
     $result['email-acquired'] = date("Y-m-d H:i:s", strtotime($memberInfo->last_changed));
     $this->statHat->ezCount(
       'mbc-user-import: MBC_UserImport_Toolbox: ' .
-      'checkExistingEmail: Existing MailChimp account',
+      'getMailchimpStatus: Existing MailChimp account',
       1
     );
     return $result;
-  }
-
-  /**
-   * Check for the existence of Drupal account.
-   *
-   * @param array $user           Settings of user account to check against.
-   * @param array $existingStatus Details of existing accounts for the user email
-   *                              address.
-   *
-   * @return array $existingStatus Details of existing accounts for the user email
-   *                               address.
-   */
-  public function checkExistingDrupal($user, &$existingStatus)
-  {
-
-    $email = $user['email'];
-    $mobile = isset($user['mobile']) ? $user['mobile'] : null;
-    $drupalUID = $this->mbToolbox->lookupDrupalUser($email, $mobile);
-
-    if ($drupalUID != 0) {
-      $existingStatus['drupal-uid'] = $drupalUID;
-      $existingStatus['drupal-email'] = $user['email'];
-      $existingStatus['drupal-mobile'] = $user['mobile'];
-      $this->statHat->ezCount(
-        'mbc-user-import: MBC_UserImport_Toolbox: ' .
-        'checkExistingDrupal: Existing user',
-        1
-      );
-    }
   }
 
   /**
@@ -194,7 +165,7 @@ class MBC_UserImport_Toolbox
    * @return array $existingStatus Details of existing accounts for the user email
    *                               address.
    */
-  public function checkExistingSMS($user, &$existingStatus)
+  public function getMobileCommonsStatus($user, &$existingStatus)
   {
 
     if (empty($user['mobile'])) {
@@ -212,7 +183,7 @@ class MBC_UserImport_Toolbox
           = (string)$mobilecommonsStatus['profile']->status;
         $this->statHat->ezCount(
           'mbc-user-import: MBC_UserImport_Toolbox: ' .
-          'checkExistingSMS: ' . $existingStatus['mobile-error'],
+          'getMobileCommonsStatus: ' . $existingStatus['mobile-error'],
           1
         );
         // opted_out_source
@@ -222,7 +193,7 @@ class MBC_UserImport_Toolbox
         $existingStatus['mobile-error'] = 'Existing account';
         $this->statHat->ezCount(
           'mbc-user-import: MBC_UserImport_Toolbox: ' .
-          'checkExistingSMS: Existing account',
+          'getMobileCommonsStatus: Existing account',
           1
         );
       }
@@ -236,7 +207,7 @@ class MBC_UserImport_Toolbox
         echo 'Mobile Common Error: ' . $mobileCommonsError, PHP_EOL;
         $this->statHat->ezCount(
           'mbc-user-import: MBC_UserImport_Toolbox: ' .
-          'checkExistingSMS: Invalid phone number',
+          'getMobileCommonsStatus: Invalid phone number',
           1
         );
       }
@@ -288,66 +259,6 @@ class MBC_UserImport_Toolbox
     $payload['user_language'] = 'en';
 
     return $payload;
-  }
-
-  /**
-   * Create the Drupal user based on user settings. email is a
-   * required value.
-   *
-   * @param array $user Values that define the user being imported.
-   *
-   * @return object $drupalUser The resulting Drupal user values.
-   */
-  public function addDrupalUser($user)
-  {
-
-    $drupalUser = $this->mbToolbox->createDrupalUser($user);
-    $this->statHat->ezCount(
-      'mbc-user-import: MBC_UserImport_Toolbox: addDrupalUser',
-      1
-    );
-    return $drupalUser;
-  }
-
-  /**
-   * Send password reset email after welcome to DoSomething email is sent.
-   *
-   * @param object $user Drupal User properties.
-   *
-   * @return null
-   *
-   * @thorws Exception
-   */
-  public function sendPasswordResetEmail($user)
-  {
-
-    $firstName = $user->field_first_name->und[0]->value != null ?
-      ucfirst($user->field_first_name->und[0]->value) : 'Doer';
-    $passwordResetURL = $this->mbToolbox->getPasswordResetURL($user->uid);
-    if ($passwordResetURL === null) {
-      throw new Exception('Failed to generate password reset URL.');
-    }
-
-    $message['email'] = $user->mail;
-    $message['merge_vars']['FNAME'] = $firstName;
-    $message['merge_vars']['PASSWORD_RESET_LINK'] = $passwordResetURL;
-    $message['merge_vars']['MEMBER_COUNT']
-      = $this->mbToolbox->getDSMemberCount();
-    $message['activity'] = 'user_password-niche';
-    $message['email_template'] = 'mb-userImport-niche_password_v1-0-0';
-
-    $message['tags'][0] = 'user_password-niche';
-    $message['log-type'] = 'transactional';
-
-    $payload = serialize($message);
-    $this->messageBroker_transactionals->publish(
-      $payload,
-      'user.password.transactional'
-    );
-    $this->statHat->ezCount(
-      'mbc-user-import: MBC_UserImport_Toolbox: sendPasswordResetEmail',
-      1
-    );
   }
 
   /**
