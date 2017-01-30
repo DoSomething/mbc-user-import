@@ -50,8 +50,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
 
   // New Year, New US
   // https://www.dosomething.org/us/campaigns/new-year-new-us
-  // const PHOENIX_SIGNUP = 3616;
-  const PHOENIX_SIGNUP = 1173;
+  const PHOENIX_SIGNUP = 3616;
 
   /**
    * Northstar-compatible user
