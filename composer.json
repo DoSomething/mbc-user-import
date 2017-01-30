@@ -18,8 +18,7 @@
     "dosomething/mb-toolbox": "0.13.*",
     "dosomething/stathat": "2.*",
     "thinkshout/mailchimp-api-php": "^1.0",
-    "dosomething/gateway": "@dev",
-    "league/oauth2-client": "^1.4"
+    "dosomething/gateway": "1.0.0-rc16"
   },
   "require-dev": {
     "phpunit/phpunit": "4.4.*",
