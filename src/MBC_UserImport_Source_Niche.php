@@ -126,10 +126,27 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       'source' => self::SOURCE_NAME,
     ];
 
-    if (!empty($message['source_file'])) {
-      $this->user['source_detail'] = $message['source_file'];
+    // Northstar fields basic mapping.
+    $mapping = [
+      // Northstar => Import
+      'source_detail' => 'source_file',
+      // Name:
+      'first_name' => 'first_name',
+      'last_name' => 'last_name',
+      // Address:
+      'addr_street1' => 'address1',
+      'addr_street2' => 'address2',
+      'addr_city' => 'city',
+      'addr_state' => 'state',
+    ];
+
+    foreach ($mapping as $northstar_field => $import_field) {
+      if (!empty($message[$import_field])) {
+        $this->user[$northstar_field] = $message[$import_field];
+      }
     }
 
+    // Custom logic fields.
     // Mobile.
     if (!empty($message['phone'])) {
       // Validate phone number based on the North American Numbering Plan
@@ -139,7 +156,6 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
         $this->user['mobile'] = $message['phone'];
       }
     }
-
     // Birthday.
     if (!empty($message['birthday'])) {
       if (is_int($message['birthdate']) || ctype_digit($message['birthdate'])) {
@@ -148,43 +164,16 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
         $this->user['birthdate'] = strtotime($message['birthdate']);
       }
     }
-
-    // First name.
-    if (!empty($message['first_name'])) {
-      $this->user['first_name'] = $message['first_name'];
-    }
-
-    // Last name.
-    if (!empty($message['last_name'])) {
-      $this->user['last_name'] = $message['last_name'];
-    }
-
-    // Address.
-    if (!empty($message['address1'])) {
-      $this->user['addr_street1'] = $message['address1'];
-    }
-    if (!empty($message['address2'])) {
-      $this->user['addr_street2'] = $message['address2'];
-    }
-    if (!empty($message['city'])) {
-      $this->user['addr_city'] = $message['city'];
-    }
-    if (!empty($message['state'])) {
-      $this->user['addr_state'] = $message['state'];
-    }
+    // Country. Assume users are from the US.
+    $this->user['country'] = !empty($message['country']) ? $message['country'] : 'US';
+    // Zip. Handle both `zip` and `postal_code` import field names.
     if (!empty($message['zip'])) {
       $this->user['addr_zip'] = $message['zip'];
     } elseif (!empty($message['postal_code'])) {
       $this->user['addr_zip'] = $message['postal_code'];
     }
 
-    // Country.
-    if (!empty($message['country'])) {
-      $this->user['country'] = $message['country'];
-    } else {
-      // Assume users are from the US.
-      $this->user['country'] = 'US';
-    }
+    var_dump($this->user); die();
   }
 
   /**
