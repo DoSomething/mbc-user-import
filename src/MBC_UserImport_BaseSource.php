@@ -75,6 +75,15 @@ abstract class MBC_UserImport_BaseSource
   protected $messageBroker_deadLetter;
 
   /**
+   * Northstar client.
+   *
+   * @var \DoSomething\Gateway\Northstar
+   *
+   * @see  https://github.com/DoSomething/gateway
+   */
+  protected $northstar;
+
+  /**
    * StatHat object for logging of activity
    *
    * @var object
@@ -118,6 +127,9 @@ abstract class MBC_UserImport_BaseSource
     $this->statHat = $this->mbConfig->getProperty('statHat');
     $this->mbToolbox = $this->mbConfig->getProperty('mbToolbox');
     $this->memberCount = $this->mbToolbox->getDSMemberCount();
+
+    // Northstar.
+    $this->northstar = $this->mbConfig->getProperty('northstar');
   }
 
   /**
@@ -178,4 +190,16 @@ abstract class MBC_UserImport_BaseSource
    * @return array $payload Adjusted based on email and user settings.
    */
   abstract public function addWelcomeSMSSettings($user, &$payload);
+
+  /**
+   * Log
+   */
+  static function log()
+  {
+    $args = func_get_args();
+    $message = array_shift($args);
+    echo '** ';
+    echo vsprintf($message, $args);
+    echo PHP_EOL;
+  }
 }

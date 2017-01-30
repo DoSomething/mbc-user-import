@@ -124,74 +124,34 @@ class MBC_UserImport_Toolbox
 
   /**
    * Check for the existence of email (Mailchimp) account.
-   *
-   * @param array $user           Settings of user account to check against.
-   * @param array $payload        Payload to be extended with Mailchimp metadata.
    */
-  public function checkExistingEmail($user, &$payload)
+  public function getMailchimpStatus($email, $listId)
   {
-
+    $result = [];
     try {
-      $memberInfo = $this->mailchimpLists->getMemberInfo(
-        $user['mailchimp_list_id'],
-        $user['email']
-      );
+      $memberInfo = $this->mailchimpLists->getMemberInfo($listId, $email);
     } catch (MailchimpAPIException $e) {
-      if ($e->getCode() !== 404) {
-        $payload['email-status'] = 'Mailchimp Error';
-        $payload['email'] = $user['email'];
-        $this->statHat->ezCount(
-          'mbc-user-import: MBC_UserImport_Toolbox: ' .
-          'checkExistingEmail: MailChimp error',
-          1
-        );
-        throw $e;
+      if ($e->getCode() === 404) {
+        // Not found = new record.
+        return false;
       }
-      // Not found = new record.
-      return false;
+
+      // Unknown error, exit.
+      $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Toolbox: ' .
+        'getMailchimpStatus: MailChimp error');
+      throw $e;
     }
 
-    // Found.
-    echo $user['email'] . ' is already subscribed to US Mailchimp list.' . PHP_EOL;
-
-    $payload['email-status'] = 'Existing account';
-    $payload['email'] = $user['email'];
-    $payload['email-acquired'] = date("Y-m-d H:i:s", strtotime($memberInfo->last_changed));
+    $result['email-subscription-status'] = $memberInfo->status !== 'unsubscribed';
+    $result['email-status'] = 'Existing account';
+    $result['email'] = $email;
+    $result['email-acquired'] = date("Y-m-d H:i:s", strtotime($memberInfo->last_changed));
     $this->statHat->ezCount(
       'mbc-user-import: MBC_UserImport_Toolbox: ' .
-      'checkExistingEmail: Existing MailChimp account',
+      'getMailchimpStatus: Existing MailChimp account',
       1
     );
-    return true;
-  }
-
-  /**
-   * Check for the existence of Drupal account.
-   *
-   * @param array $user           Settings of user account to check against.
-   * @param array $existingStatus Details of existing accounts for the user email
-   *                              address.
-   *
-   * @return array $existingStatus Details of existing accounts for the user email
-   *                               address.
-   */
-  public function checkExistingDrupal($user, &$existingStatus)
-  {
-
-    $email = $user['email'];
-    $mobile = isset($user['mobile']) ? $user['mobile'] : null;
-    $drupalUID = $this->mbToolbox->lookupDrupalUser($email, $mobile);
-
-    if ($drupalUID != 0) {
-      $existingStatus['drupal-uid'] = $drupalUID;
-      $existingStatus['drupal-email'] = $user['email'];
-      $existingStatus['drupal-mobile'] = $user['mobile'];
-      $this->statHat->ezCount(
-        'mbc-user-import: MBC_UserImport_Toolbox: ' .
-        'checkExistingDrupal: Existing user',
-        1
-      );
-    }
+    return $result;
   }
 
   /**
@@ -205,7 +165,7 @@ class MBC_UserImport_Toolbox
    * @return array $existingStatus Details of existing accounts for the user email
    *                               address.
    */
-  public function checkExistingSMS($user, &$existingStatus)
+  public function getMobileCommonsStatus($user, &$existingStatus)
   {
 
     if (empty($user['mobile'])) {
@@ -223,7 +183,7 @@ class MBC_UserImport_Toolbox
           = (string)$mobilecommonsStatus['profile']->status;
         $this->statHat->ezCount(
           'mbc-user-import: MBC_UserImport_Toolbox: ' .
-          'checkExistingSMS: ' . $existingStatus['mobile-error'],
+          'getMobileCommonsStatus: ' . $existingStatus['mobile-error'],
           1
         );
         // opted_out_source
@@ -233,7 +193,7 @@ class MBC_UserImport_Toolbox
         $existingStatus['mobile-error'] = 'Existing account';
         $this->statHat->ezCount(
           'mbc-user-import: MBC_UserImport_Toolbox: ' .
-          'checkExistingSMS: Existing account',
+          'getMobileCommonsStatus: Existing account',
           1
         );
       }
@@ -247,7 +207,7 @@ class MBC_UserImport_Toolbox
         echo 'Mobile Common Error: ' . $mobileCommonsError, PHP_EOL;
         $this->statHat->ezCount(
           'mbc-user-import: MBC_UserImport_Toolbox: ' .
-          'checkExistingSMS: Invalid phone number',
+          'getMobileCommonsStatus: Invalid phone number',
           1
         );
       }
@@ -287,10 +247,11 @@ class MBC_UserImport_Toolbox
    *
    * @return array $payload Common settings for message payload.
    */
-  public function addCommonPayload($user)
+  public function addCommonPayload($user = [])
   {
 
-    $payload['activity_timestamp'] = $user['activity_timestamp'];
+    $time = !empty($user['activity_timestamp']) ? $user['activity_timestamp'] : time();
+    $payload['activity_timestamp'] = $time;
     $payload['log-type'] = 'transactional';
     $payload['subscribed'] = 1;
     $payload['application_id'] = 'MUI';
@@ -298,66 +259,6 @@ class MBC_UserImport_Toolbox
     $payload['user_language'] = 'en';
 
     return $payload;
-  }
-
-  /**
-   * Create the Drupal user based on user settings. email is a
-   * required value.
-   *
-   * @param array $user Values that define the user being imported.
-   *
-   * @return object $drupalUser The resulting Drupal user values.
-   */
-  public function addDrupalUser($user)
-  {
-
-    $drupalUser = $this->mbToolbox->createDrupalUser($user);
-    $this->statHat->ezCount(
-      'mbc-user-import: MBC_UserImport_Toolbox: addDrupalUser',
-      1
-    );
-    return $drupalUser;
-  }
-
-  /**
-   * Send password reset email after welcome to DoSomething email is sent.
-   *
-   * @param object $user Drupal User properties.
-   *
-   * @return null
-   *
-   * @thorws Exception
-   */
-  public function sendPasswordResetEmail($user)
-  {
-
-    $firstName = $user->field_first_name->und[0]->value != null ?
-      ucfirst($user->field_first_name->und[0]->value) : 'Doer';
-    $passwordResetURL = $this->mbToolbox->getPasswordResetURL($user->uid);
-    if ($passwordResetURL === null) {
-      throw new Exception('Failed to generate password reset URL.');
-    }
-
-    $message['email'] = $user->mail;
-    $message['merge_vars']['FNAME'] = $firstName;
-    $message['merge_vars']['PASSWORD_RESET_LINK'] = $passwordResetURL;
-    $message['merge_vars']['MEMBER_COUNT']
-      = $this->mbToolbox->getDSMemberCount();
-    $message['activity'] = 'user_password-niche';
-    $message['email_template'] = 'mb-userImport-niche_password_v1-0-0';
-
-    $message['tags'][0] = 'user_password-niche';
-    $message['log-type'] = 'transactional';
-
-    $payload = serialize($message);
-    $this->messageBroker_transactionals->publish(
-      $payload,
-      'user.password.transactional'
-    );
-    $this->statHat->ezCount(
-      'mbc-user-import: MBC_UserImport_Toolbox: sendPasswordResetEmail',
-      1
-    );
   }
 
   /**
@@ -371,46 +272,40 @@ class MBC_UserImport_Toolbox
    * @param string  $source         The name of the import source
    * @param bool    $transactionals Supress sending transaction messages.
    *
-   * @return bool|int Was the user signed up to the campaign or signup id
+   * @return bool|int Signup id or true on existing subscription
    */
-  public function campaignSignup(
-    $campaignNID,
-    $drupalUID,
-    $source,
-    $transactionals = true
-  ) {
-
+  public function campaignSignup($id, $userId, $source, $transactionals = false) {
     $post = [
-    'source' => $source,
-    'uid' => $drupalUID,
-    'transactionals' => $transactionals
+      'source' => $source,
+      'uid' => $userId,
+      'transactionals' => false,
     ];
     $curlUrl = $this->phoenixAPIConfig['host'];
-    $port = $this->phoenixAPIConfig['port'];
-    if ($port != 0) {
-      $curlUrl .= ":$port";
+    if (!empty($this->phoenixAPIConfig['port'])) {
+      $curlUrl .= ":" . $this->phoenixAPIConfig['port'];
     }
-    $curlUrl .= '/api/v1/campaigns/' . $campaignNID . '/signup';
-    $signUp = $this->mbToolboxCURL->curlPOSTauth($curlUrl, $post);
+    $curlUrl .= '/api/v1/campaigns/' . $id . '/signup';
 
-    // Results returned for campaign signup
-    // User signed up, indicated by return sid (signup ID)
-    if (is_array($signUp[0]) && $signUp[0][0] > 0) {
-      $this->statHat->ezCount(
-        'mbc-user-import: MBC_UserImport_Toolbox: campaignSignup',
-        1
-      );
-      return $signUp[0][0];
+    // Execute the request.
+    list($response, $code) = $this->mbToolboxCURL->curlPOSTauth($curlUrl, $post);
+    $result = isset($response[0]) ? $response[0] : 'Unknown';
+
+    if ($code != 200) {
+      $error = "Can't signup user " .  $userId . " to " . $id . ": " . $result;
+      throw new Exception($error);
+    }
+
+    if (is_numeric($result)) {
+      // New signup: signup id will be returned.
+      $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Toolbox: campaignSignup');
+      return $result;
+    } elseif ($result === false) {
+      // User has already been subscribed.
+      $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Toolbox: existing campaignSignup');
+      return true;
     } else {
-      echo 'Drupal UID: ' . $drupalUID . ' may already be signed up for '
-        . 'campaign ' . $campaignNID . ' or campaign is not accepting signups.'
-        . $signUp[0][0] . PHP_EOL;
-      $this->statHat->ezCount(
-        'mbc-user-import: MBC_UserImport_Toolbox: existing campaignSignup',
-        1
-      );
-      return false;
+      $error = "Can't parse signup response: user " .  $userId . " to " . $id;
+      throw new Exception($error);
     }
   }
-
 }

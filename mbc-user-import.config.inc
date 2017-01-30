@@ -11,6 +11,10 @@ use DoSomething\MB_Toolbox\MB_Toolbox;
 use DoSomething\MB_Toolbox\MB_Toolbox_cURL;
 use DoSomething\StatHat\Client as StatHat;
 use DoSomething\MB_Toolbox\MB_RabbitMQManagementAPI;
+use DoSomething\Gateway\Northstar;
+
+use DoSomething\MBC_UserImport\MBC_UserImport_Northstar_OAuthBridge;
+
 
 // Load configuration settings common to the Message Broker system
 // symlinks in the project directory point to the actual location of the files
@@ -58,13 +62,6 @@ $mbConfig->setProperty('ds_drupal_api_config', [
   'password' => getenv('DS_DRUPAL_API_PASSWORD'),
 ]);
 
-// Northstar
-$mbConfig->setProperty('northstar_config', [
-  'host' => getenv("NORTHSTAR_API_HOST"),
-  'id' => getenv("NORTHSTAR_API_ID"),
-  'key' => getenv('NORTHSTAR_API_KEY'),
-]);
-
 // SMS
 $mbConfig->setProperty('mobileCommons', new \MobileCommons([
   'username' => getenv("MOBILE_COMMONS_US_USER"),
@@ -77,6 +74,21 @@ $mbConfig->setProperty('mailchimpLists', new MailchimpLists(getenv("MAILCHIMP_AP
 
 $mbConfig->setProperty('mbToolbox', new MB_Toolbox());
 $mbConfig->setProperty('mbToolboxCURL', new MB_Toolbox_cURL());
+
+// Northstar
+$northstar = new Northstar([
+    'grant' => 'client_credentials', // Default OAuth grant to use: either 'authorization_code' or 'client_credentials'
+    'url' => getenv("NORTHSTAR_API_HOST"), // the environment you want to connect to
+    'bridge' => MBC_UserImport_Northstar_OAuthBridge::class, // class which handles saving/retrieving tokens
+
+    // Then, configure client ID, client secret, and scopes per grant.
+    'client_credentials' => [
+        'client_id' => getenv("NORTHSTAR_API_ID"),
+        'client_secret' => getenv('NORTHSTAR_API_KEY'),
+        'scope' => ['user', 'admin'],
+    ],
+]);
+$mbConfig->setProperty('northstar', $northstar);
 
 // Rabbit MQ connection to specific exchanges / queues
 $mbRabbitConfig = $mbConfig->constructRabbitConfig('directUserImport', ['userImportQueue']);

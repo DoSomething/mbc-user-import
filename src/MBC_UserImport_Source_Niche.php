@@ -40,12 +40,24 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
   const WELCOME_EMAIL_EXISTING_NEW = 'mb-niche-welcome_existing-new_v1-9-0';
   const WELCOME_EMAIL_EXISTING_EXISTING = 'mb-niche-welcome_existing-existing_v1-9-0';
 
-  // Off.
-  const MOBILE_COMMONS_SIGNUP = false;
+  // Import source name.
+  const SOURCE_NAME = 'niche';
+
+  // Mailchimp List Id:
+  // Do Something Members
+  // https://us4.admin.mailchimp.com/lists/members/?id=71893
+  const MAILCHIMP_LIST_ID = 'f2fab1dfd4';
 
   // New Year, New US
   // https://www.dosomething.org/us/campaigns/new-year-new-us
   const PHOENIX_SIGNUP = 3616;
+
+  /**
+   * Northstar-compatible user
+   *
+   * @var array
+   */
+  private $user;
 
   /**
    * Constructor for MBC_UserImport_Source_Nice - extension of the base source
@@ -53,9 +65,8 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
    */
   public function __construct()
   {
-
     parent::__construct();
-    $this->sourceName = 'Niche';
+    $this->sourceName = self::SOURCE_NAME;
     $this->mbcUserImportToolbox = new MBC_UserImport_Toolbox();
   }
 
@@ -109,140 +120,57 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
   public function setter($message)
   {
 
-    if (isset($message['source'])) {
-      $this->importUser['user_registration_source'] = $message['source'];
-    } else {
-      $this->importUser['user_registration_source'] = 'Niche';
-    }
-    if (isset($message['source_file'])) {
-      $this->importUser['origin'] = $message['source_file'];
-    }
-    if (isset($message['activity_timestamp'])) {
-      $this->importUser['activity_timestamp'] = $message['activity_timestamp'];
-    }
+    // Required minimum.
+    $this->user = [
+      'email'  => $message['email'],
+      'source' => self::SOURCE_NAME,
+    ];
 
-    if (isset($message['email'])) {
-      $this->importUser['email'] = $message['email'];
-    }
-    if (isset($message['mailchimp_list_id'])) {
-      $this->importUser['mailchimp_list_id'] = $message['mailchimp_list_id'];
-    }
+    // Northstar fields basic mapping.
+    $mapping = [
+      // Northstar => Import
+      'source_detail' => 'source_file',
+      // Name:
+      'first_name' => 'first_name',
+      'last_name' => 'last_name',
+      // Address:
+      'addr_street1' => 'address1',
+      'addr_street2' => 'address2',
+      'addr_city' => 'city',
+      'addr_state' => 'state',
+    ];
 
-    if (isset($message['name']) && !isset($message['first_name'])) {
-      $nameBits = $this->mbcUserImportToolbox->nameBits($message['name']);
-      $this->importUser['first_name'] = $nameBits['first_name'];
-      $this->importUser['last_name'] = $nameBits['last_name'];
-    }
-
-    $firstName = isset($message['first_name']) && $message['first_name'] != ''
-      ? $message['first_name'] : 'DS';
-    $this->importUser['password']
-      = str_replace(' ', '', $firstName) . '-Doer' . rand(1, 1000);
-
-    // Optional fields
-    if ($message['birthdate'] > time()) {
-      echo '- WARNING: Invalid birthdate: ' . $message['birthdate'] .
-        ' -> date(): ' . date('r', $message['birthdate']), PHP_EOL;
-    } else {
-      if (isset($message['birthdate']) && is_int($message['birthdate'])) {
-        $this->importUser['birthdate_timestamp'] = $message['birthdate'];
-      } elseif (isset($message['birthdate'])
-        && ctype_digit($message['birthdate'])
-      ) {
-        $this->importUser['birthdate_timestamp']
-          = (int) $message['birthdate'];
-      } elseif (isset($message['birthdate'])
-        && is_string($message['birthdate'])
-      ) {
-        $this->importUser['birthdate_timestamp']
-          = strtotime($message['birthdate']);
+    foreach ($mapping as $northstar_field => $import_field) {
+      if (!empty($message[$import_field])) {
+        $this->user[$northstar_field] = $message[$import_field];
       }
     }
-    if (!empty($message['first_name'])) {
-      $this->importUser['first_name'] = $message['first_name'];
-    }
-    if (!empty($message['first_name'])) {
-      $this->importUser['merge_vars']['FNAME'] = $message['first_name'];
-    }
-    if (!empty($message['last_name'])) {
-      $this->importUser['last_name'] = $message['last_name'];
-    }
-    if (!empty($message['last_name'])) {
-      $this->importUser['merge_vars']['LNAME'] = $message['last_name'];
-    }
-    if (!empty($message['password'])) {
-      $this->importUser['merge_vars']['PASSWORD'] = $message['password'];
-    }
-    if (!empty($message['address1'])) {
-      $this->importUser['address1'] = $message['address1'];
-    }
-    if (!empty($message['address2'])) {
-      $this->importUser['address2'] = $message['address2'];
-    }
-    if (!empty($message['city'])) {
-      $this->importUser['city'] = $message['city'];
-    }
-    if (!empty($message['state'])) {
-      $this->importUser['state'] = $message['state'];
-    }
-    if (!empty($message['country'])) {
-      $this->importUser['country'] = $message['country'];
-    } else {
-      $this->importUser['country'] = 'US';
-    }
-    if (!empty($message['zip'])) {
-      $this->importUser['zip'] = $message['zip'];
-      $this->importUser['postal_code'] = $message['zip'];
-    } elseif (!empty($message['postal_code'])) {
-      $this->importUser['zip'] = $message['postal_code'];
-      $this->importUser['postal_code'] = $message['postal_code'];
-    }
+
+    // Custom logic fields.
+    // Mobile.
     if (!empty($message['phone'])) {
       // Validate phone number based on the North American Numbering Plan
       // https://en.wikipedia.org/wiki/North_American_Numbering_Plan
       $pattern = "/^(\d[\s-]?)?[\(\[\s-]{0,2}?\d{3}[\)\]\s-]{0,2}?\d{3}[\s-]?\d{4}$/i";
-      if ((preg_match($pattern, $message['phone']))) {
-        $this->importUser['mobile'] = $message['phone'];
+      if (preg_match($pattern, $message['phone']) !== false) {
+        $this->user['mobile'] = $message['phone'];
       }
     }
-    if (isset($message['hs_gradyear']) && $message['hs_gradyear'] != 0) {
-      $this->importUser['hs_gradyear'] = $message['hs_gradyear'];
+    // Birthday.
+    if (!empty($message['birthday'])) {
+      if (is_int($message['birthdate']) || ctype_digit($message['birthdate'])) {
+        $this->user['birthdate'] = (int) $message['birthdate'];
+      } else {
+        $this->user['birthdate'] = strtotime($message['birthdate']);
+      }
     }
-    if (!empty($message['race'])) {
-      $this->importUser['race'] = $message['race'];
-    }
-    if (!empty($message['religion'])) {
-      $this->importUser['religion'] = $message['religion'];
-    }
-    if (!empty($message['hs_name'])) {
-      $this->importUser['hs_name'] = $message['hs_name'];
-    }
-    if (!empty($message['college_name'])) {
-      $this->importUser['college_name'] = $message['college_name'];
-    }
-    if (!empty($message['major_name'])) {
-      $this->importUser['major_name'] = $message['major_name'];
-    }
-    if (!empty($message['degree_type'])) {
-      $this->importUser['degree_type'] = $message['degree_type'];
-    }
-    if (isset($message['sat_math']) && $message['sat_math'] != 0) {
-      $this->importUser['sat_math'] = $message['sat_math'];
-    }
-    if (isset($message['sat_verbal']) && $message['sat_verbal'] != 0) {
-      $this->importUser['sat_verbal'] = $message['sat_verbal'];
-    }
-    if (isset($message['sat_writing']) && $message['sat_writing'] != 0) {
-      $this->importUser['sat_writing'] = $message['sat_writing'];
-    }
-    if (isset($message['act_math']) && $message['act_math'] != 0) {
-      $this->importUser['act_math'] = $message['act_math'];
-    }
-    if (isset($message['gpa']) && $message['gpa'] != 0) {
-      $this->importUser['gpa'] = $message['gpa'];
-    }
-    if (!empty($message['role'])) {
-      $this->importUser['role'] = $message['role'];
+    // Country. Assume users are from the US.
+    $this->user['country'] = !empty($message['country']) ? $message['country'] : 'US';
+    // Zip. Handle both `zip` and `postal_code` import field names.
+    if (!empty($message['zip'])) {
+      $this->user['addr_zip'] = $message['zip'];
+    } elseif (!empty($message['postal_code'])) {
+      $this->user['addr_zip'] = $message['postal_code'];
     }
   }
 
@@ -254,209 +182,266 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
    */
   public function process()
   {
+    // User status variables.
+    $userIsNew = false;
+    $userIsNewToCampaign = false;
 
-    $payload = $this->addCommonPayload($this->importUser);
-    $existing['log-type'] = 'user-import-niche';
-    $existing['source'] = $payload['source'];
-
-    // Add welcome email details to payload
-    $this->addWelcomeEmailSettings($this->importUser, $payload);
-
-    // Check for existing email account in MailChimp
-    $subscribed = $this->mbcUserImportToolbox->checkExistingEmail(
-      $this->importUser,
-      $existing
-    );
-    if (!$subscribed) {
-      $this->addEmailSubscriptionSettings($this->importUser, $payload);
+    // Lookup on Northstar by email.
+    $identityByEmail = $this->northstar->getUser('email', $this->user['email']);
+    if (!empty($this->user['mobile'])) {
+      $identityByMobile = $this->northstar->getUser('mobile', $this->user['mobile']);
+    } else {
+      $identityByMobile = false;
     }
 
-    // Drupal user
-    $this->mbcUserImportToolbox->checkExistingDrupal(
-      $this->importUser,
-      $existing
-    );
-    if (empty($existing['drupal-uid'])) {
-      $importUser = (object) $this->importUser;
-      // Set user registration source.
-      $importUser->source = 'niche';
+    // Process all possible cases and merge data based on identity load results:
+    if (empty($identityByEmail) && empty($identityByMobile)) {
+      // ****** New user ******
+      $userIsNew = true;
+      $userIsNewToCampaign = true;
 
-      // Lookup user on Northstar.
-      $northstarUser = $this->mbToolbox->lookupNorthstarUser($importUser);
-      if ($northstarUser && !empty($northstarUser->drupal_id)) {
-        // User is missing from phoenix, but present on Northstar.
-        // Sync credentials:
-        $importUser->email = $northstarUser->email;
-        $importUser->mobile = $northstarUser->mobile;
-      }
+      // Create Northstar and Phoenix accounts.
+      self::log(
+        'User not found, creating new user on Northstar: %s',
+        json_encode($this->user)
+      );
+      $identity = $this->northstar->createUser($this->user);
+    } elseif (!empty($identityByEmail) && empty($identityByMobile)) {
+      // ****** Existing user: only email record exists ******
+      $identity = &$identityByEmail;
+      self::log(
+        'User identified by email %s as %s',
+        $this->user['email'],
+        $identity->id
+      );
 
-      // Trigger user creation on Northstar, will force-create user
-      // user on Phoenix.
-      $northstarUser = $this->mbToolbox->createNorthstarUser($importUser);
-
-      if (empty($northstarUser->drupal_id)) {
-        throw new Exception(
-          'MBC_UserImport_Source_Niche->process() - No Drupal Id provided by Northstar.'
-          . ' Response: ' . var_export($northstarUser, true)
+      // Save mobile number to record loaded by email.
+      if (!empty($this->user['mobile'])) {
+        self::log(
+          'Updating user %s mobile phone from "%s" to "%s"',
+          $identity->id,
+          ($identity->mobile ?: "NULL"),
+          $this->user['mobile']
         );
+
+        $params = ['mobile' => $this->user['mobile']];
+        $identity = $this->northstar->updateUser($identity->id, $params);
       }
+    } elseif (!empty($identityByMobile) && empty($identityByEmail)) {
+      // ****** Existing user: only mobile record exists ******
+      $identity = &$identityByMobile;
+      self::log(
+        'User identified by mobile %s as %s',
+        $this->user['mobile'],
+        $identity->id
+      );
 
-      $this->addImportUserInfo($northstarUser);
-      $drupalUID = $northstarUser->drupal_id;
-      $passwordResetURL = $this->mbToolbox->getPasswordResetURL($drupalUID);
-      // #1, user_welcome, New/New
-      $payload['email_template'] = self::WELCOME_EMAIL_NEW_NEW;
-      $payload['tags'][0] = 'user-welcome-niche';
-      $payload['tags'][1] = self::WELCOME_EMAIL_NEW_NEW;
-      $payload['merge_vars']['PASSWORD_RESET_LINK'] = $passwordResetURL;
-    } else {
-      // Existing Drupal user. Set UID for campaign signup
-      $drupalUID = $existing['drupal-uid'];
-      // #2, current_user, Existing/New
-      $payload['email_template'] = self::WELCOME_EMAIL_EXISTING_NEW;
-      $payload['tags'][0] = 'current-user-welcome-niche';
-      $payload['tags'][1] = self::WELCOME_EMAIL_EXISTING_NEW;
+      // Save email to record loaded by mobile.
+      self::log(
+        'Updating user %s email from "%s" to "%s"',
+        $identity->id,
+        ($identity->email ?: "NULL"),
+        $this->user['email']
+      );
+      $params = ['email' => $this->user['email']];
+      $identity = $this->northstar->updateUser($identity->id, $params);
+    } elseif ($identityByEmail->id !== $identityByMobile->id) {
+      // ****** Existing users: loaded both by mobile and phone ******
+      // We presume that user account with mobile number generally have
+      // email address as well. For this reason we decided to use
+      // identity loaded by mobile rather than by email.
+      $identity = &$identityByMobile;
+
+      self::log(
+        'User identified by email %s as %s and by mobile %s as %s'
+          . ' Selecting mobile identity',
+        $this->user['mobile'],
+        $identityByMobile->id,
+        $this->user['email'],
+        $identityByEmail->id
+      );
+
+    } elseif ($identityByEmail->id === $identityByMobile->id) {
+      // ****** Existing user: same identity loaded both by mobile and phone ******
+      $identity = &$identityByEmail;
+
+      self::log(
+        'User identified by mobile %s and email %s: %s',
+        $this->user['mobile'],
+        $this->user['email'],
+        $identity->id
+      );
     }
 
-    // Campaign signup
-    $campaignNID = self::PHOENIX_SIGNUP;
-    $campaignSignup = $this->mbcUserImportToolbox->campaignSignup(
-      $campaignNID,
-      $drupalUID,
-      'niche',
-      false
-    );
-
-    if (!$campaignSignup) {
-      // User was not signed up to campaign because they're already signed up.
-      // #3, current_signedup, Existing/Existing
-      $payload['email_template'] = self::WELCOME_EMAIL_EXISTING_EXISTING;
-      $payload['tags'][0] = 'current-signedup-user-welcome-niche';
-      $payload['tags'][1] = self::WELCOME_EMAIL_EXISTING_EXISTING;
-    } else {
-      $payload['event_id'] = $campaignNID;
-      $payload['signup_id'] = $campaignSignup;
+    // Something went very wrong.
+    if (empty($identity)) {
+      throw new Exception(
+        'This will only execute when user identity logic is broken'
+      );
     }
 
-    // Check for existing user account in Mobile Commons
-    $this->mbcUserImportToolbox->checkExistingSMS($this->importUser, $existing);
+    // Northstar record has no phoenix id on it.
+    if (empty($identity->drupal_id)) {
+      throw new Exception(
+        'MBC_UserImport_Source_Niche->process() - '
+        . 'Northstar user identity has no drupal_id record.'
+        . ' User input: ' . json_encode($this->user)
+        . ', Northstar id: ' . $identity->id
+      );
+    }
 
-    // Add SMS welcome details to payload - all users should be attempted to be
-    // added to MOBILE_COMMONS_SIGNUP opt_id
-    $this->addWelcomeSMSSettings($this->importUser, $payload);
-
-    // @todo: transition to using JSON formatted messages when all of the
-    // consumers are able to
-    // detect the message format and process either seralized or JSON.
-    $message = serialize($payload);
-    $this->messageBroker_transactionals->publish(
-      $message,
-      'user.registration.transactional'
-    );
-    $this->statHat->ezCount(
-      'mbc-user-import: MBC_UserImport_Source_Niche: process',
-      1
+    // Signup user to promo campaign if they already hasn't been subscribed.
+    $signup = $this->mbcUserImportToolbox->campaignSignup(
+      self::PHOENIX_SIGNUP,
+      $identity->drupal_id,
+      self::SOURCE_NAME
     );
 
-    // Log existing users
-    $this->mbcUserImportToolbox->logExisting($existing, $this->importUser);
-  }
+    if ($signup === true) {
+      // User has already been subscribed.
+      self::log(
+        'User %s (phoenix %s) has already been subscribed to campaign %s',
+        $identity->id,
+        $identity->drupal_id,
+        self::PHOENIX_SIGNUP
+      );
+    } else {
+      // New signup has been created.
+      $userIsNewToCampaign = true;
+      self::log(
+        'New signup %s to %s created for %s (phoenix %s)',
+        $signup,
+        self::PHOENIX_SIGNUP,
+        $identity->id,
+        $identity->drupal_id
+      );
+    }
 
-  /**
-   * Initial settings related to initial welcome messages.
-   *
-   * @param array $user    User settings.
-   * @param array $payload Service values specific to the user.
-   *
-   * @return array $payload Service values specific to the user.
-   */
-  public function addWelcomeEmailSettings($user, &$payload)
-  {
-
-    $payload['email'] = $user['email'];
+    // Build new payload to delegate further processing to common flow.
+    $payload = $this->mbcUserImportToolbox->addCommonPayload();
+    $payload['activity'] = 'user_welcome-niche';
+    $payload['source'] = self::SOURCE_NAME;
+    $payload['email'] = $identity->email;
+    $payload['tags'][] = self::SOURCE_NAME;
     $payload['merge_vars'] = [
       'MEMBER_COUNT' => $this->memberCount,
-      'FNAME' => $user['first_name']
+      'FNAME' => $identity->first_name,
     ];
-    $payload['tags'] = [
-      0 => 'user_welcome-niche',
-    ];
-  }
 
-  /**
-   * Payload values common to all message for submission to all services and
-   * exchanges.
-   *
-   * @param array $user Values related to the user being processed.
-   *
-   * @return array $payload Values for message distribution.
-   */
-  public function addCommonPayload($user)
-  {
-
-    $payload = $this->mbcUserImportToolbox->addCommonPayload($user);
-    $payload['activity'] = 'user_welcome-niche';
-    $payload['source'] = 'niche';
-
-    return $payload;
-  }
-
-  /**
-   * Settings related to email services.
-   *
-   * @param array $user    User settings
-   * @param array $payload Settings for submission to service.
-   *
-   * @return array $payload Settings for submission to service.
-   */
-  public function addEmailSubscriptionSettings($user, &$payload)
-  {
-
-    if (isset($user['mailchimp_list_id'])) {
-      $payload['mailchimp_list_id'] = $user['mailchimp_list_id'];
+    if ($userIsNew) {
+      // ****** New user, new subscription ******
+      $payload['email_template'] = self::WELCOME_EMAIL_NEW_NEW;
+      $payload['tags'][] = 'niche-new-new';
+      // Generate new reset password link.
+      $passwordResult = $this->northstar->post('v2/resets', ['id' => $identity->id]);
+      if (empty($passwordResult['url'])) {
+        throw new Exception("Can't get password reset for " . $identity->id);
+      }
+      $payload['merge_vars']['PASSWORD_RESET_LINK'] = $passwordResult['url'];
     } else {
-      $payload['mailchimp_list_id'] = 'f2fab1dfd4';
+      if ($userIsNewToCampaign) {
+        // ****** Existing user, new subscription ******
+        $payload['email_template'] = self::WELCOME_EMAIL_EXISTING_NEW;
+        $payload['tags'][] = 'niche-existing-new';
+
+        // Add new signup data.
+        $payload['event_id'] = self::PHOENIX_SIGNUP;
+        $payload['signup_id'] = $signup;
+      } else {
+        // ****** Existing user, existing subscription ******
+        $payload['email_template'] = self::WELCOME_EMAIL_EXISTING_EXISTING;
+        $payload['tags'][] = 'niche-existing-existing';
+      }
+    }
+    $payload['tags'][] = $payload['email_template'];
+
+    // Determine user's MailChimp subscription status, resubscribe if necessary.
+    $mailchimpStatus = $this->mbcUserImportToolbox->getMailchimpStatus(
+      $identity->email,
+      self::MAILCHIMP_LIST_ID
+    );
+    if (!$mailchimpStatus) {
+      // User has no account on MailChimp with us.
+      $payload['mailchimp_list_id'] = self::MAILCHIMP_LIST_ID;
+      self::log(
+        'Will subscribe email %s to MailChimp list id %s',
+        $identity->email,
+        self::MAILCHIMP_LIST_ID
+      );
+    } elseif (!$mailchimpStatus['email-subscription-status']) {
+      // User has unsubscribed.
+      $payload['mailchimp_list_id'] = self::MAILCHIMP_LIST_ID;
+      self::log(
+        'User %s has unsubscribed from MailChimp list id %s'
+        . ', will attempt to resubscribe them',
+        $identity->email,
+        self::MAILCHIMP_LIST_ID,
+        $mailchimpStatus['email-acquired']
+      );
+    } else {
+      // User is an active Mailchimp subscriber.
+      self::log(
+        'User %s is an active subscriber of MailChimp list id %s since %s',
+        $identity->email,
+        self::MAILCHIMP_LIST_ID,
+        $mailchimpStatus['email-acquired']
+      );
+    }
+
+    // Publish the payload.
+    $this->messageBroker_transactionals->publish(
+      serialize($payload),
+      'user.registration.transactional'
+    );
+    self::log('Publishing payload: %s', json_encode($payload));
+    $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Source_Niche: process');
+
+    // Determine user's membership.
+    // User is considered DoSomething member when ONE of the following is true:
+    // 1. User has a profile on Northstar [ OR ]
+    $membership = !$userIsNew;
+
+    // 2. User is our MailChimp subscriber [ OR ]
+    $membership |= !$mailchimpStatus;
+
+    // 3. User is our MobileCommons subscriber
+    // This MobileCommons request is super ugly.
+    // Keeping it for compatibility with AfterShool.
+    $mocoStatus = [];
+    $this->mbcUserImportToolbox->getMobileCommonsStatus($this->user, $mocoStatus);
+    $membership |= !$mailchimpStatus;
+
+    // If user is our member, we'll log that.
+    if ($membership) {
+      $payloadLog = [];
+      $payloadLog['log-type'] = 'user-import-niche';
+      $payloadLog['source'] = self::SOURCE_NAME;
+      if ($mailchimpStatus) {
+        $payloadLog = array_merge($payloadLog, $mailchimpStatus);
+      }
+      if ($mocoStatus) {
+        $payloadLog = array_merge($payloadLog, $mocoStatus);
+      }
+      // Legacy.
+      if (!$userIsNew) {
+        $payloadLog['drupal-uid'] = $identity->drupal_id;
+        $payloadLog['drupal-email'] = $identity->email;
+        $payloadLog['drupal-mobile'] = $identity->mobile;
+      }
+
+      // Legacy. Second argument is just silly.
+      $origin = !empty($this->user['source_detail']) ? $this->user['source_detail'] : 'undetermined';
+      self::log(
+        'User identified as DoSomething member, logging: %s',
+        json_encode($payloadLog)
+      );
+      $this->mbcUserImportToolbox->logExisting($payloadLog, ['origin' => $origin]);
     }
   }
 
-  /**
-   * Settings related to SMS services.
-   *
-   * @param array $user    User settings
-   * @param array $payload Settings for submission to service.
-   *
-   * @return array $payload Settings for submission to service.
-   */
-  public function addWelcomeSMSSettings($user, &$payload)
-  {
-
-    if (isset($user['mobile']) && self::MOBILE_COMMONS_SIGNUP !== false) {
-      $payload['mobile'] = $user['mobile'];
-      $payload['mobile_opt_in_path_id'] = self::MOBILE_COMMONS_SIGNUP;
-    } elseif (isset($user['mobile'])) {
-      $payload['mobile'] = $user['mobile'];
-    }
-  }
-
-  /**
-   * Details about sending password reset email.
-   *
-   * @return null
-   */
-  public function sendPasswordResetEmail()
-  {
-  }
-
-  /**
-   * Details about the Drulal user created for the user import.
-   *
-   * @param object $drupalUser The user object created by Drupal API.
-   *
-   * @return null
-   */
-  public function addImportUserInfo($drupalUser)
-  {
-
-    $this->importUser['uid'] = $drupalUser->drupal_id;
-  }
+  /** Bad OOP is bad OOP */
+  public function addEmailSubscriptionSettings($user, &$payload) {}
+  public function addWelcomeEmailSettings($user, &$payload) {}
+  public function addCommonPayload() {}
+  public function addWelcomeSMSSettings($user, &$payload) {}
 }
