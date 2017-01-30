@@ -172,8 +172,6 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     } elseif (!empty($message['postal_code'])) {
       $this->user['addr_zip'] = $message['postal_code'];
     }
-
-    var_dump($this->user); die();
   }
 
   /**
@@ -184,18 +182,14 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
    */
   public function process()
   {
-    // Shortcuts.
-    $northstar = &$this->northstar;
-    $input = &$this->user;
-
     // User status variables.
     $userIsNew = false;
     $userIsNewToCampaign = false;
 
     // Lookup on Northstar by email.
-    $identityByEmail = $northstar->getUser('email', $input['email']);
-    if (!empty($input['mobile'])) {
-      $identityByMobile = $northstar->getUser('mobile', $input['mobile']);
+    $identityByEmail = $this->northstar->getUser('email', $this->user['email']);
+    if (!empty($this->user['mobile'])) {
+      $identityByMobile = $this->northstar->getUser('mobile', $this->user['mobile']);
     } else {
       $identityByMobile = false;
     }
@@ -209,36 +203,36 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       // Create Northstar and Phoenix accounts.
       self::log(
         'User not found, creating new user on Northstar: %s',
-        json_encode($input)
+        json_encode($this->user)
       );
-      $identity = $northstar->createUser($input);
+      $identity = $this->northstar->createUser($this->user);
     } elseif (!empty($identityByEmail) && empty($identityByMobile)) {
       // ****** Existing user: only email record exists ******
       $identity = &$identityByEmail;
       self::log(
         'User identified by email %s as %s',
-        $input['email'],
+        $this->user['email'],
         $identity->id
       );
 
       // Save mobile number to record loaded by email.
-      if (!empty($input['mobile'])) {
+      if (!empty($this->user['mobile'])) {
         self::log(
           'Updating user %s mobile phone from "%s" to "%s"',
           $identity->id,
           ($identity->mobile ?: "NULL"),
-          $input['mobile']
+          $this->user['mobile']
         );
 
-        $params = ['mobile' => $input['mobile']];
-        $identity = $northstar->updateUser($identity->id, $params);
+        $params = ['mobile' => $this->user['mobile']];
+        $identity = $this->northstar->updateUser($identity->id, $params);
       }
     } elseif (!empty($identityByMobile) && empty($identityByEmail)) {
       // ****** Existing user: only mobile record exists ******
       $identity = &$identityByMobile;
       self::log(
         'User identified by mobile %s as %s',
-        $input['mobile'],
+        $this->user['mobile'],
         $identity->id
       );
 
@@ -247,10 +241,10 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
         'Updating user %s email from "%s" to "%s"',
         $identity->id,
         ($identity->email ?: "NULL"),
-        $input['email']
+        $this->user['email']
       );
-      $params = ['email' => $input['email']];
-      $identity = $northstar->updateUser($identity->id, $params);
+      $params = ['email' => $this->user['email']];
+      $identity = $this->northstar->updateUser($identity->id, $params);
     } elseif ($identityByEmail->id !== $identityByMobile->id) {
       // ****** Existing users: loaded both by mobile and phone ******
       // We presume that user account with mobile number generally have
@@ -261,9 +255,9 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       self::log(
         'User identified by email %s as %s and by mobile %s as %s'
           . ' Selecting mobile identity',
-        $input['mobile'],
+        $this->user['mobile'],
         $identityByMobile->id,
-        $input['email'],
+        $this->user['email'],
         $identityByEmail->id
       );
 
@@ -273,8 +267,8 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
 
       self::log(
         'User identified by mobile %s and email %s: %s',
-        $input['mobile'],
-        $input['email'],
+        $this->user['mobile'],
+        $this->user['email'],
         $identity->id
       );
     }
@@ -291,7 +285,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       throw new Exception(
         'MBC_UserImport_Source_Niche->process() - '
         . 'Northstar user identity has no drupal_id record.'
-        . ' User input: ' . json_encode($input)
+        . ' User input: ' . json_encode($this->user)
         . ', Northstar id: ' . $identity->id
       );
     }
@@ -339,7 +333,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       $payload['email_template'] = self::WELCOME_EMAIL_NEW_NEW;
       $payload['tags'][] = 'niche-new-new';
       // Generate new reset password link.
-      $passwordResult = $northstar->post('v2/resets', ['id' => $identity->id]);
+      $passwordResult = $this->northstar->post('v2/resets', ['id' => $identity->id]);
       if (empty($passwordResult['url'])) {
         throw new Exception("Can't get password reset for " . $identity->id);
       }
@@ -414,7 +408,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     // This MobileCommons request is super ugly.
     // Keeping it for compatibility with AfterShool.
     $mocoStatus = [];
-    $this->mbcUserImportToolbox->getMobileCommonsStatus($input, $mocoStatus);
+    $this->mbcUserImportToolbox->getMobileCommonsStatus($this->user, $mocoStatus);
     $membership |= !$mailchimpStatus;
 
     // If user is our member, we'll log that.
@@ -436,7 +430,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       }
 
       // Legacy. Second argument is just silly.
-      $origin = !empty($input['source_detail']) ? $input['source_detail'] : 'undetermined';
+      $origin = !empty($this->user['source_detail']) ? $this->user['source_detail'] : 'undetermined';
       self::log(
         'User identified as DoSomething member, logging: %s',
         json_encode($payloadLog)
