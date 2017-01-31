@@ -399,10 +399,10 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     // Determine user's membership.
     // User is considered DoSomething member when ONE of the following is true:
     // 1. User has a profile on Northstar [ OR ]
-    $membership = !$userIsNew;
+    $membership = ($userIsNew !== true);
 
     // 2. User is our MailChimp subscriber [ OR ]
-    $membership |= !$mailchimpStatus;
+    $membership |= ($mailchimpStatus !== false);
 
     // 3. User is our MobileCommons subscriber
     if (!empty($identity->mobile)) {
