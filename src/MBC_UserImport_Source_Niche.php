@@ -405,11 +405,15 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     $membership |= !$mailchimpStatus;
 
     // 3. User is our MobileCommons subscriber
-    // This MobileCommons request is super ugly.
-    // Keeping it for compatibility with AfterShool.
-    $mocoStatus = [];
-    $this->mbcUserImportToolbox->getMobileCommonsStatus($this->user, $mocoStatus);
-    $membership |= !$mailchimpStatus;
+    if (!empty($identity->mobile)) {
+      $params = $this->user;
+      $params['mobile'] = $identity->mobile;
+      $mocoStatus = [];
+      // This MobileCommons request is super ugly.
+      // Keeping it for compatibility with AfterShool.
+      $this->mbcUserImportToolbox->getMobileCommonsStatus($params, $mocoStatus);
+      $membership |= !empty($mocoStatus['mobile-acquired']);
+    }
 
     // If user is our member, we'll log that.
     if ($membership) {
@@ -419,7 +423,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       if ($mailchimpStatus) {
         $payloadLog = array_merge($payloadLog, $mailchimpStatus);
       }
-      if ($mocoStatus) {
+      if (!empty($mocoStatus)) {
         $payloadLog = array_merge($payloadLog, $mocoStatus);
       }
       // Legacy.
