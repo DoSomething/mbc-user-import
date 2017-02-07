@@ -388,6 +388,11 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       );
     }
 
+    // Add mobile phone to payload.
+    if (!empty($identity->mobile)) {
+      $payload['mobile'] = $identity->mobile;
+    }
+
     // Publish the payload.
     $this->messageBroker_transactionals->publish(
       serialize($payload),
@@ -446,6 +451,5 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
   /** Bad OOP is bad OOP */
   public function addEmailSubscriptionSettings($user, &$payload) {}
   public function addWelcomeEmailSettings($user, &$payload) {}
-  public function addCommonPayload() {}
   public function addWelcomeSMSSettings($user, &$payload) {}
 }
