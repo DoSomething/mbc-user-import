@@ -338,6 +338,10 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
         throw new Exception("Can't get password reset for " . $identity->id);
       }
       $payload['merge_vars']['PASSWORD_RESET_LINK'] = $passwordResult['url'];
+
+      // Add new signup data.
+      $payload['event_id'] = self::PHOENIX_SIGNUP;
+      $payload['signup_id'] = $signup;
     } else {
       if ($userIsNewToCampaign) {
         // ****** Existing user, new subscription ******
