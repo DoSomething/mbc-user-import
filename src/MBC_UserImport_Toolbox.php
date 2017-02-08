@@ -284,11 +284,13 @@ class MBC_UserImport_Toolbox
     if (!empty($this->phoenixAPIConfig['port'])) {
       $curlUrl .= ":" . $this->phoenixAPIConfig['port'];
     }
-    $curlUrl .= '/api/v1/campaigns/' . $id . '/signup';
+    $curlUrl .= '/api/v1/signups?user='. $userId . '&campaigns=' . $id . '&count=1';
 
     // Execute the request.
-    list($response, $code) = $this->mbToolboxCURL->curlPOSTauth($curlUrl, $post);
-    $result = isset($response[0]) ? $response[0] : 'Unknown';
+    list($response, $code) = $this->mbToolboxCURL->curlGETauth($curlUrl, $post);
+
+    $result = isset($response->data[0]->id) ? $response->data[0]->id : false;
+    return $result;
 
     if ($code != 200) {
       $error = "Can't signup user " .  $userId . " to " . $id . ": " . $result;

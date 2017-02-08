@@ -195,18 +195,18 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     }
 
     // Process all possible cases and merge data based on identity load results:
-    if (empty($identityByEmail) && empty($identityByMobile)) {
+    // if (empty($identityByEmail) && empty($identityByMobile)) {
       // ****** New user ******
       $userIsNew = true;
       $userIsNewToCampaign = true;
 
-      // Create Northstar and Phoenix accounts.
-      self::log(
-        'User not found, creating new user on Northstar: %s',
-        json_encode($this->user)
-      );
-      $identity = $this->northstar->createUser($this->user);
-    } elseif (!empty($identityByEmail) && empty($identityByMobile)) {
+      // // Create Northstar and Phoenix accounts.
+      // self::log(
+      //   'User not found, creating new user on Northstar: %s',
+      //   json_encode($this->user)
+      // );
+      // $identity = $this->northstar->createUser($this->user);
+    // } elseif (!empty($identityByEmail) && empty($identityByMobile)) {
       // ****** Existing user: only email record exists ******
       $identity = &$identityByEmail;
       self::log(
@@ -215,63 +215,63 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
         $identity->id
       );
 
-      // Save mobile number to record loaded by email.
-      if (!empty($this->user['mobile'])) {
-        self::log(
-          'Updating user %s mobile phone from "%s" to "%s"',
-          $identity->id,
-          ($identity->mobile ?: "NULL"),
-          $this->user['mobile']
-        );
+      // // Save mobile number to record loaded by email.
+      // if (!empty($this->user['mobile'])) {
+      //   self::log(
+      //     'Updating user %s mobile phone from "%s" to "%s"',
+      //     $identity->id,
+      //     ($identity->mobile ?: "NULL"),
+      //     $this->user['mobile']
+      //   );
 
-        $params = ['mobile' => $this->user['mobile']];
-        $identity = $this->northstar->updateUser($identity->id, $params);
-      }
-    } elseif (!empty($identityByMobile) && empty($identityByEmail)) {
-      // ****** Existing user: only mobile record exists ******
-      $identity = &$identityByMobile;
-      self::log(
-        'User identified by mobile %s as %s',
-        $this->user['mobile'],
-        $identity->id
-      );
+      //   $params = ['mobile' => $this->user['mobile']];
+      //   $identity = $this->northstar->updateUser($identity->id, $params);
+      // }
+    // } elseif (!empty($identityByMobile) && empty($identityByEmail)) {
+    //   // ****** Existing user: only mobile record exists ******
+    //   $identity = &$identityByMobile;
+    //   self::log(
+    //     'User identified by mobile %s as %s',
+    //     $this->user['mobile'],
+    //     $identity->id
+    //   );
 
-      // Save email to record loaded by mobile.
-      self::log(
-        'Updating user %s email from "%s" to "%s"',
-        $identity->id,
-        ($identity->email ?: "NULL"),
-        $this->user['email']
-      );
-      $params = ['email' => $this->user['email']];
-      $identity = $this->northstar->updateUser($identity->id, $params);
-    } elseif ($identityByEmail->id !== $identityByMobile->id) {
-      // ****** Existing users: loaded both by mobile and phone ******
-      // We presume that user account with mobile number generally have
-      // email address as well. For this reason we decided to use
-      // identity loaded by mobile rather than by email.
-      $identity = &$identityByMobile;
+    //   // Save email to record loaded by mobile.
+    //   self::log(
+    //     'Updating user %s email from "%s" to "%s"',
+    //     $identity->id,
+    //     ($identity->email ?: "NULL"),
+    //     $this->user['email']
+    //   );
+    //   $params = ['email' => $this->user['email']];
+    //   $identity = $this->northstar->updateUser($identity->id, $params);
+    // } elseif ($identityByEmail->id !== $identityByMobile->id) {
+    //   // ****** Existing users: loaded both by mobile and phone ******
+    //   // We presume that user account with mobile number generally have
+    //   // email address as well. For this reason we decided to use
+    //   // identity loaded by mobile rather than by email.
+    //   $identity = &$identityByMobile;
 
-      self::log(
-        'User identified by email %s as %s and by mobile %s as %s'
-          . ' Selecting mobile identity',
-        $this->user['mobile'],
-        $identityByMobile->id,
-        $this->user['email'],
-        $identityByEmail->id
-      );
+    //   self::log(
+    //     'User identified by email %s as %s and by mobile %s as %s'
+    //       . ' Selecting mobile identity',
+    //     $this->user['mobile'],
+    //     $identityByMobile->id,
+    //     $this->user['email'],
+    //     $identityByEmail->id
+    //   );
 
-    } elseif ($identityByEmail->id === $identityByMobile->id) {
-      // ****** Existing user: same identity loaded both by mobile and phone ******
-      $identity = &$identityByEmail;
+    // } elseif ($identityByEmail->id === $identityByMobile->id) {
+    //   // ****** Existing user: same identity loaded both by mobile and phone ******
+    //   $identity = &$identityByEmail;
 
-      self::log(
-        'User identified by mobile %s and email %s: %s',
-        $this->user['mobile'],
-        $this->user['email'],
-        $identity->id
-      );
-    }
+    //   self::log(
+    //     'User identified by mobile %s and email %s: %s',
+    //     $this->user['mobile'],
+    //     $this->user['email'],
+    //     $identity->id
+    //   );
+    // }
 
     // Something went very wrong.
     if (empty($identity)) {
@@ -296,26 +296,34 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       $identity->drupal_id,
       self::SOURCE_NAME
     );
+    // var_dump($signup); die();
 
-    if ($signup === true) {
-      // User has already been subscribed.
-      self::log(
-        'User %s (phoenix %s) has already been subscribed to campaign %s',
-        $identity->id,
-        $identity->drupal_id,
-        self::PHOENIX_SIGNUP
-      );
-    } else {
-      // New signup has been created.
+    // if ($signup === true) {
+    //   // User has already been subscribed.
+    //   self::log(
+    //     'User %s (phoenix %s) has already been subscribed to campaign %s',
+    //     $identity->id,
+    //     $identity->drupal_id,
+    //     self::PHOENIX_SIGNUP
+    //   );
+    // } else {
+    //   // New signup has been created.
       $userIsNewToCampaign = true;
+    //   self::log(
+    //     'New signup %s to %s created for %s (phoenix %s)',
+    //     $signup,
+    //     self::PHOENIX_SIGNUP,
+    //     $identity->id,
+    //     $identity->drupal_id
+    //   );
+    // }
       self::log(
-        'New signup %s to %s created for %s (phoenix %s)',
+        'Signup %s to %s found for %s (phoenix %s)',
         $signup,
         self::PHOENIX_SIGNUP,
         $identity->id,
         $identity->drupal_id
       );
-    }
 
     // Build new payload to delegate further processing to common flow.
     $payload = $this->mbcUserImportToolbox->addCommonPayload();
@@ -398,12 +406,14 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     }
 
     // Publish the payload.
+    // var_dump($payload); die();
     $this->messageBroker_transactionals->publish(
       serialize($payload),
       'user.registration.transactional'
     );
     self::log('Publishing payload: %s', json_encode($payload));
-    $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Source_Niche: process');
+    return;
+    // $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Source_Niche: process');
 
     // Determine user's membership.
     // User is considered DoSomething member when ONE of the following is true:
