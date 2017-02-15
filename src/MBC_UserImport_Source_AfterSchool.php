@@ -158,7 +158,7 @@ class MBC_UserImport_Source_AfterSchool extends MBC_UserImport_BaseSource
     $existing['log-type'] = 'user-import-afterschool';
     $existing['source'] = $payload['source'];
 
-    $this->mbcUserImportToolbox->checkExistingSMS($this->importUser, $existing);
+    $this->mbcUserImportToolbox->getMobileCommonsStatus($this->importUser, $existing);
     $this->addWelcomeSMSSettings($this->importUser, $payload);
 
     // Remove submitting source if account already exists in Mobile Commons to
