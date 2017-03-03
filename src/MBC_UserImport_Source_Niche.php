@@ -36,9 +36,9 @@ use \Exception;
 class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
 {
   // Mandrill email templates.
-  const WELCOME_EMAIL_NEW_NEW = 'mb-niche-welcome_new-new_v1-10-0';
-  const WELCOME_EMAIL_EXISTING_NEW = 'mb-niche-welcome_existing-new_v1-10-0';
-  const WELCOME_EMAIL_EXISTING_EXISTING = 'mb-niche-welcome_existing-existing_v1-10-0';
+  const WELCOME_EMAIL_NEW_NEW = 'mb-niche-welcome_new-new_v1-11-0';
+  const WELCOME_EMAIL_EXISTING_NEW = 'mb-niche-welcome_existing-new_v1-11-0';
+  const WELCOME_EMAIL_EXISTING_EXISTING = 'mb-niche-welcome_existing-existing_v1-11-0';
 
   // Import source name.
   const SOURCE_NAME = 'niche';
@@ -48,9 +48,9 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
   // https://us4.admin.mailchimp.com/lists/members/?id=71893
   const MAILCHIMP_LIST_ID = 'f2fab1dfd4';
 
-  // Missing In History
-  // https://www.dosomething.org/us/campaigns/missing-history
-  const PHOENIX_SIGNUP = 7554;
+  // Keep 'Em Safe Behind The Wheel
+  // https://www.dosomething.org/us/campaigns/keep-em-safe-behind-wheel
+  const PHOENIX_SIGNUP = 7703;
 
   /**
    * Northstar-compatible user
