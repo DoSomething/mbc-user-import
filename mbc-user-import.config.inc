@@ -99,8 +99,6 @@ $mbRabbitConfig = $mbConfig->constructRabbitConfig(
   'transactionalExchange',
   [
     'transactionalQueue',
-    'userAPIRegistrationQueue',
-    'userRegistrationQueue',
     'mobileCommonsQueue',
   ]
 );
