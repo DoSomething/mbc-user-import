@@ -47,15 +47,6 @@ class MBC_UserImport_Toolbox
   protected $mbLogging;
 
   /**
-   * MailChimp lists API.
-   *
-   * @var \Mailchimp\MailchimpLists
-   *
-   * @see https://github.com/thinkshout/mailchimp-api-php/blob/master/src/MailchimpLists.php
-   */
-  protected $mailchimpLists;
-
-  /**
    * Mobile Commons DoSomething.org US connection.
    *
    * @var object $mobileCommons
@@ -114,44 +105,11 @@ class MBC_UserImport_Toolbox
     $this->messageBroker_transactionals
       = $mbConfig->getProperty('messageBrokerTransactionals');
     $this->mbLogging = $mbConfig->getProperty('messageBrokerLogging');
-    $this->mailchimpLists = $mbConfig->getProperty('mailchimpLists');
     $this->mobileCommons = $mbConfig->getProperty('mobileCommons');
     $this->mbToolbox = $mbConfig->getProperty('mbToolbox');
     $this->mbToolboxCURL = $mbConfig->getProperty('mbToolboxCURL');
     $this->phoenixAPIConfig = $mbConfig->getProperty('ds_drupal_api_config');
     $this->statHat = $mbConfig->getProperty('statHat');
-  }
-
-  /**
-   * Check for the existence of email (Mailchimp) account.
-   */
-  public function getMailchimpStatus($email, $listId)
-  {
-    $result = [];
-    try {
-      $memberInfo = $this->mailchimpLists->getMemberInfo($listId, $email);
-    } catch (MailchimpAPIException $e) {
-      if ($e->getCode() === 404) {
-        // Not found = new record.
-        return false;
-      }
-
-      // Unknown error, exit.
-      $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Toolbox: ' .
-        'getMailchimpStatus: MailChimp error');
-      throw $e;
-    }
-
-    $result['email-subscription-status'] = $memberInfo->status !== 'unsubscribed';
-    $result['email-status'] = 'Existing account';
-    $result['email'] = $email;
-    $result['email-acquired'] = date("Y-m-d H:i:s", strtotime($memberInfo->last_changed));
-    $this->statHat->ezCount(
-      'mbc-user-import: MBC_UserImport_Toolbox: ' .
-      'getMailchimpStatus: Existing MailChimp account',
-      1
-    );
-    return $result;
   }
 
   /**
