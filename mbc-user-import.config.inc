@@ -21,8 +21,6 @@ require_once CONFIG_PATH . '/mb-secure-config/' . ENVIRONMENT . '/mb-secure-conf
 define("ALLOWED_SOURCES", serialize([
   'Niche',
   'AfterSchool',
-  'mobileapp_ios',
-  'mobileapp_android',
 ]));
 
 $mbConfig = MB_Configuration::getInstance();
