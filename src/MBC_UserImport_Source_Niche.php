@@ -176,6 +176,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     // User status variables.
     $userIsNew = false;
     $userIsNewToCampaign = false;
+    $campaignSignupId = false;
 
     // Lookup on Northstar by email.
     $identityByEmail = $this->northstar->getUser('email', $this->user['email']);
@@ -281,30 +282,40 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       );
     }
 
-    // Signup user to promo campaign if they already hasn't been subscribed.
-    $signup = $this->mbcUserImportToolbox->campaignSignup(
-      self::PHOENIX_SIGNUP,
-      $identity->drupal_id,
-      self::SOURCE_NAME
-    );
 
-    if ($signup === true) {
-      // User has already been subscribed.
-      self::log(
-        'User %s (phoenix %s) has already been subscribed to campaign %s',
+    // If exiting user, check if already subscribed to promo campaign.
+    if (!$userIsNew) {
+      $campaignSignupId = $this->mbcUserImportToolbox->checkSignup(
         $identity->id,
-        $identity->drupal_id,
         self::PHOENIX_SIGNUP
       );
-    } else {
+    }
+
+    // Subscribe when new user, or existing, but unsubscribed
+    if (!$campaignSignupId) {
+      $campaignSignupId = $this->mbcUserImportToolbox->campaignSignup(
+        self::PHOENIX_SIGNUP,
+        $identity->drupal_id,
+        self::SOURCE_NAME
+      );
+
       // New signup has been created.
       $userIsNewToCampaign = true;
       self::log(
         'New signup %s to %s created for %s (phoenix %s)',
-        $signup,
+        $campaignSignupId,
         self::PHOENIX_SIGNUP,
         $identity->id,
         $identity->drupal_id
+      );
+    } else {
+      // User has already been subscribed.
+      self::log(
+        'User %s (phoenix %s) has already been subscribed to campaign %s, signup id %s',
+        $identity->id,
+        $identity->drupal_id,
+        self::PHOENIX_SIGNUP,
+        $campaignSignupId
       );
     }
 
@@ -332,7 +343,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
 
       // Add new signup data.
       $payload['event_id'] = self::PHOENIX_SIGNUP;
-      $payload['signup_id'] = $signup;
+      $payload['signup_id'] = $campaignSignupId;
     } else {
       if ($userIsNewToCampaign) {
         // ****** Existing user, new subscription ******
@@ -341,7 +352,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
 
         // Add new signup data.
         $payload['event_id'] = self::PHOENIX_SIGNUP;
-        $payload['signup_id'] = $signup;
+        $payload['signup_id'] = $campaignSignupId;
       } else {
         // ****** Existing user, existing subscription ******
         $payload['email_template'] = self::WELCOME_EMAIL_EXISTING_EXISTING;
