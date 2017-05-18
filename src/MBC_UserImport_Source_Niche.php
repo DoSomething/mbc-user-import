@@ -198,6 +198,9 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
         json_encode($this->user)
       );
       $identity = $this->northstar->createUser($this->user);
+      // Pause for .5s to ensure we don't post too many users to customer.io
+      // TODO: remove when rate limiter is implemented
+      usleep(500000);
     } elseif (!empty($identityByEmail) && empty($identityByMobile)) {
       // ****** Existing user: only email record exists ******
       $identity = &$identityByEmail;
