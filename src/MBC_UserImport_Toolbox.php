@@ -18,8 +18,6 @@
 
 namespace DoSomething\MBC_UserImport;
 
-use \Mailchimp\MailchimpAPIException;
-
 use DoSomething\MB_Toolbox\MB_Configuration;
 use DoSomething\StatHat\Client as StatHat;
 use \Exception;
@@ -45,15 +43,6 @@ class MBC_UserImport_Toolbox
    * @var object $mbLogging
    */
   protected $mbLogging;
-
-  /**
-   * MailChimp lists API.
-   *
-   * @var \Mailchimp\MailchimpLists
-   *
-   * @see https://github.com/thinkshout/mailchimp-api-php/blob/master/src/MailchimpLists.php
-   */
-  protected $mailchimpLists;
 
   /**
    * Mobile Commons DoSomething.org US connection.
@@ -114,7 +103,6 @@ class MBC_UserImport_Toolbox
     $this->messageBroker_transactionals
       = $mbConfig->getProperty('messageBrokerTransactionals');
     $this->mbLogging = $mbConfig->getProperty('messageBrokerLogging');
-    $this->mailchimpLists = $mbConfig->getProperty('mailchimpLists');
     $this->mobileCommons = $mbConfig->getProperty('mobileCommons');
     $this->mbToolbox = $mbConfig->getProperty('mbToolbox');
     $this->mbToolboxCURL = $mbConfig->getProperty('mbToolboxCURL');
@@ -123,39 +111,7 @@ class MBC_UserImport_Toolbox
   }
 
   /**
-   * Check for the existence of email (Mailchimp) account.
-   */
-  public function getMailchimpStatus($email, $listId)
-  {
-    $result = [];
-    try {
-      $memberInfo = $this->mailchimpLists->getMemberInfo($listId, $email);
-    } catch (MailchimpAPIException $e) {
-      if ($e->getCode() === 404) {
-        // Not found = new record.
-        return false;
-      }
-
-      // Unknown error, exit.
-      $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Toolbox: ' .
-        'getMailchimpStatus: MailChimp error');
-      throw $e;
-    }
-
-    $result['email-subscription-status'] = $memberInfo->status !== 'unsubscribed';
-    $result['email-status'] = 'Existing account';
-    $result['email'] = $email;
-    $result['email-acquired'] = date("Y-m-d H:i:s", strtotime($memberInfo->last_changed));
-    $this->statHat->ezCount(
-      'mbc-user-import: MBC_UserImport_Toolbox: ' .
-      'getMailchimpStatus: Existing MailChimp account',
-      1
-    );
-    return $result;
-  }
-
-  /**
-   * Check for the existence of email (Mailchimp) and SMS (Mobile Commons)
+   * Check for the existence SMS (Mobile Commons)
    * accounts.
    *
    * @param array $user           Settings of user account to check against.
@@ -215,7 +171,7 @@ class MBC_UserImport_Toolbox
   }
 
   /**
-   * Check for the existence of email (Mailchimp) and SMS (Mobile Commons)
+   * Check for the existence of and SMS (Mobile Commons)
    * accounts.
    *
    * @param array $existing   Values to submit for existing user log entry.

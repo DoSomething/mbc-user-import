@@ -43,11 +43,6 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
   // Import source name.
   const SOURCE_NAME = 'niche';
 
-  // Mailchimp List Id:
-  // Do Something Members
-  // https://us4.admin.mailchimp.com/lists/members/?id=71893
-  const MAILCHIMP_LIST_ID = 'f2fab1dfd4';
-
   // Keep 'Em Safe Behind The Wheel
   // https://www.dosomething.org/us/campaigns/keep-em-safe-behind-wheel
   const PHOENIX_SIGNUP = 7703;
@@ -101,10 +96,6 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
         $message['email'],
         FILTER_VALIDATE_EMAIL
       );
-    }
-
-    if (isset($message['email']) && empty($message['mailchimp_list_id'])) {
-      throw new Exception('mailchimp_list_id not set when email is set.');
     }
 
     return true;
@@ -359,39 +350,6 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     }
     $payload['tags'][] = $payload['email_template'];
 
-    // Determine user's MailChimp subscription status, resubscribe if necessary.
-    $mailchimpStatus = $this->mbcUserImportToolbox->getMailchimpStatus(
-      $identity->email,
-      self::MAILCHIMP_LIST_ID
-    );
-    if (!$mailchimpStatus) {
-      // User has no account on MailChimp with us.
-      $payload['mailchimp_list_id'] = self::MAILCHIMP_LIST_ID;
-      self::log(
-        'Will subscribe email %s to MailChimp list id %s',
-        $identity->email,
-        self::MAILCHIMP_LIST_ID
-      );
-    } elseif (!$mailchimpStatus['email-subscription-status']) {
-      // User has unsubscribed.
-      $payload['mailchimp_list_id'] = self::MAILCHIMP_LIST_ID;
-      self::log(
-        'User %s has unsubscribed from MailChimp list id %s'
-        . ', will attempt to resubscribe them',
-        $identity->email,
-        self::MAILCHIMP_LIST_ID,
-        $mailchimpStatus['email-acquired']
-      );
-    } else {
-      // User is an active Mailchimp subscriber.
-      self::log(
-        'User %s is an active subscriber of MailChimp list id %s since %s',
-        $identity->email,
-        self::MAILCHIMP_LIST_ID,
-        $mailchimpStatus['email-acquired']
-      );
-    }
-
     // Add mobile phone to payload.
     if (!empty($identity->mobile)) {
       $payload['mobile'] = $identity->mobile;
@@ -410,10 +368,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     // 1. User has a profile on Northstar [ OR ]
     $membership = ($userIsNew !== true);
 
-    // 2. User is our MailChimp subscriber [ OR ]
-    $membership |= ($mailchimpStatus !== false);
-
-    // 3. User is our MobileCommons subscriber
+    // 2. User is our MobileCommons subscriber
     if (!empty($identity->mobile)) {
       $params = $this->user;
       $params['mobile'] = $identity->mobile;
@@ -429,9 +384,6 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       $payloadLog = [];
       $payloadLog['log-type'] = 'user-import-niche';
       $payloadLog['source'] = self::SOURCE_NAME;
-      if ($mailchimpStatus) {
-        $payloadLog = array_merge($payloadLog, $mailchimpStatus);
-      }
       if (!empty($mocoStatus)) {
         $payloadLog = array_merge($payloadLog, $mocoStatus);
       }
@@ -453,7 +405,6 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
   }
 
   /** Bad OOP is bad OOP */
-  public function addEmailSubscriptionSettings($user, &$payload) {}
   public function addWelcomeEmailSettings($user, &$payload) {}
   public function addWelcomeSMSSettings($user, &$payload) {}
 }
