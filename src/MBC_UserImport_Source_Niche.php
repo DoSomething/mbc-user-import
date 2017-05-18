@@ -43,11 +43,6 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
   // Import source name.
   const SOURCE_NAME = 'niche';
 
-  // Mailchimp List Id:
-  // Do Something Members
-  // https://us4.admin.mailchimp.com/lists/members/?id=71893
-  const MAILCHIMP_LIST_ID = 'f2fab1dfd4';
-
   // Keep 'Em Safe Behind The Wheel
   // https://www.dosomething.org/us/campaigns/keep-em-safe-behind-wheel
   const PHOENIX_SIGNUP = 7703;
@@ -101,10 +96,6 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
         $message['email'],
         FILTER_VALIDATE_EMAIL
       );
-    }
-
-    if (isset($message['email']) && empty($message['mailchimp_list_id'])) {
-      throw new Exception('mailchimp_list_id not set when email is set.');
     }
 
     return true;
