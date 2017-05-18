@@ -218,6 +218,34 @@ class MBC_UserImport_Toolbox
   }
 
   /**
+   * Check if users is subscribed for a campaign
+   */
+  public function checkSignup($userId, $campaignId) {
+    $curlUrl = $this->phoenixAPIConfig['host'];
+    if (!empty($this->phoenixAPIConfig['port'])) {
+      $curlUrl .= ":" . $this->phoenixAPIConfig['port'];
+    }
+    $curlUrl .= '/api/v1/signups?user=' . $userId . '&campaigns=' . $campaignId;
+
+    // Execute the request.
+    list($response, $code) = $this->mbToolboxCURL->curlGETauth($curlUrl);
+
+    if ($code != 200) {
+      $error = "Can't check signup of user " .  $userId . " to " . $id . ": " . $result;
+      echo $error . PHP_EOL;
+      return false;
+    }
+
+    if (empty($response->data) || empty($response->data[0]) || empty($response->data[0]->id)) {
+      return false;
+    }
+
+    $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Toolbox: existing campaignSignup');
+
+    return $response->data[0]->id;
+  }
+
+  /**
    * Sign up user ID (UID) to campaign.
    *
    * - https://github.com/DoSomething/dosomething/wiki/API#campaign-signup
@@ -255,10 +283,6 @@ class MBC_UserImport_Toolbox
       // New signup: signup id will be returned.
       $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Toolbox: campaignSignup');
       return $result;
-    } elseif ($result === false) {
-      // User has already been subscribed.
-      $this->statHat->ezCount('mbc-user-import: MBC_UserImport_Toolbox: existing campaignSignup');
-      return true;
     } else {
       $error = "Can't parse signup response: user " .  $userId . " to " . $id;
       throw new Exception($error);
