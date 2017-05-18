@@ -222,19 +222,6 @@ class MBC_UserImport_Source_AfterSchool extends MBC_UserImport_BaseSource
   }
 
   /**
-   * NOT USED  as After School as Source
-   * Settings specific to email subscriptions (MailChimp lists).
-   *
-   * @param array $user    Setting specific to the user being imported.
-   * @param array $payload Existing based on email and user settings.
-   *
-   * @return array &$payload Adjusted based on email and user settings.
-   */
-  public function addEmailSubscriptionSettings($user, &$payload)
-  {
-  }
-
-  /**
    * Add settings to message payload that are specific to SMS.
    *
    * @param array $user    Settings specific to the user data being imported.

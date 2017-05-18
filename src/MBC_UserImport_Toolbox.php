@@ -111,7 +111,7 @@ class MBC_UserImport_Toolbox
   }
 
   /**
-   * Check for the existence of email (Mailchimp) and SMS (Mobile Commons)
+   * Check for the existence SMS (Mobile Commons)
    * accounts.
    *
    * @param array $user           Settings of user account to check against.
@@ -171,7 +171,7 @@ class MBC_UserImport_Toolbox
   }
 
   /**
-   * Check for the existence of email (Mailchimp) and SMS (Mobile Commons)
+   * Check for the existence of and SMS (Mobile Commons)
    * accounts.
    *
    * @param array $existing   Values to submit for existing user log entry.

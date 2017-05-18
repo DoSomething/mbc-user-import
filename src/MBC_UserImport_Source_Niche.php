@@ -405,7 +405,6 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
   }
 
   /** Bad OOP is bad OOP */
-  public function addEmailSubscriptionSettings($user, &$payload) {}
   public function addWelcomeEmailSettings($user, &$payload) {}
   public function addWelcomeSMSSettings($user, &$payload) {}
 }
