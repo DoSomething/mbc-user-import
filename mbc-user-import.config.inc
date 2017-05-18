@@ -3,8 +3,6 @@
  * Message Broker configuration settings for mbc-user-import
  */
 
-use \Mailchimp\MailchimpLists;
-
 use DoSomething\MessageBroker\MessageBroker;
 use DoSomething\MB_Toolbox\MB_Configuration;
 use DoSomething\MB_Toolbox\MB_Toolbox;
@@ -68,9 +66,6 @@ $mbConfig->setProperty('mobileCommons', new \MobileCommons([
   'password' => getenv("MOBILE_COMMONS_US_PASSWORD"),
   'company_key' => getenv("MOBILE_COMMONS_US_COMPANY_KEY"),
 ]));
-
-// MailChimp
-$mbConfig->setProperty('mailchimpLists', new MailchimpLists(getenv("MAILCHIMP_APIKEY")));
 
 $mbConfig->setProperty('mbToolbox', new MB_Toolbox());
 $mbConfig->setProperty('mbToolboxCURL', new MB_Toolbox_cURL());

@@ -17,7 +17,6 @@
     "DoSomething/messagebroker-phplib": "0.3.*",
     "dosomething/mb-toolbox": "0.13.*",
     "dosomething/stathat": "2.*",
-    "thinkshout/mailchimp-api-php": "^1.0",
     "dosomething/gateway": "1.0.0-rc16"
   },
   "require-dev": {
