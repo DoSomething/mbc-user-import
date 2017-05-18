@@ -286,7 +286,7 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
     // If exiting user, check if already subscribed to promo campaign.
     if (!$userIsNew) {
       $campaignSignupId = $this->mbcUserImportToolbox->checkSignup(
-        $identity->id,
+        $identity->drupal_id,
         self::PHOENIX_SIGNUP
       );
     }
