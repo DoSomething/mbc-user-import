@@ -35,12 +35,11 @@ messages to other consumers responsible for each task:
 
 - Drupal user creation
 - Mobile Commons submission
-- MailChimp submission
 - submission to mb-user-api
 - Campaign signup (Drupal site)
 
 Each user submission is checked for existing user accounts in Drupal,
-MailChimp and Mobile Commons. Existing detected accounts are logged in
+and Mobile Commons. Existing detected accounts are logged in
 mb-logging.
 
 ### Installation
