@@ -156,7 +156,6 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       }
       $this->user['birthdate'] = date('Y-m-d', $birthdateTimestamp);
     }
-    var_dump($this->user['birthdate']);
 
     // Country. Assume users are from the US.
     $this->user['country'] = !empty($message['country']) ? $message['country'] : 'US';
