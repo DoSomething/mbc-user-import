@@ -148,13 +148,16 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
       }
     }
     // Birthday.
-    if (!empty($message['birthday'])) {
+    if (!empty($message['birthdate'])) {
       if (is_int($message['birthdate']) || ctype_digit($message['birthdate'])) {
-        $this->user['birthdate'] = (int) $message['birthdate'];
+        $birthdateTimestamp = (int) $message['birthdate'];
       } else {
-        $this->user['birthdate'] = strtotime($message['birthdate']);
+        $birthdateTimestamp = strtotime($message['birthdate']);
       }
+      $this->user['birthdate'] = date('Y-m-d', $birthdateTimestamp);
     }
+    var_dump($this->user['birthdate']);
+
     // Country. Assume users are from the US.
     $this->user['country'] = !empty($message['country']) ? $message['country'] : 'US';
     // Zip. Handle both `zip` and `postal_code` import field names.
