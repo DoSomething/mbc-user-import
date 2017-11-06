@@ -92,7 +92,6 @@ $mbRabbitConfig = $mbConfig->constructRabbitConfig(
   'transactionalExchange',
   [
     'transactionalQueue',
-    'mobileCommonsQueue',
   ]
 );
 $mbConfig->setProperty('messageBrokerTransactionals', new MessageBroker($rabbitCredentials, $mbRabbitConfig));
