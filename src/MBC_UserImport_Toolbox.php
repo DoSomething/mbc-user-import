@@ -45,13 +45,6 @@ class MBC_UserImport_Toolbox
   protected $mbLogging;
 
   /**
-   * Mobile Commons DoSomething.org US connection.
-   *
-   * @var object $mobileCommons
-   */
-  protected $moblieCommons;
-
-  /**
    * Collection of tools related to the Message Broker system.
    *
    * @var object $mbToolbox
@@ -103,71 +96,10 @@ class MBC_UserImport_Toolbox
     $this->messageBroker_transactionals
       = $mbConfig->getProperty('messageBrokerTransactionals');
     $this->mbLogging = $mbConfig->getProperty('messageBrokerLogging');
-    $this->mobileCommons = $mbConfig->getProperty('mobileCommons');
     $this->mbToolbox = $mbConfig->getProperty('mbToolbox');
     $this->mbToolboxCURL = $mbConfig->getProperty('mbToolboxCURL');
     $this->phoenixAPIConfig = $mbConfig->getProperty('ds_drupal_api_config');
     $this->statHat = $mbConfig->getProperty('statHat');
-  }
-
-  /**
-   * Check for the existence SMS (Mobile Commons)
-   * accounts.
-   *
-   * @param array $user           Settings of user account to check against.
-   * @param array $existingStatus Details of existing accounts for the user email
-   *                               address.
-   *
-   * @return array $existingStatus Details of existing accounts for the user email
-   *                               address.
-   */
-  public function getMobileCommonsStatus($user, &$existingStatus)
-  {
-
-    if (empty($user['mobile'])) {
-      echo 'Phone number isn\'t set.' . PHP_EOL;
-      return false;
-    }
-    $mobilecommonsStatus
-      = (array) $this->mobileCommons->profiles_get(
-        ['phone_number' => $user['mobile']]
-      );
-    if (!isset($mobilecommonsStatus['error'])) {
-      echo($user['mobile'] . ' already a Mobile Commons user.' . PHP_EOL);
-      if (isset($mobilecommonsStatus['profile']->status)) {
-        $existingStatus['mobile-error']
-          = (string)$mobilecommonsStatus['profile']->status;
-        $this->statHat->ezCount(
-          'mbc-user-import: MBC_UserImport_Toolbox: ' .
-          'getMobileCommonsStatus: ' . $existingStatus['mobile-error'],
-          1
-        );
-        // opted_out_source
-        $existingStatus['mobile-acquired']
-          = (string)$mobilecommonsStatus['profile']->created_at;
-      } else {
-        $existingStatus['mobile-error'] = 'Existing account';
-        $this->statHat->ezCount(
-          'mbc-user-import: MBC_UserImport_Toolbox: ' .
-          'getMobileCommonsStatus: Existing account',
-          1
-        );
-      }
-      $existingStatus['mobile'] = $user['mobile'];
-    } else {
-      $mobileCommonsError
-        = $mobilecommonsStatus['error']->attributes()->{'message'};
-      // via Mobile Commons API - "Invalid phone number" aka "number not
-      // found", the number is not from an existing user.
-      if (!$mobileCommonsError == 'Invalid phone number') {
-        echo 'Mobile Common Error: ' . $mobileCommonsError, PHP_EOL;
-        $this->statHat->ezCount(
-          'mbc-user-import: MBC_UserImport_Toolbox: ' .
-          'getMobileCommonsStatus: Invalid phone number',
-          1
-        );
-      }
-    }
   }
 
   /**
