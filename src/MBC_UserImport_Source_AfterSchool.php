@@ -153,6 +153,9 @@ class MBC_UserImport_Source_AfterSchool extends MBC_UserImport_BaseSource
    */
   public function process()
   {
+    // Mobilecommons integration is off
+    // Needs to be refactored to use northstar
+    return false;
 
     $payload = $this->addCommonPayload($this->importUser);
     $existing['log-type'] = 'user-import-afterschool';
