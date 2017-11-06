@@ -9,7 +9,6 @@
  *   - User creation in the Drupal website
  *   - An entry in mb-users database via mb-userAPI
  *   - Mandrill transactional signup email message
- *   - SMS transactional via Mobile Commons (US / Canada) or mGage (future - MX / BR)
  */
 
 use DoSomething\MBC_UserImport\MBC_UserImport_Consumer;

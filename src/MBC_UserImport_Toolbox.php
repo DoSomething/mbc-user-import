@@ -103,7 +103,7 @@ class MBC_UserImport_Toolbox
   }
 
   /**
-   * Check for the existence of and SMS (Mobile Commons)
+   * Check for the existence of and SMS
    * accounts.
    *
    * @param array $existing   Values to submit for existing user log entry.
