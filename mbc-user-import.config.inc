@@ -58,13 +58,6 @@ $mbConfig->setProperty('ds_drupal_api_config', [
   'password' => getenv('DS_DRUPAL_API_PASSWORD'),
 ]);
 
-// SMS
-$mbConfig->setProperty('mobileCommons', new \MobileCommons([
-  'username' => getenv("MOBILE_COMMONS_US_USER"),
-  'password' => getenv("MOBILE_COMMONS_US_PASSWORD"),
-  'company_key' => getenv("MOBILE_COMMONS_US_COMPANY_KEY"),
-]));
-
 $mbConfig->setProperty('mbToolbox', new MB_Toolbox());
 $mbConfig->setProperty('mbToolboxCURL', new MB_Toolbox_cURL());
 
