@@ -381,19 +381,8 @@ class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
 
     // Determine user's membership.
     // User is considered DoSomething member when ONE of the following is true:
-    // 1. User has a profile on Northstar [ OR ]
+    // 1. User has a profile on Northstar
     $membership = ($userIsNew !== true);
-
-    // 2. User is our MobileCommons subscriber
-    if (!empty($identity->mobile)) {
-      $params = $this->user;
-      $params['mobile'] = $identity->mobile;
-      $mocoStatus = [];
-      // This MobileCommons request is super ugly.
-      // Keeping it for compatibility with AfterShool.
-      $this->mbcUserImportToolbox->getMobileCommonsStatus($params, $mocoStatus);
-      $membership |= !empty($mocoStatus['mobile-acquired']);
-    }
 
     // If user is our member, we'll log that.
     if ($membership) {

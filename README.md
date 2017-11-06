@@ -34,13 +34,8 @@ the source activities cobinations of the following are processed by sending
 messages to other consumers responsible for each task:
 
 - Drupal user creation
-- Mobile Commons submission
 - submission to mb-user-api
 - Campaign signup (Drupal site)
-
-Each user submission is checked for existing user accounts in Drupal,
-and Mobile Commons. Existing detected accounts are logged in
-mb-logging.
 
 ### Installation
 

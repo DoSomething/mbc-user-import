@@ -117,10 +117,6 @@ class MBC_UserImport_Source_AfterSchool extends MBC_UserImport_BaseSource
     if (isset($message['mobile'])) {
       $this->importUser['mobile'] = $message['mobile'];
     }
-    if (isset($message['mobile_opt_in_path_id'])) {
-      $this->importUser['mobile_opt_in_path_id']
-        = $message['mobile_opt_in_path_id'];
-    }
 
     if (isset($message['first_name'])) {
       $this->importUser['first_name'] = $message['first_name'];
@@ -153,6 +149,9 @@ class MBC_UserImport_Source_AfterSchool extends MBC_UserImport_BaseSource
    */
   public function process()
   {
+    // Mobilecommons integration is off
+    // Needs to be refactored to use northstar
+    return false;
 
     $payload = $this->addCommonPayload($this->importUser);
     $existing['log-type'] = 'user-import-afterschool';
@@ -234,7 +233,6 @@ class MBC_UserImport_Source_AfterSchool extends MBC_UserImport_BaseSource
 
     if (isset($user['mobile'])) {
       $payload['mobile'] = $user['mobile'];
-      $payload['mobile_opt_in_path_id'] = $user['mobile_opt_in_path_id'];
 
       if (isset($user['first_name'])) {
         $payload['first_name'] = $user['first_name'];
