@@ -36,16 +36,15 @@ use \Exception;
 class MBC_UserImport_Source_Niche extends MBC_UserImport_BaseSource
 {
   // Mandrill email templates.
-  const WELCOME_EMAIL_NEW_NEW = 'mb-niche-welcome_new-new_v1-12-0';
-  const WELCOME_EMAIL_EXISTING_NEW = 'mb-niche-welcome_existing-new_v1-12-0';
-  const WELCOME_EMAIL_EXISTING_EXISTING = 'mb-niche-welcome_existing-existing_v1-12-0';
+  const WELCOME_EMAIL_NEW_NEW = 'mb-niche-welcome_new-new_v1-13-0';
+  const WELCOME_EMAIL_EXISTING_NEW = 'mb-niche-welcome_existing-new_v1-13-0';
+  const WELCOME_EMAIL_EXISTING_EXISTING = 'mb-niche-welcome_existing-existing_v1-13-0';
 
   // Import source name.
   const SOURCE_NAME = 'niche';
 
-  // Shower Songs
-  // https://www.dosomething.org/us/campaigns/shower-songs
-  const PHOENIX_SIGNUP = 3590;
+  // Save The Mascots
+  const PHOENIX_SIGNUP = 8038;
 
   /**
    * Northstar-compatible user
